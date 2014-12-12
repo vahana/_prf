@@ -194,3 +194,17 @@ class BaseView(object):
                     raise JHTTPBadRequest('id2obj: Object %s not found' % self._params[name])
                 self._params[name] = obj
 
+class NoOp(BaseView):
+    """Use this class as a stub if you want to layout all your resources before
+    implementing actual views.
+    """
+
+    def index(self, **kw):
+        return [
+            dict(route = self.request.matched_route.name,
+                kw = kw,
+                params = self._params)]
+
+    def show(self, **kw):
+        return kw
+
