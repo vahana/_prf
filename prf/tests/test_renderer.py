@@ -63,7 +63,7 @@ class TestRenderers(unittest.TestCase):
         self.assertRaises(TypeError, enc.default, {})
 
     def test_JsonRendererFactory(self):
-        from  prf.renderers import JsonRendererFactory
+        from prf.renderers import JsonRendererFactory
 
         request = mock.MagicMock()
         request.response.default_content_type = 'text/html'
@@ -76,6 +76,7 @@ class TestRenderers(unittest.TestCase):
             'registry': None
         })
 
-        result = json.loads(jfr(self._get_dummy_result(), {'request': request}))
+        result = json.loads(
+            jfr(self._get_dummy_result(), {'request': request}))
         self.assertDictContainsSubset(self._get_dummy_expected(), result)
         self.assertEqual('application/json', request.response.content_type)

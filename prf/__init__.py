@@ -14,21 +14,27 @@ __version__ = _DIST.version
 
 log = logging.getLogger(__name__)
 
+
 class RootACL(object):
     __acl__ = [(Allow, 'g:admin', ALL_PERMISSIONS)]
 
-    def __init__(self, request): pass
+    def __init__(self, request):
+        pass
+
     def __getitem__(self, key):
         return type('Dummy', (object,),
-                    {'__acl__':RootACL.__acl__})()
+                    {'__acl__': RootACL.__acl__})()
+
 
 def get_root_resource(config):
     from prf.resource import Resource
     return config.registry._root_resources.setdefault(config.package_name,
-            Resource(config))
+                                                      Resource(config))
+
 
 def get_resource_map(request):
     return request.registry._resources_map
+
 
 def enable_auth(config, user_model=None,
                 root_factory=RootACL,
@@ -42,9 +48,9 @@ def enable_auth(config, user_model=None,
     AccountView.set_user_model(user_model)
 
     authn_policy = AuthTktAuthenticationPolicy(
-            secret,
-            callback=config.maybe_dotted(AccountView.groupfinder),
-        )
+        secret,
+        callback=config.maybe_dotted(AccountView.groupfinder),
+    )
 
     config.set_authentication_policy(authn_policy)
     config.set_authorization_policy(ACLAuthorizationPolicy())
@@ -54,11 +60,11 @@ def enable_auth(config, user_model=None,
 
     config.add_route('prf_login', login_path)
     config.add_view(view='prf.utility_views.AccountView', attr='login',
-                route_name='prf_login', request_method='POST')
+                    route_name='prf_login', request_method='POST')
 
     config.add_route('prf_logout', logout_path)
     config.add_view(view='prf.utility_views.AccountView', attr='logout',
-                route_name='prf_logout', request_method='POST')
+                    route_name='prf_logout', request_method='POST')
 
 
 def includeme(config):
@@ -82,6 +88,7 @@ def includeme(config):
     config.set_root_factory(RootACL)
 
     from prf.json_httpexceptions import JHTTPBadRequest
+
     def param_error(context, request):
         return JHTTPBadRequest("Bad or missing param '%s'" % str(context.message))
 

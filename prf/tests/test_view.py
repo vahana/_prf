@@ -38,10 +38,10 @@ class TestBaseView(unittest.TestCase):
         with self.assertRaises(AttributeError):
             view.frobnicate()
 
-        # delete is an allowed action, but it raises since BaseView does not implement it.
+        # delete is an allowed action, but it raises since BaseView does not
+        # implement it.
         with self.assertRaises(AttributeError):
             view.delete()
-
 
     def test_get_pagination_links(self):
         request = mock.MagicMock(content_type='')
@@ -73,7 +73,7 @@ class TestBaseView(unittest.TestCase):
         links = get_pagination_links(ctrl.request)
 
         self.assertEqual({'first': '/things?page=1', 'last': '/things?page=1'
-                         }, links)
+                          }, links)
 
     def test_add_links(self, *a):
         config = Configurator(autocommit=True)
@@ -81,7 +81,7 @@ class TestBaseView(unittest.TestCase):
 
         def get_results():
             return [{'id': 0, 'name': 'Bruce Lee'}, {'id': 1,
-                    'name': 'Jacky Chan'}]
+                                                     'name': 'Jacky Chan'}]
 
         class MyView(BaseView):
 
@@ -103,12 +103,12 @@ class TestBaseView(unittest.TestCase):
 
         # show must have self and edit links
         self.assertEqual({u'edit': u'http://localhost/things/0',
-                         u'self': u'http://localhost/things/0'}, resp['links'])
+                          u'self': u'http://localhost/things/0'}, resp['links'])
 
         # index doesnt have self and edit links only pagination
         resp = app.get('/things').json
         self.assertEqual(resp.get('links'),
-                          {'last': 'http://localhost/things?page=1',
+                         {'last': 'http://localhost/things?page=1',
                           'first': 'http://localhost/things?page=1'})
 
     def test_pagination(self, *a):
@@ -116,6 +116,7 @@ class TestBaseView(unittest.TestCase):
         self.maxDiff = None
 
         class MyView(BaseView):
+
             @paginate(items_per_page=5)
             def index(self):
                 return range(num_items)
@@ -129,10 +130,9 @@ class TestBaseView(unittest.TestCase):
         app = TestApp(config.make_wsgi_app())
 
         resp = app.get('/things').json
-        self.assertEqual({u'links': {u'first': u'http://localhost/things?page=1'
-                         , u'last': u'http://localhost/things?page=20',
-                         u'next': u'http://localhost/things?page=2'},
-                         u'things': [0, 1, 2, 3, 4], u'total': 100}, resp)
+        self.assertEqual({u'links': {u'first': u'http://localhost/things?page=1', u'last': u'http://localhost/things?page=20',
+                                     u'next': u'http://localhost/things?page=2'},
+                          u'things': [0, 1, 2, 3, 4], u'total': 100}, resp)
 
         resp = app.get('/things?page=2').json
         self.assertEqual({u'links': {
@@ -144,17 +144,17 @@ class TestBaseView(unittest.TestCase):
 
         resp = app.get('/things?page=3').json
         self.assertEqual('http://localhost/things?page=1', resp['links'
-                         ]['first'])
+                                                                ]['first'])
         self.assertEqual('http://localhost/things?page=2', resp['links'
-                         ]['previous'])
+                                                                ]['previous'])
         self.assertEqual('http://localhost/things?page=4', resp['links']['next'
-                         ])
+                                                                         ])
 
         num_items = 3  # less than per page
         resp = app.get('/things?page=5').json
 
         self.assertEqual(u'http://localhost/things?page=1', resp['links'
-                         ]['first'], resp['links']['last'])
+                                                                 ]['first'], resp['links']['last'])
 
         self.assertNotIn('next', resp['links'])
         self.assertNotIn('previous', resp['links'])
@@ -222,11 +222,10 @@ class TestBaseView(unittest.TestCase):
                     wrappers.add_parent_links]})
 
         self.assertEqual({'create': [wrappers.validate_types(),
-                         wrappers.validate_required()],
-                         'index': [before_call],
-                         'update': [wrappers.validate_types()]},
+                                     wrappers.validate_required()],
+                          'index': [before_call],
+                          'update': [wrappers.validate_types()]},
                          view._before_calls)
 
         self.assertEqual(view.index._before_calls, [before_call])
         self.assertEqual(view.index._after_calls, [after_call])
-

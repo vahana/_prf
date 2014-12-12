@@ -1,6 +1,8 @@
 from prf.utils.dictset import dictset
 
+
 class DataProxy(object):
+
     def __init__(self, data={}):
         self._data = dictset(data)
 
@@ -26,6 +28,7 @@ class DataProxy(object):
         _dict['_type'] = self.__class__.__name__
         return _dict
 
+
 def dict2obj(data):
     if not data:
         return data
@@ -38,11 +41,12 @@ def dict2obj(data):
             setattr(top, key, dict2obj(val))
         elif isinstance(val, list):
             setattr(top, key,
-                [dict2obj(sj) if isinstance(sj, dict) else sj for sj in val])
+                    [dict2obj(sj) if isinstance(sj, dict) else sj for sj in val])
         else:
             setattr(top, key, val)
 
     return top
+
 
 def to_objs(collection):
     _objs = []
@@ -51,6 +55,7 @@ def to_objs(collection):
         _objs.append(dict2obj(each))
 
     return _objs
+
 
 def to_dicts(collection, key=None, **kw):
     _dicts = []
@@ -68,6 +73,7 @@ def to_dicts(collection, key=None, **kw):
 
     return _dicts
 
+
 def obj2dict(obj, classkey=None):
     if isinstance(obj, dict):
         for k in obj.keys():
@@ -77,8 +83,8 @@ def obj2dict(obj, classkey=None):
         return [obj2dict(v, classkey) for v in obj]
     elif hasattr(obj, "__dict__"):
         data = dictset([(key, obj2dict(value, classkey))
-            for key, value in obj.__dict__.iteritems()
-            if not callable(value) and not key.startswith('_')])
+                        for key, value in obj.__dict__.iteritems()
+                        if not callable(value) and not key.startswith('_')])
         if classkey is not None and hasattr(obj, "__class__"):
             data[classkey] = obj.__class__.__name__
         return data

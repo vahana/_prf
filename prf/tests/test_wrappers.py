@@ -22,7 +22,8 @@ class WrappersTest(unittest.TestCase):
             res = wrappers.update_links({'trash': 111}, 'garbage')
 
         with self.assertRaises(TypeError):
-            res = wrappers.update_links({}, [1, 2])  # must fail, since items not dicts
+            # must fail, since items not dicts
+            res = wrappers.update_links({}, [1, 2])
 
         res = wrappers.update_links({}, {'self': 'url'})
         self.assertEqual({'link': {'self': 'url'}}, res)
@@ -43,7 +44,6 @@ class WrappersTest(unittest.TestCase):
                                     {'self': 'url'})
         self.assertEqual({'links': {'a': 'b', 'c': 'd', 'self': 'url'}}, res)
 
-
     def test_validator_decorator(self):
         params = dict(a=10, b='bbb', c=20)
 
@@ -53,7 +53,7 @@ class WrappersTest(unittest.TestCase):
         class MyView(BaseView):
 
             __validation_schema__ = dict(a=dict(type=int, required=True),
-                    b=dict(type=str, required=False))
+                                         b=dict(type=str, required=False))
 
             def __init__(self):
                 BaseView.__init__(self, res, req)
@@ -73,7 +73,7 @@ class WrappersTest(unittest.TestCase):
 
         view = MyView()
         self.assertEqual([wrappers.validate_types(),
-                         wrappers.validate_required()],
+                          wrappers.validate_required()],
                          view._before_calls['create'])
         self.assertIn('c', view._before_calls['create'][0].kwargs)
 
@@ -94,27 +94,26 @@ class WrappersTest(unittest.TestCase):
 
         request.route_url = route_url
         res = wrappers.add_parent_links(request=request, result=dict(one_id=1,
-                one='blabla', thing_id=3))
+                                                                     one='blabla', thing_id=3))
 
         self.assertEqual(res['thing'], {'link': 'http://localhost/thing/3',
-                         'id': 3})
+                                        'id': 3})
         self.assertEqual(res['one_id'], 1)
         self.assertEqual(res['one'], 'blabla')
 
         res = wrappers.add_parent_links(request=request,
-                result=dict(thing_id=None))
+                                        result=dict(thing_id=None))
         self.assertEqual({'thing': {'link': 'http://localhost/thing/None',
-                         'id': None}}, res)
+                                    'id': None}}, res)
 
         # multiple results
         res = wrappers.add_parent_links(request=request,
-                result=[dict(one_id=1, one='blabla', thing_id=3),
-                dict(one_id=2, one='blabla', thing_id=6)])
+                                        result=[dict(one_id=1, one='blabla', thing_id=3),
+                                                dict(one_id=2, one='blabla', thing_id=6)])
 
         self.assertEqual([{'one': 'blabla', 'one_id': 1, 'thing': {'id': 3,
-                         'link': 'http://localhost/thing/3'}}, {'one': 'blabla'
-                         , 'one_id': 2, 'thing': {'id': 6,
-                         'link': 'http://localhost/thing/6'}}], res)
+                                                                   'link': 'http://localhost/thing/3'}}, {'one': 'blabla', 'one_id': 2, 'thing': {'id': 6,
+                                                                                                                                                  'link': 'http://localhost/thing/6'}}], res)
 
     def test_validate_types(self):
         import datetime as dt
@@ -157,7 +156,7 @@ class WrappersTest(unittest.TestCase):
         wrappers.validate_types()(request=request)
 
         schema = dict(a=dict(type=int, required=True), b=dict(type=str,
-                      required=False), c=dict(type=int))
+                                                              required=False), c=dict(type=int))
 
         request.params = dict(a=1, b=2, c=3)
         wrappers.validate_required(**schema)(request=request)

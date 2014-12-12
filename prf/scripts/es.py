@@ -20,6 +20,7 @@ def main(argv=sys.argv, quiet=False):
     command = ESCommand(argv, log)
     return command.run()
 
+
 class ESCommand(object):
 
     bootstrap = (bootstrap,)
@@ -29,10 +30,14 @@ class ESCommand(object):
     def __init__(self, argv, log):
         parser = ArgumentParser(description=__doc__)
 
-        parser.add_argument('-c', '--config', help='config.ini (required)', required=True)
-        parser.add_argument('--quiet', help='quiet mode', action='store_true', default=False)
-        parser.add_argument('--models', help='explicit list of models to index', required=True)
-        parser.add_argument('--params', help='url encoded params for each model')
+        parser.add_argument(
+            '-c', '--config', help='config.ini (required)', required=True)
+        parser.add_argument(
+            '--quiet', help='quiet mode', action='store_true', default=False)
+        parser.add_argument(
+            '--models', help='explicit list of models to index', required=True)
+        parser.add_argument(
+            '--params', help='url encoded params for each model')
         parser.add_argument('--index', help='index name', default=None)
 
         self.options = parser.parse_args()
@@ -55,7 +60,8 @@ class ESCommand(object):
 
         for model in models:
             params = self.options.params or ''
-            params = dict([ [k, v[0]] for k,v in urlparse.parse_qs(params).items()])
+            params = dict([[k, v[0]]
+                           for k, v in urlparse.parse_qs(params).items()])
             ES(model).index(params)
 
         return 0

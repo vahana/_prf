@@ -5,8 +5,10 @@ import json
 
 log = logging.getLogger(__name__)
 
+
 def request_timing(handler, registry):
-    threshold = float(registry.settings.get('request_timing.slow_request_threshold', 2))
+    threshold = float(
+        registry.settings.get('request_timing.slow_request_threshold', 2))
     log.info('request_timing enabled: slow_request_threshold = %s' % threshold)
 
     def timing(request):
@@ -15,14 +17,16 @@ def request_timing(handler, registry):
         try:
             return handler(request)
         finally:
-            delta = time.time()-start
-            msg = '%s (%s) request took %s seconds' % (request.method, request.url, delta)
+            delta = time.time() - start
+            msg = '%s (%s) request took %s seconds' % (
+                request.method, request.url, delta)
             if delta > threshold:
                 log.warning(msg)
             else:
                 log.debug(msg)
 
     return timing
+
 
 def post_tunneling(handler, registry):
     """Allow other request methods to be tunneled via POST.
@@ -73,6 +77,7 @@ def post_tunneling(handler, registry):
 
     return post_tunneling
 
+
 def get_tunneling(handler, registry):
     """
     This allows all methods to be tunneled via GET for dev/debuging purposes.
@@ -94,10 +99,12 @@ def get_tunneling(handler, registry):
 
     return get_tunneling
 
+
 def cors(handler, registry):
     log.info('cors_tunneling enabled')
 
-    allow_origins = [each.strip() for each in registry.settings.get('cors.allow_origins', '').split(',')]
+    allow_origins = [each.strip() for each in registry.settings.get(
+        'cors.allow_origins', '').split(',')]
     allow_credentials = registry.settings.get('cors.allow_credentials', None)
 
     def cors(request):
@@ -108,7 +115,8 @@ def cors(handler, registry):
             response.headerlist.append(('Access-Control-Allow-Origin', origin))
 
         if allow_credentials is not None:
-            response.headerlist.append(('Access-Control-Allow-Credentials', allow_credentials))
+            response.headerlist.append(
+                ('Access-Control-Allow-Credentials', allow_credentials))
 
         return response
 
@@ -121,12 +129,14 @@ def cors(handler, registry):
         log.warning('cors.allow_credentials is not set')
 
     elif asbool(allow_credentials) and allow_origins == '*':
-        log.error('Not allowed Access-Control-Allow-Credentials to set to TRUE if origin is *')
+        log.error(
+            'Not allowed Access-Control-Allow-Credentials to set to TRUE if origin is *')
         return
     else:
         log.info('Access-Control-Allow-Credentials = %s ' % allow_credentials)
 
     return cors
+
 
 def cache_control(handler, registry):
     log.info('cache_control enabled')
@@ -134,7 +144,7 @@ def cache_control(handler, registry):
     def cache_control(request):
         response = handler(request)
 
-        #change only if the header cache-control is missing
+        # change only if the header cache-control is missing
         add_header = True
         for header in response.headerlist:
             if 'Cache-Control' in header:
@@ -145,6 +155,7 @@ def cache_control(handler, registry):
         return response
 
     return cache_control
+
 
 def ssl(handler, registry):
     log.info('ssl enabled')
@@ -163,6 +174,8 @@ def ssl(handler, registry):
     return ssl
 
 from pyramid.events import ContextFound
+
+
 def enable_selfalias(config, id_name):
     """
     This allows to replace id_name with "self".

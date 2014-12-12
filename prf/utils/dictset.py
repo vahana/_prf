@@ -4,7 +4,9 @@ from pyramid.settings import asbool
 
 from prf.utils.utils import process_fields, split_strip
 
+
 class dictset(dict):
+
     def copy(self):
         return dictset(super(dictset, self).copy())
 
@@ -12,16 +14,16 @@ class dictset(dict):
         only, exclude = process_fields(keys)
 
         if only and not exclude:
-            return dictset([[k,v] for k,v in self.items() if k in only])
+            return dictset([[k, v] for k, v in self.items() if k in only])
 
         if exclude:
-            return dictset([[k,v] for k,v in self.items() if k not in exclude])
+            return dictset([[k, v] for k, v in self.items() if k not in exclude])
 
         return dictset()
 
     def remove(self, keys):
         only, _ = process_fields(keys)
-        return dictset([[k,v] for k,v in self.items() if k not in only])
+        return dictset([[k, v] for k, v in self.items() if k not in only])
 
     def __getattr__(self, key):
         return self[key]
@@ -67,7 +69,7 @@ class dictset(dict):
         """
 
         if _type is None:
-            _type = lambda t:t
+            _type = lambda t: t
 
         dict_str = self.pop(name, None)
         if not dict_str:
@@ -107,7 +109,7 @@ class dictset(dict):
 
     def process_list_param(self, name, _type=None, default=None, pop=False, setdefault=None):
         if _type is None:
-            _type = lambda t:t
+            _type = lambda t: t
 
         _csv = self.get(name, '')
         if _csv and isinstance(_csv, basestring):
@@ -144,9 +146,11 @@ class dictset(dict):
     def process_datetime_param(self, name):
         if name in self:
             try:
-                self[name] = datetime.strptime(self[name], "%Y-%m-%dT%H:%M:%SZ")
+                self[name] = datetime.strptime(
+                    self[name], "%Y-%m-%dT%H:%M:%SZ")
             except ValueError:
-                raise ValueError("Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ" % name)
+                raise ValueError(
+                    "Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ" % name)
 
         return self.get(name, None)
 
@@ -174,8 +178,7 @@ class dictset(dict):
         return self.asdict(name, _type, _set=not pop)
 
     def pop_by_values(self, val):
-        for k,v in self.items():
+        for k, v in self.items():
             if v == val:
                 self.pop(k)
         return self
-

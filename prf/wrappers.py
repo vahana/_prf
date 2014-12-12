@@ -5,17 +5,21 @@ import logging
 
 log = logging.getLogger(__name__)
 
+
 class ValidationError(Exception):
     pass
+
 
 def issequence(arg):
     """Return True if `arg` acts as a list and does not look like a string."""
     return (not hasattr(arg, 'strip') and hasattr(arg, '__getitem__') or
-                                          hasattr(arg, '__iter__'))
+            hasattr(arg, '__iter__'))
 
 # Decorators
 
+
 class wrap_me(object):
+
     """Base class for decorators used to add before and after calls.
     The callables are appended to the ``before`` or ``after`` lists,
     which are in turn injected into the method object being decorated.
@@ -42,6 +46,7 @@ class wrap_me(object):
 
 
 class validator(wrap_me):
+
     """Decorator that validates the type and required fields in request params against the supplied kwargs
 
     ::
@@ -54,10 +59,11 @@ class validator(wrap_me):
 
     def __init__(self, **kwargs):
         wrap_me.__init__(self, before=[validate_types(**kwargs),
-                         validate_required(**kwargs)])
+                                       validate_required(**kwargs)])
 
 
 class callable_base(object):
+
     """Base class for all before and after calls.
     ``__eq__`` method is overloaded in order to prevent duplicate callables of the same type.
     For example, you could have a before call ``pager`` which is called in the base class and
@@ -75,15 +81,19 @@ class callable_base(object):
 # Before calls
 
 class validate_base(callable_base):
+
     """Base class for validation callables.
     """
 
     def __call__(self, **kwargs):
         self.request = kwargs['request']
         self.params = self.request.params.copy()
-        self.params.pop('_method', None)  # tunneling internal param, no need to check.
+        # tunneling internal param, no need to check.
+        self.params.pop('_method', None)
+
 
 class validate_types(validate_base):
+
     """
 
     Validates the field types in ``request.params`` match the types declared in ``kwargs``.
@@ -99,11 +109,14 @@ class validate_types(validate_base):
             _type = self.kwargs.get(name, {}).get('type')
             try:
                 if _type == datetime:
-                    value = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')  # must be in iso format
+                    # must be in iso format
+                    value = datetime.strptime(value, '%Y-%m-%dT%H:%M:%S')
                 elif _type == date:
-                    value = datetime.strptime(value, '%Y-%m-%d')  # must be in iso format
+                    # must be in iso format
+                    value = datetime.strptime(value, '%Y-%m-%d')
                 elif _type == None:
-                    log.debug('Incorrect or unsupported type for %s(%s)', name, value)
+                    log.debug(
+                        'Incorrect or unsupported type for %s(%s)', name, value)
                     continue
                 elif type(_type) is type:
                     _type(value)
@@ -111,9 +124,11 @@ class validate_types(validate_base):
                     raise ValueError
             except ValueError, e:
                 raise ValidationError('Bad type %s for %s=%s. Suppose to be %s'
-                                       % (type(value), name, value, _type))
+                                      % (type(value), name, value, _type))
+
 
 class validate_required(validate_base):
+
     """Validates that fields in ``request.params`` are present
     according to ``kwargs`` argument passed to ``__call__.
     Raises ValidationError in case of the mismatch
@@ -121,23 +136,25 @@ class validate_required(validate_base):
 
     def __call__(self, **kwargs):
         validate_base.__call__(self, **kwargs)
-        #get parent resources' ids from matchdict, so there is no need to pass in the request.params
+        # get parent resources' ids from matchdict, so there is no need to pass
+        # in the request.params
         self.params.update(self.request.matchdict)
 
         self.kwargs.pop('id', None)
 
         required_fields = set([n for n in self.kwargs.keys()
-                              if self.kwargs[n].get('required', False)])
+                               if self.kwargs[n].get('required', False)])
 
         if not required_fields.issubset(set(self.params.keys())):
             raise ValidationError('Required fields: %s. Received: %s'
                                   % (list(required_fields),
-                                  self.params.keys()))
+                                     self.params.keys()))
 
 
 # After calls.
 
 class obj2dict(object):
+
     def __init__(self, request):
         self.request = request
 
@@ -156,14 +173,17 @@ class obj2dict(object):
             return result.to_dict(_keys=_fields, request=self.request)
 
         elif issequence(result):
-            #make sure its mutable, i.e list
+            # make sure its mutable, i.e list
             result = list(result)
             for ix, each in enumerate(result):
-                result[ix] = obj2dict(self.request)(_fields=_fields, result=each)
+                result[ix] = obj2dict(self.request)(
+                    _fields=_fields, result=each)
 
         return result
 
+
 class wrap_in_dict(object):
+
     def __init__(self, request):
         self.request = request
 
@@ -186,7 +206,9 @@ class wrap_in_dict(object):
 
         return result
 
+
 class add_meta(object):
+
     def __init__(self, request):
         self.request = request
 
@@ -197,9 +219,10 @@ class add_meta(object):
             result['count'] = len(result["data"])
             for each in result['data']:
                 try:
-                    url = urlparse(self.request.current_route_url())._replace(query='')
+                    url = urlparse(
+                        self.request.current_route_url())._replace(query='')
                     each.setdefault('self', '%s/%s' % (url.geturl(),
-                                                        urllib.quote(str(each['id']))))
+                                                       urllib.quote(str(each['id']))))
                 except TypeError:
                     pass
         except (TypeError, KeyError):
@@ -207,7 +230,9 @@ class add_meta(object):
         finally:
             return result
 
+
 class add_confirmation_url(object):
+
     def __init__(self, request):
         self.request = request
 
@@ -216,6 +241,6 @@ class add_confirmation_url(object):
         q_or_a = '&' if self.request.params else '?'
 
         return dict(
-                method = self.request.method,
-                count=len(result),
-                confirmation_url = self.request.url+'%s__confirmation&_m=%s' % (q_or_a, self.request.method))
+            method=self.request.method,
+            count=len(result),
+            confirmation_url=self.request.url + '%s__confirmation&_m=%s' % (q_or_a, self.request.method))

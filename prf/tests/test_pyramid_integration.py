@@ -1,6 +1,7 @@
 import unittest
 import mock
 
+
 class TestPyramidIntegration(unittest.TestCase):
 
     def test_includeme(self):

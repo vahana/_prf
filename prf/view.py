@@ -12,16 +12,19 @@ from prf import wrappers
 
 log = logging.getLogger(__name__)
 
-ACTIONS = ['index', 'show', 'create', 'update', 'delete', 'update_many', 'delete_many']
+ACTIONS = ['index', 'show', 'create', 'update',
+           'delete', 'update_many', 'delete_many']
+
 
 class ViewMapper(object):
+
     "mapper class for BaseView"
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
     def __call__(self, view):
-        #i.e index, create etc.
+        # i.e index, create etc.
         action_name = self.kwargs['attr']
 
         def view_mapper_wrapper(context, request):
@@ -29,7 +32,7 @@ class ViewMapper(object):
             matchdict.pop('action', None)
             matchdict.pop('traverse', None)
 
-            #instance of BaseView (or child of)
+            # instance of BaseView (or child of)
             view_obj = view(context, request)
             action = getattr(view_obj, action_name)
             request.action = action_name
@@ -61,6 +64,7 @@ class ViewMapper(object):
 
 
 class BaseView(object):
+
     """Base class for prf views.
     """
     __view_mapper__ = ViewMapper
@@ -79,8 +83,7 @@ class BaseView(object):
                     self._params.update(request.json)
                 except ValueError as e:
                     log.error("Excpeting JSON. Received: '%s'. Request: %s %s",
-                                        request.body, request.method, request.url)
-
+                              request.body, request.method, request.url)
 
         # dict of the callables {action_name:[callable1, callable2..]}
         # before calls are executed before the action is called
@@ -145,11 +148,13 @@ class BaseView(object):
         else:
             callkind[action].insert(pos, _callable)
 
-    add_before_call = lambda self, *a, **k: self.add_before_or_after_call(*a, before=True, **k)
-    add_after_call = lambda self, *a, **k: self.add_before_or_after_call(*a, before=False, **k)
+    add_before_call = lambda self, * \
+        a, **k: self.add_before_or_after_call(*a, before=True, **k)
+    add_after_call = lambda self, * \
+        a, **k: self.add_before_or_after_call(*a, before=False, **k)
 
     def subrequest(self, url, params={}, method='GET'):
-        req =  Request.blank(url, cookies=self.request.cookies,
+        req = Request.blank(url, cookies=self.request.cookies,
                             content_type='application/json',
                             method=method)
 
@@ -167,7 +172,7 @@ class BaseView(object):
     def delete_many(self, **kw):
         if not self._model_class:
             log.error("%s _model_class in invalid: %s",
-                    self.__class__.__name__, self._model_class)
+                      self.__class__.__name__, self._model_class)
             raise JHTTPBadRequest
 
         objs = self._model_class.get_collection(**self._params)
@@ -178,7 +183,7 @@ class BaseView(object):
         count = len(objs)
         objs.delete()
         return JHTTPOk("Deleted %s %s objects" %
-                            (count, self._model_class.__name__))
+                       (count, self._model_class.__name__))
 
     def id2obj(self, name, model, id_field=None, setdefault=None):
         if name in self._params:
@@ -191,20 +196,22 @@ class BaseView(object):
                 self._params[name] = obj or setdefault
             else:
                 if not obj:
-                    raise JHTTPBadRequest('id2obj: Object %s not found' % self._params[name])
+                    raise JHTTPBadRequest(
+                        'id2obj: Object %s not found' % self._params[name])
                 self._params[name] = obj
 
+
 class NoOp(BaseView):
+
     """Use this class as a stub if you want to layout all your resources before
     implementing actual views.
     """
 
     def index(self, **kw):
         return [
-            dict(route = self.request.matched_route.name,
-                kw = kw,
-                params = self._params)]
+            dict(route=self.request.matched_route.name,
+                 kw=kw,
+                 params=self._params)]
 
     def show(self, **kw):
         return kw
-

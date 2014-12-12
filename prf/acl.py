@@ -1,5 +1,6 @@
 from pyramid.security import (ALL_PERMISSIONS, Allow)
 
+
 class BaseACL(object):
     __context_class__ = None
 
@@ -24,7 +25,7 @@ class BaseACL(object):
         assert(self.__context_class__)
 
         id_field = self.__context_class__._meta['id_field']
-        obj = self.__context_class__.get(**{id_field:key})
+        obj = self.__context_class__.get(**{id_field: key})
         obj.__acl__ = self.context_acl(obj)
         obj.__parent__ = self
         obj.__name__ = key

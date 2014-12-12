@@ -9,10 +9,12 @@ from prf.utils import get_document_cls, to_dicts, dictset
 
 log = logging.getLogger(__name__)
 
+
 @view_config(name='options_view', request_method='OPTIONS', route_name='options')
 class OptionsView(object):
 
-    all_methods = set(['GET', 'HEAD', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH', 'TRACE'])
+    all_methods = set(
+        ['GET', 'HEAD', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH', 'TRACE'])
 
     def __init__(self, request):
         self.request = request
@@ -23,14 +25,18 @@ class OptionsView(object):
         request.response.headers['Allow'] = ', '.join(self.all_methods)
 
         if 'Access-Control-Request-Method' in request.headers:
-            request.response.headers['Access-Control-Allow-Methods'] = ', '.join(self.all_methods)
+            request.response.headers[
+                'Access-Control-Allow-Methods'] = ', '.join(self.all_methods)
 
         if 'Access-Control-Request-Headers' in request.headers:
-            request.response.headers['Access-Control-Allow-Headers'] = 'origin, x-requested-with, content-type'
+            request.response.headers[
+                'Access-Control-Allow-Headers'] = 'origin, x-requested-with, content-type'
 
         return request.response
 
+
 class MongoView(BaseView):
+
     def __init__(self, context, request):
         super(MongoView, self).__init__(context, request)
         self._params.process_int_param('_limit', 20)
@@ -41,14 +47,16 @@ class MongoView(BaseView):
 
             try:
                 for each in result['data']:
-                    each['self'] = "%s?id=%s" % (request.current_route_url(), each['id'])
+                    each['self'] = "%s?id=%s" % (
+                        request.current_route_url(), each['id'])
             except KeyError:
                 pass
 
             return result
 
         self.add_after_call('show', add_self)
-        self.add_after_call('show', wrappers.wrap_in_dict(self.request), pos=0) #wrap in a dict so it acts as "index"
+        # wrap in a dict so it acts as "index"
+        self.add_after_call('show', wrappers.wrap_in_dict(self.request), pos=0)
 
     def index(self):
         return 'Implement index action to return list of models'
@@ -70,15 +78,17 @@ class MongoView(BaseView):
 
 
 LOGNAME_MAP = dict(
-    NOTSET = logging.NOTSET,
-    DEBUG = logging.DEBUG,
-    INFO = logging.INFO,
-    WARNING = logging.WARNING,
-    ERROR = logging.ERROR,
-    CRITICAL = logging.CRITICAL,
+    NOTSET=logging.NOTSET,
+    DEBUG=logging.DEBUG,
+    INFO=logging.INFO,
+    WARNING=logging.WARNING,
+    ERROR=logging.ERROR,
+    CRITICAL=logging.CRITICAL,
 )
 
+
 class LogLevelsView(BaseView):
+
     def __init__(self, *arg, **kw):
         super(LogLevelsView, self).__init__(*arg, **kw)
 
@@ -94,8 +104,8 @@ class LogLevelsView(BaseView):
 
     def show(self, id=None):
         return dict(
-            logger = self.name,
-            level = logging.getLevelName(self.log.getEffectiveLevel())
+            logger=self.name,
+            level=logging.getLevelName(self.log.getEffectiveLevel())
         )
 
     def update(self, id=None):
@@ -107,15 +117,16 @@ class LogLevelsView(BaseView):
         self.setlevel('INFO')
         return JHTTPOk()
 
+
 class SettingsView(BaseView):
     settings = None
     __orig = None
+
     def __init__(self, *arg, **kw):
         super(SettingsView, self).__init__(*arg, **kw)
 
-
         SettingsView.settings = (SettingsView.settings or
-                dictset(self.request.registry.settings))
+                                 dictset(self.request.registry.settings))
         self.__orig = self.settings.copy()
 
     def index(self):
@@ -152,6 +163,7 @@ class SettingsView(BaseView):
             self.settings[name] = self.__orig[name]
 
         return JHTTPOk("Reset the settings to original values")
+
 
 class AccountView(object):
 

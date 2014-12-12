@@ -8,8 +8,10 @@ from pyramid.url import route_path
 
 from prf.view import BaseView
 
+
 def get_test_view_class(name=''):
     class View(BaseView):
+
         def __init__(self, *a, **k):
             BaseView.__init__(self, *a, **k)
             # turning off before and after calls
@@ -30,6 +32,7 @@ def get_test_view_class(name=''):
 
     return View
 
+
 def _create_config():
     config = Configurator(autocommit=True)
     config.include('prf')
@@ -37,6 +40,7 @@ def _create_config():
 
 
 class Test(unittest.TestCase):
+
     def setUp(self):
         self.config = _create_config()
         self.config.begin()
@@ -47,12 +51,16 @@ class Test(unittest.TestCase):
 
 
 class DummyCrudView(object):
+
     def __init__(self, request):
         self.request = request
+
     def index(self, **a):
         return 'index'
+
     def show(self, **a):
         return 'show'
+
     def delete(self, **a):
         return 'delete'
 
@@ -61,6 +69,7 @@ class DummyCrudView(object):
 
 
 class TestResourceGeneration(Test):
+
     def test_basic_resources(self):
         from prf.resource import add_resource
         add_resource(self.config, DummyCrudView, 'message', 'messages')
@@ -68,19 +77,19 @@ class TestResourceGeneration(Test):
         self.assertEqual(
             '/messages',
             route_path('messages', testing.DummyRequest())
-            )
+        )
         self.assertEqual(
             '/messages/new',
             route_path('new_message', testing.DummyRequest())
-            )
+        )
         self.assertEqual(
             '/messages/1',
             route_path('message', testing.DummyRequest(), id=1)
-            )
+        )
         self.assertEqual(
             '/messages/1/edit',
             route_path('edit_message', testing.DummyRequest(), id=1)
-            )
+        )
 
     def test_resources_with_path_prefix(self):
         from prf.resource import add_resource
@@ -91,28 +100,28 @@ class TestResourceGeneration(Test):
             'message',
             'messages',
             path_prefix='/category/:category_id'
-            )
+        )
 
         self.assertEqual(
             '/category/2/messages',
             route_path('messages', testing.DummyRequest(), category_id=2)
-            )
+        )
         self.assertEqual(
             '/category/2/messages/new',
             route_path('new_message', testing.DummyRequest(), category_id=2)
-            )
+        )
         self.assertEqual(
             '/category/2/messages/1',
             route_path('message', testing.DummyRequest(), id=1, category_id=2)
-            )
+        )
         self.assertEqual(
             '/category/2/messages/1/edit',
             route_path(
                 'edit_message',
                 testing.DummyRequest(),
                 id=1, category_id=2
-                )
             )
+        )
 
     def test_resources_with_path_prefix_with_trailing_slash(self):
         from prf.resource import add_resource
@@ -122,24 +131,25 @@ class TestResourceGeneration(Test):
             'message',
             'messages',
             path_prefix='/category/:category_id/'
-            )
+        )
 
         self.assertEqual(
             '/category/2/messages',
             route_path('messages', testing.DummyRequest(), category_id=2)
-            )
+        )
         self.assertEqual(
             '/category/2/messages/new',
             route_path('new_message', testing.DummyRequest(), category_id=2)
-            )
+        )
         self.assertEqual(
             '/category/2/messages/1',
             route_path('message', testing.DummyRequest(), id=1, category_id=2)
-            )
+        )
         self.assertEqual(
             '/category/2/messages/1/edit',
-            route_path('edit_message', testing.DummyRequest(), id=1, category_id=2)
-            )
+            route_path(
+                'edit_message', testing.DummyRequest(), id=1, category_id=2)
+        )
 
     def test_resources_with_name_prefix(self):
         from prf.resource import add_resource
@@ -149,15 +159,16 @@ class TestResourceGeneration(Test):
             'message',
             'messages',
             name_prefix="special_"
-            )
+        )
 
         self.assertEqual(
             '/messages/1',
             route_path('special_message', testing.DummyRequest(), id=1)
-            )
+        )
 
 
 class TestResourceRecognition(Test):
+
     def setUp(self):
         from prf.resource import add_resource
         self.config = _create_config()
@@ -167,13 +178,13 @@ class TestResourceRecognition(Test):
             'message',
             'messages',
             renderer='string'
-            )
+        )
         self.config.begin()
         self.app = TestApp(self.config.make_wsgi_app())
         self.collection_path = '/messages'
         self.collection_name = 'messages'
-        self.member_path     = '/messages/:id'
-        self.member_name     = 'message'
+        self.member_path = '/messages/:id'
+        self.member_name = 'message'
 
     def test_get_collection(self):
         self.assertEqual(self.app.get('/messages').body, 'index')
@@ -186,7 +197,7 @@ class TestResourceRecognition(Test):
             'message',
             'messages',
             renderer='json'
-            )
+        )
         self.assertEqual(self.app.get('/messages').body, '"index"')
 
     def test_get_collection_prf_json(self):
@@ -197,7 +208,7 @@ class TestResourceRecognition(Test):
             'message',
             'messages',
             renderer='prf_json'
-            )
+        )
         self.assertEqual(self.app.get('/messages').body, '"index"')
 
     def test_get_collection_no_renderer(self):
@@ -239,19 +250,19 @@ class TestResource(Test):
             self.config,
             member_name='group_member',
             collection_name='group_members'
-            )
+        )
 
         self.assertEqual(
             "prf.tests.unittests.views.group_members:GroupMembersView",
             default_view(m)
-            )
+        )
 
-        #singular
+        # singular
         m = Resource(self.config, member_name='group_member')
         self.assertEqual(
             "prf.tests.unittests.views.group_member:GroupMemberView",
             default_view(m)
-            )
+        )
 
     def test_singular_resource(self, *a):
         View = get_test_view_class()
@@ -268,64 +279,69 @@ class TestResource(Test):
         self.assertEqual(
             '/grandpas/1/wife',
             route_path('grandpa_wife', testing.DummyRequest(), grandpa_id=1)
-            )
+        )
 
         self.assertEqual(
             '/grandpas/1/wife/new',
-            route_path('grandpa_new_wife', testing.DummyRequest(), grandpa_id=1)
-            )
+            route_path(
+                'grandpa_new_wife', testing.DummyRequest(), grandpa_id=1)
+        )
 
         self.assertEqual(
             '/grandpas/1/wife/edit',
-            route_path('grandpa_edit_wife', testing.DummyRequest(), grandpa_id=1)
-            )
+            route_path(
+                'grandpa_edit_wife', testing.DummyRequest(), grandpa_id=1)
+        )
 
         self.assertEqual(
             '/grandpas/1/wife/children/2',
-            route_path('grandpa_wife_child', testing.DummyRequest(), grandpa_id=1, id=2)
-            )
+            route_path(
+                'grandpa_wife_child', testing.DummyRequest(), grandpa_id=1, id=2)
+        )
 
         self.assertEqual(
             '/grandpas/1/wife/children/new',
-            route_path('grandpa_wife_new_child', testing.DummyRequest(), grandpa_id=1, id=2)
-            )
+            route_path(
+                'grandpa_wife_new_child', testing.DummyRequest(), grandpa_id=1, id=2)
+        )
 
         self.assertEqual(
             app.put('/grandpas/1').body,
             app.post('/grandpas/1', params=dict(_method='put')).body
-            )
+        )
 
         self.assertEqual(
             app.delete('/grandpas/1').body,
             app.post('/grandpas/1', params=dict(_method='delete')).body
-            )
+        )
 
         self.assertEqual(
             app.put('/thing').body,
             app.post('/thing', params=dict(_method='put')).body
-            )
+        )
 
         self.assertEqual(
             app.delete('/thing').body,
             app.post('/thing', params=dict(_method='delete')).body
-            )
+        )
 
         self.assertEqual(
             app.put('/grandpas/1/wife').body,
             app.post('/grandpas/1/wife', params=dict(_method='put')).body
-            )
+        )
 
         self.assertEqual(
             app.delete('/grandpas/1/wife').body,
             app.post('/grandpas/1/wife', params=dict(_method='delete')).body
-            )
+        )
 
         self.assertEqual('"show"', app.get('/grandpas/1').body)
         self.assertEqual("show", app.get('/grandpas/1/wife').body)
         self.assertEqual('"show"', app.get('/grandpas/1/wife/children/1').body)
 
     def test_renderer_override(self, *args):
-        # resource.renderer and view._default_renderer are only used when accept header is missing.
+        # resource.renderer and view._default_renderer are only used when
+        # accept header is missing.
 
         View = get_test_view_class()
         config = _create_config()
@@ -333,45 +349,46 @@ class TestResource(Test):
 
         r.add('thing', 'things', renderer='string', view=View)
         r.add('2thing', '2things', renderer='json', view=View)
-        r.add('3thing', '3things', view=View) #defaults to prf_json
+        r.add('3thing', '3things', view=View)  # defaults to prf_json
 
         config.begin()
         app = TestApp(config.make_wsgi_app())
 
-        #no headers, user renderer==string.returns string
+        # no headers, user renderer==string.returns string
         self.assertEqual("index", app.get('/things').body)
 
-        #header is sting, renderer is string. returns string
+        # header is sting, renderer is string. returns string
         self.assertEqual('index', app.get('/things',
-                headers={'ACCEPT':'text/plain'}).body)
+                                          headers={'ACCEPT': 'text/plain'}).body)
 
-        #header is json, renderer is string. returns json
+        # header is json, renderer is string. returns json
         self.assertEqual('"index"', app.get('/things',
-                headers={'ACCEPT':'application/json'}).body)
+                                            headers={'ACCEPT': 'application/json'}).body)
 
-        #no header. returns json
+        # no header. returns json
         self.assertEqual('"index"', app.get('/2things').body)
 
-        #header==json, renderer==json, returns json
+        # header==json, renderer==json, returns json
         self.assertEqual('"index"', app.get('/2things',
-                headers={'ACCEPT':'application/json'}).body)
+                                            headers={'ACCEPT': 'application/json'}).body)
 
-        #header==text, renderer==json, returns string
+        # header==text, renderer==json, returns string
         self.assertEqual("index", app.get('/2things',
-                headers={'ACCEPT':'text/plain'}).body)
+                                          headers={'ACCEPT': 'text/plain'}).body)
 
-        #no header, no renderer. uses default_renderer, returns View._default_renderer==prf_json
+        # no header, no renderer. uses default_renderer, returns
+        # View._default_renderer==prf_json
         self.assertEqual('"index"', app.get('/3things').body)
 
         self.assertEqual('"index"', app.get('/3things',
-                headers={'ACCEPT':'application/json'}).body)
+                                            headers={'ACCEPT': 'application/json'}).body)
 
         self.assertEqual('index', app.get('/3things',
-            headers={'ACCEPT':'text/plain'}).body)
+                                          headers={'ACCEPT': 'text/plain'}).body)
 
-        #bad accept.defaults to json
+        # bad accept.defaults to json
         self.assertEqual('"index"', app.get('/3things',
-            headers={'ACCEPT':'text/blablabla'}).body)
+                                            headers={'ACCEPT': 'text/blablabla'}).body)
 
     def test_nonBaseView_default_renderer(self, *a):
         config = _create_config()
@@ -398,6 +415,8 @@ class TestResource(Test):
         app.get('/as/1/bs/2/cs/3/ds/4')
 
 # @mock.patch('prf.resource.add_tunneling')
+
+
 class TestMockedResource(Test):
 
     def test_get_root_resource(self, *args):
@@ -408,7 +427,6 @@ class TestMockedResource(Test):
         self.assertIsInstance(root, Resource)
         self.assertIsInstance(w, Resource)
         self.assertEqual(root, self.config.get_root_resource())
-
 
     def test_resource_repr(self, *args):
         r = self.config.get_root_resource()
@@ -462,7 +480,7 @@ class TestMockedResource(Test):
             'grandpa',
             'grandpas',
             renderer=View._default_renderer
-            )
+        )
 
         pr = g.add('parent', 'parents')
 
@@ -474,8 +492,7 @@ class TestMockedResource(Test):
             path_prefix='grandpas/:grandpa_id',
             name_prefix='grandpa_',
             renderer=View._default_renderer
-            )
-
+        )
 
         ch = pr.add('child', 'children')
 
@@ -487,7 +504,7 @@ class TestMockedResource(Test):
             path_prefix='grandpas/:grandpa_id/parents/:parent_id',
             name_prefix='grandpa_parent_',
             renderer=View._default_renderer
-            )
+        )
 
         self.assertEqual(ch.uid, 'grandpa_parent_child')
 
@@ -511,7 +528,7 @@ class TestMockedResource(Test):
             path_prefix='grandpas/:grandpa_id',
             name_prefix='grandpa_',
             renderer=View._default_renderer
-            )
+        )
 
         gm = m.add('grandma', 'grandmas')
 
@@ -524,8 +541,7 @@ class TestMockedResource(Test):
             path_prefix='grandmas/:grandma_id',
             name_prefix='grandma_',
             renderer=View._default_renderer
-            )
-
+        )
 
         pa.add('child', 'children', parent='grandpa_parent')
         m_add_resource.assert_called_with(
@@ -536,7 +552,7 @@ class TestMockedResource(Test):
             path_prefix='grandpas/:grandpa_id/parents/:parent_id',
             name_prefix='grandpa_parent_',
             renderer=View._default_renderer
-            )
+        )
 
     @mock.patch('prf.resource.add_resource')
     def test_add_resources_from(self, *arg):
@@ -549,17 +565,17 @@ class TestMockedResource(Test):
 
         self.assertEqual(len(root.resource_map), 5)
 
-        gp=root.add('grandpa', 'grandpas')
+        gp = root.add('grandpa', 'grandpas')
         gp.add_from(pa)
 
         self.assertEqual(
             pa.children[0],
             root.resource_map['grandma_parent_boy']
-            )
+        )
         self.assertEqual(
             gp.children[0].children[1],
             root.resource_map['grandpa_parent_girl']
-            )
+        )
         self.assertEqual(len(root.resource_map), 10)
 
         # make sure these are not same objects but copies.
@@ -569,13 +585,14 @@ class TestMockedResource(Test):
         from prf.view import BaseView
         root = self.config.get_root_resource()
 
-        class H1(BaseView):pass
+        class H1(BaseView):
+            pass
         r = root.add(
             'thing1',
             'things1',
             view=H1,
             exclude=['index', 'delete']
-            )
+        )
         self.assertEqual(set('show update create edit new'.split()), r.actions)
 
         r = root.add(
@@ -583,7 +600,7 @@ class TestMockedResource(Test):
             'a_things',
             view=BaseView,
             include=['blabla', 'show']
-            )
+        )
         self.assertEqual(set(['show']), r.actions)
 
         r = root.add(
@@ -592,7 +609,7 @@ class TestMockedResource(Test):
             view=BaseView,
             exclude=['index', 'show', 'delete'],
             include=['index']
-            )
+        )
         self.assertEqual(set(['index']), r.actions)
 
     def test_exclude_action_exceptions(self, *args):
@@ -601,6 +618,7 @@ class TestMockedResource(Test):
         from prf.resource import includeme
 
         class UsersView(BaseView):
+
             def __init__(self, context, request):
                 BaseView.__init__(self, context, request)
 
