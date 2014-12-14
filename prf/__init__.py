@@ -75,7 +75,7 @@ def includeme(config):
 
     config.add_request_method(get_resource_map, 'resource_map', reify=True)
 
-    config.add_tween('prf.tweens.post_tunneling')
+    config.add_tween('prf.tweens.GET_tunneling')
     config.add_tween('prf.tweens.cache_control')
 
     config.add_route('options', '/*path', request_method='OPTIONS')

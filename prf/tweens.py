@@ -29,7 +29,7 @@ def request_timing(handler, registry):
     return timing
 
 
-def post_tunneling(handler, registry):
+def POST_tunneling(handler, registry):
     """Allow other request methods to be tunneled via POST.
 
     This allows PUT, PATCH and DELETE requests to be tunneled via POST requests.
@@ -48,7 +48,7 @@ def post_tunneling(handler, registry):
     the request, and the application will never see them.
 
     """
-    log.info('post_tunneling enabled')
+    log.info('POST_tunneling enabled')
 
     param_name = '_method'
     header_name = 'X-HTTP-Method-Override'
@@ -56,7 +56,7 @@ def post_tunneling(handler, registry):
     disallowed_message = \
         'Only these methods may be tunneled over POST: {0}.'.format(sorted(list(allowed_methods)))
 
-    def post_tunneling(request):
+    def POST_tunneling(request):
         if request.method == 'POST':
             method = ''
 
@@ -75,17 +75,17 @@ def post_tunneling(handler, registry):
 
         return handler(request)
 
-    return post_tunneling
+    return POST_tunneling
 
 
-def get_tunneling(handler, registry):
+def GET_tunneling(handler, registry):
     """
     This allows all methods to be tunneled via GET for dev/debuging purposes.
     """
 
-    log.info('get_tunneling enabled')
+    log.info('GET_tunneling enabled')
 
-    def get_tunneling(request):
+    def GET_tunneling(request):
         if request.method == 'GET':
             method = request.GET.pop('_m', 'GET')
             request.method = method
@@ -97,7 +97,7 @@ def get_tunneling(handler, registry):
 
         return handler(request)
 
-    return get_tunneling
+    return GET_tunneling
 
 
 def cors(handler, registry):

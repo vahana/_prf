@@ -222,9 +222,7 @@ class BaseMixin(object):
         _data = dictset([attr, getattr(self, attr, None)] for attr in
                         self._data)
         _data['_type'] = self._type
-
         _data.update(kw.pop('override', {}))
-
         return DataProxy(_data).to_dict(**kw)
 
     @classmethod

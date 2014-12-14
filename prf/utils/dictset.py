@@ -43,7 +43,9 @@ class dictset(dict):
         return val
 
     def aslist(self, name, remove_empty=True, default=[], _set=False):
-        _lst = split_strip(self.get(name, default) or default)
+        attr = self.get(name, default) or default
+        _lst = (attr if isinstance(attr, list) else attr.split(','))
+
         if remove_empty:
             _lst = filter(bool, _lst)
 
