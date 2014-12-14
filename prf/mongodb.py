@@ -240,8 +240,11 @@ class BaseMixin(object):
 
         return self.save(**kw)
 
+    def repr_parts(self):
+        return []
+
     def __repr__(self):
-        parts = ['%s:' % self.__class__.__name__]
+        parts = []
 
         if hasattr(self, 'id'):
             parts.append('id=%s' % self.id)
@@ -249,7 +252,9 @@ class BaseMixin(object):
         if hasattr(self, '_version'):
             parts.append('v=%s' % self._version)
 
-        return '<%s>' % ', '.join(parts)
+        parts.extend(self.repr_parts())
+
+        return '<%s: %s>' % (self.__class__.__name__, ', '.join(parts))
 
     def update_iterables(self, params, attr, unique=False, value_type=None):
         is_dict = isinstance(type(self)._fields[attr], mongo.DictField)
