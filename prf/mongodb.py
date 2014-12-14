@@ -4,8 +4,8 @@ from bson import ObjectId, DBRef
 import mongoengine as mongo
 
 from prf.json_httpexceptions import *
-from prf.utils import (process_fields, process_limit, _split, dictset,
-                       DataProxy, to_dicts, dict2obj)
+from prf.utils import process_fields, process_limit, _split, dictset, \
+    DataProxy, to_dicts, dict2obj
 from prf.utils.dictset import asbool
 
 from prf.renderers import _JSONEncoder
@@ -69,8 +69,8 @@ def apply_fields(query_set, _fields):
 
         if fields_exclude:
             query_set = query_set.exclude(*fields_exclude)
+    except mongo.InvalidQueryError, e:
 
-    except mongo.InvalidQueryError as e:
         raise JHTTPBadRequest('Bad _fields param: %s ' % e)
 
     return query_set
@@ -84,7 +84,7 @@ def apply_sort(query_set, _sort):
 
 class BaseMixin(object):
 
-    "Represents mixin class for models"
+    '''Represents mixin class for models'''
 
     _auth_fields = None
     _public_fields = None
@@ -102,8 +102,8 @@ class BaseMixin(object):
         fields = [f.split('__')[0] for f in fields]
         if not set(fields).issubset(set(cls.fields_to_query())):
             not_allowed = set(fields) - set(cls.fields_to_query())
-            raise JHTTPBadRequest(
-                "'%s' object does not have fields: %s" % (cls.__name__, ', '.join(not_allowed)))
+            raise JHTTPBadRequest("'%s' object does not have fields: %s"
+                                  % (cls.__name__, ', '.join(not_allowed)))
 
     @classmethod
     def filter_fields(cls, params):
@@ -121,6 +121,8 @@ class BaseMixin(object):
         returns paginated and sorted query set
         raises JHTTPBadRequest for bad values in params
         """
+        params = dictset(params)
+
         __confirmation = '__confirmation' in params
         params.pop('__confirmation', False)
         __strict = params.pop('__strict', True)
@@ -139,13 +141,8 @@ class BaseMixin(object):
 
         query_set = cls.objects
 
-        # remove any __ legacy instructions from this point on
-        params = dictset(
-            filter(lambda item: not item[0].startswith('__'), params.items()))
-
         if __strict:
-            _check_fields = [f.strip('-+')
-                             for f in params.keys() + _fields + _sort]
+            _check_fields = [f.strip('-+') for f in params.keys() + _sort]
             cls.check_fields_allowed(_check_fields)
         else:
             params = cls.filter_fields(params)
@@ -169,7 +166,8 @@ class BaseMixin(object):
 
             # filtering by fields has to be the first thing to do on the
             # query_set!
-            query_set = apply_fields(query_set, _fields)
+            # query_set = apply_fields(query_set, _fields)
+
             query_set = apply_sort(query_set, _sort)
             query_set = query_set[_start:_start + _limit]
 
@@ -179,27 +177,31 @@ class BaseMixin(object):
                     raise JHTTPNotFound(msg)
                 else:
                     log.debug(msg)
+        except (mongo.ValidationError, mongo.InvalidQueryError), e:
 
-        except (mongo.ValidationError, mongo.InvalidQueryError) as e:
             raise JHTTPBadRequest(str(e), extra={'data': e})
 
         if _explain:
             return query_set.explain()
 
-        log.debug(
-            'get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
+        log.debug('get_collection.query_set: %s(%s)', cls.__name__,
+                  query_set._query)
 
-        query_set._prf_meta = dict(
-            total=_total,
-            start=_start,
-            fields=_fields)
+        query_set._prf_meta = dict(total=_total, start=_start, fields=_fields)
 
         return query_set
 
     @classmethod
     def fields_to_query(cls):
-        return ['id', '_limit', '_page', '_sort', '_fields', '_count', '_start'] \
-            + cls._fields.keys()  # + cls._meta.get('indexes', [])
+        return [
+            'id',
+            '_limit',
+            '_page',
+            '_sort',
+            '_fields',
+            '_count',
+            '_start',
+            ] + cls._fields.keys()  # + cls._meta.get('indexes', [])
 
     @classmethod
     def get_resource(cls, **params):
@@ -209,16 +211,21 @@ class BaseMixin(object):
 
     @classmethod
     def get(cls, **kw):
-        return cls.get_resource(__raise_on_empty=kw.pop('__raise', False), **kw)
+        return cls.get_resource(__raise_on_empty=kw.pop('__raise', False),
+                                **kw)
 
     def unique_fields(self):
-        return [e['fields'][0][0] for e in self._unique_with_indexes()] + [self._meta['id_field']]
+        return [e['fields'][0][0] for e in self._unique_with_indexes()] \
+            + [self._meta['id_field']]
 
-    def to_dict(self, **kwargs):
-        _data = dict([attr, getattr(self, attr, None)] for attr in self._data)
-        _dict = DataProxy(_data).to_dict(**kwargs)
-        _dict['_type'] = self._type
-        return _dict
+    def to_dict(self, request=None, **kw):
+        _data = dictset([attr, getattr(self, attr, None)] for attr in
+                        self._data)
+        _data['_type'] = self._type
+
+        _data.update(kw.pop('override', {}))
+
+        return DataProxy(_data).to_dict(**kw)
 
     @classmethod
     def get_or_create(cls, **params):
@@ -278,11 +285,11 @@ class BaseMixin(object):
         def update_dict():
             name = params.pop('name')
 
-            if name.startswith("-"):
+            if name.startswith('-'):
                 self[attr].pop(name[1:], None)
             else:
                 pos, neg = split_keys(params.keys())
-                vals = pos + ["-%s" % n for n in neg]
+                vals = pos + ['-%s' % n for n in neg]
                 if not vals:
                     raise JHTTPBadRequest('missing params')
 
@@ -296,7 +303,7 @@ class BaseMixin(object):
         def update_list():
             pos_keys, neg_keys = split_keys(params.keys())
 
-            if not (pos_keys + neg_keys):
+            if not pos_keys + neg_keys:
                 raise JHTTPBadRequest('missing params')
 
             if pos_keys:
@@ -310,8 +317,8 @@ class BaseMixin(object):
 
         if is_dict:
             update_dict()
-
         elif is_list:
+
             update_list()
 
     @classmethod
@@ -319,7 +326,8 @@ class BaseMixin(object):
         return cls.get_collection(id__in=ids, _limit=len(ids), **params)
 
     @classmethod
-    def expand_with(cls, with_cls, join_on=None, attr_name=None, params={}, with_params={}):
+    def expand_with(cls, with_cls, join_on=None, attr_name=None, params={},
+                    with_params={}):
         """
             acts like "join" and inserts the with_cls objects in the result as "attr_name".
         """
@@ -331,8 +339,8 @@ class BaseMixin(object):
 
         with_fields = with_params.pop('_fields', [])
 
-        with_objs = with_cls.get_by_ids(
-            cls.objects.scalar(join_on), **with_params)
+        with_objs = with_cls.get_by_ids(cls.objects.scalar(join_on),
+                **with_params)
         with_objs = dict([[str(wth.id), wth] for wth in with_objs])
 
         params['%s__in' % join_on] = with_objs.keys()
@@ -346,12 +354,11 @@ class BaseMixin(object):
 
 
 class BaseDocument(BaseMixin, mongo.Document):
+
     updated_at = mongo.DateTimeField()
     _version = mongo.IntField(default=0)
 
-    meta = {
-        'abstract': True,
-    }
+    meta = {'abstract': True}
 
     def save(self, *arg, **kw):
         if self._get_changed_fields():
@@ -360,26 +367,29 @@ class BaseDocument(BaseMixin, mongo.Document):
         try:
             super(BaseDocument, self).save(*arg, **kw)
             return self
-        except (mongo.NotUniqueError, mongo.OperationError) as e:
-            if e.__class__ is mongo.OperationError and 'E11000' not in e.message:
-                raise  # other error, not duplicate
+        except (mongo.NotUniqueError, mongo.OperationError), e:
+            if e.__class__ is mongo.OperationError and 'E11000' \
+                not in e.message:
+                raise   # other error, not duplicate
 
-            raise JHTTPConflict(detail='Resource `%s` already exists.' % self.__class__.__name__,
-                                extra={'data': e})
+            raise JHTTPConflict(detail='Resource `%s` already exists.'
+                                % self.__class__.__name__, extra={'data': e})
 
     def update(self, *arg, **kw):
         try:
             return super(BaseDocument, self).update(*arg, **kw)
-        except (mongo.NotUniqueError, mongo.OperationError) as e:
-            if e.__class__ is mongo.OperationError and 'E11000' not in e.message:
-                raise  # other error, not duplicate
+        except (mongo.NotUniqueError, mongo.OperationError), e:
+            if e.__class__ is mongo.OperationError and 'E11000' \
+                not in e.message:
+                raise   # other error, not duplicate
 
-            raise JHTTPConflict(detail='Resource `%s` already exists.' % self.__class__.__name__,
-                                extra={'data': e})
+            raise JHTTPConflict(detail='Resource `%s` already exists.'
+                                % self.__class__.__name__, extra={'data': e})
 
     def validate(self, *arg, **kw):
         try:
             return super(BaseDocument, self).validate(*arg, **kw)
-        except mongo.ValidationError as e:
-            raise JHTTPBadRequest(
-                "Resource '%s': %s" % (self.__class__.__name__, e), extra={'data': e})
+        except mongo.ValidationError, e:
+            raise JHTTPBadRequest("Resource '%s': %s"
+                                  % (self.__class__.__name__, e),
+                                  extra={'data': e})

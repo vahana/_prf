@@ -3,7 +3,7 @@ import logging
 import elasticsearch
 from bson import ObjectId, DBRef
 import mongoengine as mongo
-from prf.utils import (dictset, dict2obj, process_limit, split_strip, to_dicts)
+from prf.utils import dictset, dict2obj, process_limit, split_strip, to_dicts
 from prf.json_httpexceptions import *
 
 log = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ RESERVED = [
     '_count',
     '_sort',
     '_raw_terms',
-]
+    ]
 
 
 def on_pre_save(sender, document, **kw):
@@ -35,8 +35,8 @@ def on_delete(sender, document, **kw):
 
 def setup_es_signals_for(source_cls):
     mongo.signals.post_save.connect(on_post_save, sender=source_cls)
-    mongo.signals.pre_save_post_validation.connect(
-        on_pre_save, sender=source_cls)
+    mongo.signals.pre_save_post_validation.connect(on_pre_save,
+            sender=source_cls)
     mongo.signals.post_delete.connect(on_delete, sender=source_cls)
     log.info('setup_es_signals_for: %r' % source_cls)
 
@@ -52,7 +52,7 @@ class ESHttpConnection(elasticsearch.Urllib3HttpConnection):
                 log.debug(msg)
 
             return super(ESHttpConnection, self).perform_request(*args, **kw)
-        except Exception as e:
+        except Exception, e:
             raise exception_response(400, detail='ElasticSearch Error',
                                      extra=dict(data=e))
 
@@ -129,6 +129,7 @@ class _ESDocs(list):
 
 
 class ES(object):
+
     api = None
     settings = None
 
@@ -143,37 +144,38 @@ class ES(object):
         try:
             _hosts = ES.settings.hosts
             hosts = []
-            for (host, port) in [split_strip(each, ':') for each in split_strip(_hosts)]:
+            for host, port in [split_strip(each, ':') for each in
+                               split_strip(_hosts)]:
                 hosts.append(dict(host=host, port=port))
 
             params = {}
             if ES.settings.asbool('sniff'):
-                params = dict(
-                    sniff_on_start=True,
-                    sniff_on_connection_fail=True
-                )
+                params = dict(sniff_on_start=True,
+                              sniff_on_connection_fail=True)
 
-            ES.api = elasticsearch.Elasticsearch(hosts=hosts, serializer=MongoSerializer(),
-                                                 connection_class=ESHttpConnection, **params)
+            ES.api = elasticsearch.Elasticsearch(hosts=hosts,
+                    serializer=MongoSerializer(),
+                    connection_class=ESHttpConnection, **params)
             log.info('Including ElasticSearch. %s' % ES.settings)
+        except KeyError, e:
 
-        except KeyError as e:
-            raise Exception(
-                'Bad or missing settings for elasticsearch. %s' % e)
+            raise Exception('Bad or missing settings for elasticsearch. %s'
+                            % e)
 
     def __init__(self, source='', index_name=None):
         self.doc_type = self.src2type(source)
         self.index_name = index_name or ES.settings.index_name
 
     def prep_bulk_documents(self, action, documents):
-        if not (isinstance(documents, mongo.QuerySet) or isinstance(documents, list)):
+        if not (isinstance(documents, mongo.QuerySet) or isinstance(documents,
+                list)):
             documents = [documents]
 
         _docs = []
         for doc in documents:
             if not isinstance(doc, dict):
-                raise ValueError(
-                    'document type must be `dict` not a %s' % (type(doc)))
+                raise ValueError('document type must be `dict` not a %s'
+                                 % type(doc))
 
             if '_type' in doc:
                 _doc_type = self.src2type(doc['_type'])
@@ -184,9 +186,8 @@ class ES(object):
                 'action': action,
                 '_index': self.index_name,
                 '_type': _doc_type,
-                '_id': doc['id']
-            }
-            }
+                '_id': doc['id'],
+                }}
 
             _docs.append([meta, doc])
 
@@ -221,8 +222,8 @@ class ES(object):
         if not isinstance(ids, list):
             ids = [ids]
 
-        self._bulk(
-            'delete', [{'id': _id, '_type': self.doc_type} for _id in ids])
+        self._bulk('delete', [{'id': _id, '_type': self.doc_type} for _id in
+                   ids])
 
     def get_by_ids(self, ids, **params):
         if not ids:
@@ -238,17 +239,10 @@ class ES(object):
 
         docs = []
         for _id in ids:
-            docs.append(
-                dict(
-                    _index=self.index_name,
-                    _type=self.src2type(_id['_type']),
-                    _id=_id['_id']
-                )
-            )
+            docs.append(dict(_index=self.index_name,
+                        _type=self.src2type(_id['_type']), _id=_id['_id']))
 
-        params = dict(
-            body=dict(docs=docs)
-        )
+        params = dict(body=dict(docs=docs))
         if fields:
             params['fields'] = fields
 
@@ -257,10 +251,10 @@ class ES(object):
 
         for _d in data['docs']:
             try:
-                _d = _d['fields'] if fields else _d['_source']
+                _d = (_d['fields'] if fields else _d['_source'])
             except KeyError:
-                msg = "ES: '%s(%s)' resource not found" % (
-                    _d['_type'], _d['_id'])
+                msg = "ES: '%s(%s)' resource not found" % (_d['_type'],
+                        _d['_id'])
                 if __raise_on_empty:
                     raise JHTTPNotFound(msg)
                 else:
@@ -269,39 +263,30 @@ class ES(object):
 
             documents.append(dict2obj(dictset(_d)))
 
-        documents._prf_meta = dict(
-            total=len(documents),
-            start=_start,
-            fields=fields,
-        )
+        documents._prf_meta = dict(total=len(documents), start=_start,
+                                   fields=fields)
 
         return documents
 
     def build_search_params(self, params):
         params = dictset(params)
 
-        _params = dict(
-            index=self.index_name,
-            doc_type=self.doc_type
-        )
+        _params = dict(index=self.index_name, doc_type=self.doc_type)
 
         if 'body' not in params:
             query_string = build_qs(params.remove(RESERVED),
                                     params.get('_raw_terms', ''))
             if query_string:
-                _params['body'] = {
-                    'query': {
-                        'query_string': {
-                            'query': query_string
-                        }
-                    }
-                }
+                _params['body'] = \
+                    {'query': {'query_string': {'query': query_string}}}
             else:
-                _params['body'] = {"query": {"match_all": {}}}
+
+                _params['body'] = {'query': {'match_all': {}}}
 
         if '_limit' in params:
-            _params['from_'], _params['size'] = process_limit(params.get('_start', None),
-                                                              params.get('_page', None), params['_limit'])
+            _params['from_'], _params['size'] = \
+                process_limit(params.get('_start', None), params.get('_page',
+                              None), params['_limit'])
 
         if '_sort' in params:
             _params['sort'] = apply_sort(params['_sort'])
@@ -336,16 +321,13 @@ class ES(object):
         documents = _ESDocs()
 
         for da in data['hits']['hits']:
-            _d = da['fields'] if 'fields' in _params else da['_source']
+            _d = (da['fields'] if 'fields' in _params else da['_source'])
             _d['_score'] = da['_score']
             documents.append(dict2obj(_d))
 
-        documents._prf_meta = dict(
-            total=data['hits']['total'],
-            start=_params['from_'],
-            fields=_fields,
-            took=data['took'],
-        )
+        documents._prf_meta = dict(total=data['hits']['total'],
+                                   start=_params['from_'], fields=_fields,
+                                   took=data['took'])
 
         if not documents:
             msg = "'%s(%s)' resource not found" % (self.doc_type, params)
@@ -359,10 +341,7 @@ class ES(object):
     def get_resource(self, **kw):
         __raise = kw.pop('__raise_on_empty', True)
 
-        params = dict(
-            index=self.index_name,
-            doc_type=self.doc_type
-        )
+        params = dict(index=self.index_name, doc_type=self.doc_type)
         params.setdefault('ignore', 404)
         params.update(kw)
 
@@ -385,19 +364,17 @@ class ES(object):
         models = mongo_obj.__class__._meta['delete_rules'] or {}
         for model, key in models:
             if getattr(model, '_index_enabled', False):
-                cls(model.__name__).index(
-                    to_dicts(model.objects(**{key: mongo_obj})))
+                cls(model.__name__).index(to_dicts(model.objects(**{key: mongo_obj})))
 
 
 from prf.mongodb import BaseDocument
 
 
 class ESBaseDocument(BaseDocument):
+
     __metaclass__ = ESMetaclass
 
-    meta = {
-        'abstract': True,
-    }
+    meta = {'abstract': True}
 
     @classmethod
     def get(cls, **kw):

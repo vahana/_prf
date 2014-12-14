@@ -10,8 +10,7 @@ log = logging.getLogger(__name__)
 
 
 def pyramid_resp(resp, **kw):
-    return Response(status_code=resp.status_code,
-                    headers=resp.headers,
+    return Response(status_code=resp.status_code, headers=resp.headers,
                     body=resp.text, **kw)
 
 
@@ -24,12 +23,12 @@ class Requests(object):
         url = self.base_url
 
         if path:
-            url = '%s%s' % (
-                url, (path if path.startswith('/') else '/' + path))
+            url = '%s%s' % (url, (path if path.startswith('/') else '/'
+                            + path))
 
         if params:
-            url = '%s%s%s' % (
-                url, '&' if '?' in url else '?', urllib.urlencode(params))
+            url = '%s%s%s' % (url, ('&' if '?' in url else '?'),
+                              urllib.urlencode(params))
 
         return url
 
@@ -42,7 +41,7 @@ class Requests(object):
             if not resp.ok:
                 raise exception_response(**resp.json())
             return resp.json()
-        except requests.ConnectionError as e:
+        except requests.ConnectionError, e:
             raise JHTTPServerError('Server is down? %s' % e)
 
     def mget(self, path, params={}, page_size=None):
@@ -72,7 +71,7 @@ class Requests(object):
                 raise exception_response(**resp.json())
 
             return pyramid_resp(resp)
-        except requests.ConnectionError as e:
+        except requests.ConnectionError, e:
             raise JHTTPServerError('Server is down? %s' % e)
 
     def mpost(self, path='', data={}, bulk_size=None, bulk_key=None):
@@ -102,7 +101,7 @@ class Requests(object):
                 raise exception_response(**resp.json())
 
             return resp.json()
-        except requests.ConnectionError as e:
+        except requests.ConnectionError, e:
             raise JHTTPServerError('Server is down? %s' % e)
 
     def head(self, path='', params={}):
@@ -110,8 +109,8 @@ class Requests(object):
             resp = requests.head(self.prepare_url(path, params))
             if not resp.ok:
                 raise exception_response(**resp.json())
+        except requests.ConnectionError, e:
 
-        except requests.ConnectionError as e:
             raise JHTTPServerError('Server is down? %s' % e)
 
     def delete(self, path='', **kw):
@@ -119,12 +118,11 @@ class Requests(object):
         log.debug(url)
         try:
             resp = requests.delete(url,
-                                   headers={
-                                       'content-type': 'application/json'},
-                                   **kw)
+                                   headers={'content-type': 'application/json'
+                                   }, **kw)
             if not resp.ok:
                 raise exception_response(**resp.json())
 
             return resp.json()
-        except requests.ConnectionError as e:
+        except requests.ConnectionError, e:
             raise JHTTPServerError('Server is down? %s' % e)

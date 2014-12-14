@@ -10,11 +10,18 @@ from prf.utils import get_document_cls, to_dicts, dictset
 log = logging.getLogger(__name__)
 
 
-@view_config(name='options_view', request_method='OPTIONS', route_name='options')
 class OptionsView(object):
 
-    all_methods = set(
-        ['GET', 'HEAD', 'POST', 'OPTIONS', 'PUT', 'DELETE', 'PATCH', 'TRACE'])
+    all_methods = set([
+        'GET',
+        'HEAD',
+        'POST',
+        'OPTIONS',
+        'PUT',
+        'DELETE',
+        'PATCH',
+        'TRACE',
+        ])
 
     def __init__(self, request):
         self.request = request
@@ -25,12 +32,14 @@ class OptionsView(object):
         request.response.headers['Allow'] = ', '.join(self.all_methods)
 
         if 'Access-Control-Request-Method' in request.headers:
-            request.response.headers[
-                'Access-Control-Allow-Methods'] = ', '.join(self.all_methods)
+
+            request.response.headers['Access-Control-Allow-Methods'] = \
+                ', '.join(self.all_methods)
 
         if 'Access-Control-Request-Headers' in request.headers:
-            request.response.headers[
-                'Access-Control-Allow-Headers'] = 'origin, x-requested-with, content-type'
+
+            request.response.headers['Access-Control-Allow-Headers'] = \
+                'origin, x-requested-with, content-type'
 
         return request.response
 
@@ -47,8 +56,8 @@ class MongoView(BaseView):
 
             try:
                 for each in result['data']:
-                    each['self'] = "%s?id=%s" % (
-                        request.current_route_url(), each['id'])
+                    each['self'] = '%s?id=%s' % (request.current_route_url(),
+                            each['id'])
             except KeyError:
                 pass
 
@@ -74,17 +83,12 @@ class MongoView(BaseView):
 
         count = len(objs)
         objs.delete()
-        return JHTTPOk("Deleted %s %s objects" % (count, id))
+        return JHTTPOk('Deleted %s %s objects' % (count, id))
 
 
-LOGNAME_MAP = dict(
-    NOTSET=logging.NOTSET,
-    DEBUG=logging.DEBUG,
-    INFO=logging.INFO,
-    WARNING=logging.WARNING,
-    ERROR=logging.ERROR,
-    CRITICAL=logging.CRITICAL,
-)
+LOGNAME_MAP = dict(NOTSET=logging.NOTSET, DEBUG=logging.DEBUG,
+                   INFO=logging.INFO, WARNING=logging.WARNING,
+                   ERROR=logging.ERROR, CRITICAL=logging.CRITICAL)
 
 
 class LogLevelsView(BaseView):
@@ -103,10 +107,8 @@ class LogLevelsView(BaseView):
         self.log.setLevel(LOGNAME_MAP[level])
 
     def show(self, id=None):
-        return dict(
-            logger=self.name,
-            level=logging.getLevelName(self.log.getEffectiveLevel())
-        )
+        return dict(logger=self.name,
+                    level=logging.getLevelName(self.log.getEffectiveLevel()))
 
     def update(self, id=None):
         level = self._params['value'].upper()
@@ -119,14 +121,15 @@ class LogLevelsView(BaseView):
 
 
 class SettingsView(BaseView):
+
     settings = None
     __orig = None
 
     def __init__(self, *arg, **kw):
         super(SettingsView, self).__init__(*arg, **kw)
 
-        SettingsView.settings = (SettingsView.settings or
-                                 dictset(self.request.registry.settings))
+        SettingsView.settings = SettingsView.settings \
+            or dictset(self.request.registry.settings)
         self.__orig = self.settings.copy()
 
     def index(self):
@@ -162,7 +165,7 @@ class SettingsView(BaseView):
         for name, val in self.settings.items():
             self.settings[name] = self.__orig[name]
 
-        return JHTTPOk("Reset the settings to original values")
+        return JHTTPOk('Reset the settings to original values')
 
 
 class AccountView(object):

@@ -12,13 +12,20 @@ from prf import wrappers
 
 log = logging.getLogger(__name__)
 
-ACTIONS = ['index', 'show', 'create', 'update',
-           'delete', 'update_many', 'delete_many']
+ACTIONS = [
+    'index',
+    'show',
+    'create',
+    'update',
+    'delete',
+    'update_many',
+    'delete_many',
+    ]
 
 
 class ViewMapper(object):
 
-    "mapper class for BaseView"
+    '''mapper class for BaseView'''
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -41,8 +48,8 @@ class ViewMapper(object):
                 # run before_calls (validators) before running the action
                 for call in view_obj._before_calls.get(action_name, []):
                     call(request=request)
-
             except wrappers.ValidationError, e:
+
                 log.error('validation error: %s', e)
                 raise JHTTPBadRequest(e.args)
 
@@ -67,6 +74,7 @@ class BaseView(object):
 
     """Base class for prf views.
     """
+
     __view_mapper__ = ViewMapper
     _default_renderer = 'json'
 
@@ -81,9 +89,9 @@ class BaseView(object):
             if ctype == 'application/json':
                 try:
                     self._params.update(request.json)
-                except ValueError as e:
-                    log.error("Excpeting JSON. Received: '%s'. Request: %s %s",
-                              request.body, request.method, request.url)
+                except ValueError, e:
+                    log.error("Excpeting JSON. Received: '%s'. Request: %s %s"
+                              , request.body, request.method, request.url)
 
         # dict of the callables {action_name:[callable1, callable2..]}
         # before calls are executed before the action is called
@@ -94,36 +102,29 @@ class BaseView(object):
         # no accept headers, use default
         if '' in request.accept:
             request.override_renderer = self._default_renderer
-
         elif 'application/json' in request.accept:
-            request.override_renderer = 'prf_json'
 
+            request.override_renderer = 'prf_json'
         elif 'text/plain' in request.accept:
+
             request.override_renderer = 'string'
 
         self.setup_default_wrappers()
 
     def setup_default_wrappers(self):
-        self._after_calls['index'] = [
-            wrappers.wrap_in_dict(self.request),
-            wrappers.add_meta(self.request),
-        ]
+        self._after_calls['index'] = [wrappers.wrap_in_dict(self.request),
+                                      wrappers.add_meta(self.request)]
 
-        self._after_calls['show'] = [
-            wrappers.wrap_in_dict(self.request),
-        ]
+        self._after_calls['show'] = [wrappers.wrap_in_dict(self.request)]
 
-        self._after_calls['delete'] = [
-            wrappers.add_confirmation_url(self.request)
-        ]
+        self._after_calls['delete'] = \
+            [wrappers.add_confirmation_url(self.request)]
 
-        self._after_calls['delete_many'] = [
-            wrappers.add_confirmation_url(self.request)
-        ]
+        self._after_calls['delete_many'] = \
+            [wrappers.add_confirmation_url(self.request)]
 
-        self._after_calls['update_many'] = [
-            wrappers.add_confirmation_url(self.request)
-        ]
+        self._after_calls['update_many'] = \
+            [wrappers.add_confirmation_url(self.request)]
 
     def __getattr__(self, attr):
         if attr in ACTIONS:
@@ -134,7 +135,8 @@ class BaseView(object):
     def not_allowed_action(self, *a, **k):
         raise JHTTPMethodNotAllowed()
 
-    def add_before_or_after_call(self, action, _callable, pos=None, before=True):
+    def add_before_or_after_call(self, action, _callable, pos=None,
+                                 before=True):
         if not callable(_callable):
             raise ValueError('%s is not a callable' % _callable)
 
@@ -148,15 +150,14 @@ class BaseView(object):
         else:
             callkind[action].insert(pos, _callable)
 
-    add_before_call = lambda self, * \
-        a, **k: self.add_before_or_after_call(*a, before=True, **k)
-    add_after_call = lambda self, * \
-        a, **k: self.add_before_or_after_call(*a, before=False, **k)
+    add_before_call = lambda self, *a, **k: \
+        self.add_before_or_after_call(before=True, *a, **k)
+    add_after_call = lambda self, *a, **k: \
+        self.add_before_or_after_call(before=False, *a, **k)
 
     def subrequest(self, url, params={}, method='GET'):
         req = Request.blank(url, cookies=self.request.cookies,
-                            content_type='application/json',
-                            method=method)
+                            content_type='application/json', method=method)
 
         if req.method == 'GET' and params:
             req.body = urllib.urlencode(params)
@@ -171,7 +172,7 @@ class BaseView(object):
 
     def delete_many(self, **kw):
         if not self._model_class:
-            log.error("%s _model_class in invalid: %s",
+            log.error('%s _model_class in invalid: %s',
                       self.__class__.__name__, self._model_class)
             raise JHTTPBadRequest
 
@@ -182,8 +183,8 @@ class BaseView(object):
 
         count = len(objs)
         objs.delete()
-        return JHTTPOk("Deleted %s %s objects" %
-                       (count, self._model_class.__name__))
+        return JHTTPOk('Deleted %s %s objects' % (count,
+                       self._model_class.__name__))
 
     def id2obj(self, name, model, id_field=None, setdefault=None):
         if name in self._params:
@@ -196,8 +197,8 @@ class BaseView(object):
                 self._params[name] = obj or setdefault
             else:
                 if not obj:
-                    raise JHTTPBadRequest(
-                        'id2obj: Object %s not found' % self._params[name])
+                    raise JHTTPBadRequest('id2obj: Object %s not found'
+                            % self._params[name])
                 self._params[name] = obj
 
 
@@ -208,10 +209,8 @@ class NoOp(BaseView):
     """
 
     def index(self, **kw):
-        return [
-            dict(route=self.request.matched_route.name,
-                 kw=kw,
-                 params=self._params)]
+        return [dict(route=self.request.matched_route.name, kw=kw,
+                params=self._params)]
 
     def show(self, **kw):
         return kw

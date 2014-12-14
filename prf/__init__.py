@@ -3,7 +3,7 @@ from pkg_resources import get_distribution
 
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
-from pyramid.security import (ALL_PERMISSIONS, Allow)
+from pyramid.security import ALL_PERMISSIONS, Allow
 
 from prf.utility_views import AccountView
 
@@ -16,30 +16,28 @@ log = logging.getLogger(__name__)
 
 
 class RootACL(object):
+
     __acl__ = [(Allow, 'g:admin', ALL_PERMISSIONS)]
 
     def __init__(self, request):
         pass
 
     def __getitem__(self, key):
-        return type('Dummy', (object,),
-                    {'__acl__': RootACL.__acl__})()
+        return type('Dummy', (object, ), {'__acl__': RootACL.__acl__})()
 
 
 def get_root_resource(config):
     from prf.resource import Resource
     return config.registry._root_resources.setdefault(config.package_name,
-                                                      Resource(config))
+            Resource(config))
 
 
 def get_resource_map(request):
     return request.registry._resources_map
 
 
-def enable_auth(config, user_model=None,
-                root_factory=RootACL,
-                login_path='/login',
-                logout_path='/logout'):
+def enable_auth(config, user_model=None, root_factory=RootACL,
+                login_path='/login', logout_path='/logout'):
 
     secret = config.registry.settings['auth_tkt_secret']
     user_model = config.maybe_dotted(user_model)
@@ -47,10 +45,8 @@ def enable_auth(config, user_model=None,
     from prf.utility_views import AccountView
     AccountView.set_user_model(user_model)
 
-    authn_policy = AuthTktAuthenticationPolicy(
-        secret,
-        callback=config.maybe_dotted(AccountView.groupfinder),
-    )
+    authn_policy = AuthTktAuthenticationPolicy(secret,
+            callback=config.maybe_dotted(AccountView.groupfinder))
 
     config.set_authentication_policy(authn_policy)
     config.set_authorization_policy(ACLAuthorizationPolicy())
@@ -70,7 +66,7 @@ def enable_auth(config, user_model=None,
 def includeme(config):
     from prf.renderers import JsonRendererFactory
 
-    log.info("%s %s" % (APP_NAME, __version__))
+    log.info('%s %s' % (APP_NAME, __version__))
     config.add_directive('get_root_resource', get_root_resource)
     config.add_renderer('json', JsonRendererFactory)
 
@@ -90,7 +86,8 @@ def includeme(config):
     from prf.json_httpexceptions import JHTTPBadRequest
 
     def param_error(context, request):
-        return JHTTPBadRequest("Bad or missing param '%s'" % str(context.message))
+        return JHTTPBadRequest("Bad or missing param '%s'"
+                               % str(context.message))
 
     config.add_view(param_error, context=KeyError)
     config.add_view(param_error, context=ValueError)

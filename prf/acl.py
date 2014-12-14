@@ -1,7 +1,8 @@
-from pyramid.security import (ALL_PERMISSIONS, Allow)
+from pyramid.security import ALL_PERMISSIONS, Allow
 
 
 class BaseACL(object):
+
     __context_class__ = None
 
     def __init__(self, request):
@@ -15,14 +16,14 @@ class BaseACL(object):
 
     @acl.setter
     def acl(self, val):
-        assert(isinstance(val, tuple))
+        assert isinstance(val, tuple)
         self.__acl__.append(val)
 
     def context_acl(self, obj):
         return self.__context_acl__
 
     def __getitem__(self, key):
-        assert(self.__context_class__)
+        assert self.__context_class__
 
         id_field = self.__context_class__._meta['id_field']
         obj = self.__context_class__.get(**{id_field: key})

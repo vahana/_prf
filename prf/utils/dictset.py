@@ -14,16 +14,17 @@ class dictset(dict):
         only, exclude = process_fields(keys)
 
         if only and not exclude:
-            return dictset([[k, v] for k, v in self.items() if k in only])
+            return dictset([[k, v] for (k, v) in self.items() if k in only])
 
         if exclude:
-            return dictset([[k, v] for k, v in self.items() if k not in exclude])
+            return dictset([[k, v] for (k, v) in self.items() if k
+                           not in exclude])
 
         return dictset()
 
     def remove(self, keys):
         only, _ = process_fields(keys)
-        return dictset([[k, v] for k, v in self.items() if k not in only])
+        return dictset([[k, v] for (k, v) in self.items() if k not in only])
 
     def __getattr__(self, key):
         return self[key]
@@ -107,7 +108,8 @@ class dictset(dict):
         super(dictset, self).update(*args, **kw)
         return self
 
-    def process_list_param(self, name, _type=None, default=None, pop=False, setdefault=None):
+    def process_list_param(self, name, _type=None, default=None, pop=False,
+                           setdefault=None):
         if _type is None:
             _type = lambda t: t
 
@@ -146,11 +148,11 @@ class dictset(dict):
     def process_datetime_param(self, name):
         if name in self:
             try:
-                self[name] = datetime.strptime(
-                    self[name], "%Y-%m-%dT%H:%M:%SZ")
+                self[name] = datetime.strptime(self[name], '%Y-%m-%dT%H:%M:%SZ'
+                        )
             except ValueError:
-                raise ValueError(
-                    "Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ" % name)
+                raise ValueError("Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ"
+                                  % name)
 
         return self.get(name, None)
 
@@ -160,8 +162,8 @@ class dictset(dict):
                 self[name] = float(self[name])
             except ValueError:
                 raise ValueError('%s must be a decimal' % name)
-
         elif default is not None:
+
             self[name] = default
 
     def process_int_param(self, name, default=None):
@@ -170,8 +172,8 @@ class dictset(dict):
                 self[name] = int(self[name])
             except ValueError:
                 raise ValueError('%s must be a decimal' % name)
-
         elif default is not None:
+
             self[name] = default
 
     def process_dict_param(self, name, _type=None, pop=False):

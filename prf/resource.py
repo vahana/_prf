@@ -7,10 +7,10 @@ DEFAULT_ID_NAME = 'id'
 
 
 def default_view(resource):
-    "Returns the dotted path to the default view class."
+    '''Returns the dotted path to the default view class.'''
 
-    parts = [a.member_name for a in resource.ancestors] +\
-            [resource.collection_name or resource.member_name]
+    parts = [a.member_name for a in resource.ancestors] \
+        + [resource.collection_name or resource.member_name]
 
     if resource.prefix:
         parts.insert(-1, resource.prefix)
@@ -32,7 +32,7 @@ def get_uri_elements(resource):
             if res.id_name:
                 id_full = res.id_name
             else:
-                id_full = "%s_%s" % (res.member_name, DEFAULT_ID_NAME)
+                id_full = '%s_%s' % (res.member_name, DEFAULT_ID_NAME)
 
             path_segs.append('%s/{%s}' % (res.collection_name, id_full))
         else:
@@ -60,19 +60,20 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     name_prefix = kwargs.pop('name_prefix', '')
 
     if config.route_prefix:
-        name_prefix = "%s_%s" % (config.route_prefix, name_prefix)
+        name_prefix = '%s_%s' % (config.route_prefix, name_prefix)
 
     id_name = ('/{%s}' % (kwargs.pop('id_name', None)
-                          or DEFAULT_ID_NAME)) if collection_name else ''
+               or DEFAULT_ID_NAME) if collection_name else '')
     path = path_prefix.strip('/') + '/' + (collection_name or member_name)
 
     _factory = kwargs.pop('factory', None)
     _auth = config.registry._auth
-    _traverse = (kwargs.pop('traverse', None) or id_name)
+    _traverse = kwargs.pop('traverse', None) or id_name
 
     added_routes = {}
 
-    def add_route_and_view(config, action, route_name, path, request_method, **route_kwargs):
+    def add_route_and_view(config, action, route_name, path, request_method,
+                           **route_kwargs):
         if _factory:
             route_kwargs['factory'] = _factory
 
@@ -82,35 +83,36 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
 
         config.add_view(view=view, attr=action, route_name=route_name,
                         request_method=request_method,
-                        permission=action if _auth else None,
-                        **kwargs)
+                        permission=(action if _auth else None), **kwargs)
         config.commit()
 
     if collection_name:
-        add_route_and_view(config, 'index', name_prefix + collection_name, path,
-                           'GET')
+        add_route_and_view(config, 'index', name_prefix + collection_name,
+                           path, 'GET')
 
-    add_route_and_view(config, 'show', name_prefix + member_name, path + id_name,
-                       'GET', traverse=_traverse)
+    add_route_and_view(config, 'show', name_prefix + member_name, path
+                       + id_name, 'GET', traverse=_traverse)
 
-    add_route_and_view(config, 'update', name_prefix + member_name, path + id_name,
-                       'PUT', traverse=_traverse)
+    add_route_and_view(config, 'update', name_prefix + member_name, path
+                       + id_name, 'PUT', traverse=_traverse)
 
-    add_route_and_view(config, 'update', name_prefix + member_name, path + id_name,
-                       'PATCH', traverse=_traverse)
+    add_route_and_view(config, 'update', name_prefix + member_name, path
+                       + id_name, 'PATCH', traverse=_traverse)
 
-    add_route_and_view(config, 'create', name_prefix + (collection_name or member_name),
-                       path, 'POST')
+    add_route_and_view(config, 'create', name_prefix + (collection_name
+                       or member_name), path, 'POST')
 
-    add_route_and_view(config, 'delete', name_prefix + member_name, path + id_name,
-                       'DELETE', traverse=_traverse)
+    add_route_and_view(config, 'delete', name_prefix + member_name, path
+                       + id_name, 'DELETE', traverse=_traverse)
 
     if collection_name:
-        add_route_and_view(config, 'update_many', name_prefix + (collection_name or member_name),
-                           path, 'PUT', traverse=_traverse)
+        add_route_and_view(config, 'update_many', name_prefix
+                           + (collection_name or member_name), path, 'PUT',
+                           traverse=_traverse)
 
-        add_route_and_view(config, 'delete_many', name_prefix + (collection_name or member_name),
-                           path, 'DELETE', traverse=_traverse)
+        add_route_and_view(config, 'delete_many', name_prefix
+                           + (collection_name or member_name), path, 'DELETE',
+                           traverse=_traverse)
 
 
 class Resource(object):
@@ -134,7 +136,7 @@ class Resource(object):
         return "%s(uid='%s')" % (self.__class__.__name__, self.uid)
 
     def get_ancestors(self):
-        "Returns the list of ancestor resources."
+        '''Returns the list of ancestor resources.'''
 
         if self._ancestors:
             return self._ancestors
@@ -153,8 +155,8 @@ class Resource(object):
 
     ancestors = property(get_ancestors)
     resource_map = property(lambda self: self.config.registry._resources_map)
-    is_singular = property(
-        lambda self: self.member_name and not self.collection_name)
+    is_singular = property(lambda self: self.member_name \
+                           and self.collection_name is None)
 
     def add(self, member_name, collection_name='', **kwargs):
         """
@@ -173,6 +175,11 @@ class Resource(object):
         parent = self
         prefix = kwargs.pop('prefix', '')
 
+        if collection_name == '':
+            collection_name = member_name + 's'
+        elif collection_name is None:
+            collection_name = ''
+
         uid = ':'.join(filter(bool, [parent.uid, prefix, member_name]))
 
         if uid in self.resource_map:
@@ -189,16 +196,16 @@ class Resource(object):
 
         root_resource = self.config.get_root_resource()
 
-        kwargs['path_prefix'], kwargs[
-            'name_prefix'] = get_uri_elements(child_resource)
+        kwargs['path_prefix'], kwargs['name_prefix'] = \
+            get_uri_elements(child_resource)
 
         # set some defaults
         kwargs.setdefault('renderer', child_view._default_renderer)
         kwargs.setdefault('http_cache', root_resource.http_cache)
 
         # add the routes for the resource
-        add_action_routes(
-            self.config, child_view, member_name, collection_name, **kwargs)
+        add_action_routes(self.config, child_view, member_name,
+                          collection_name, **kwargs)
 
         self.resource_map[uid] = child_resource
         parent.children.append(child_resource)
@@ -208,7 +215,7 @@ class Resource(object):
     def add_from(self, resource, **kwargs):
         '''add a resource with its all children resources to the current resource'''
 
-        new_resource = self.add(
-            resource.member_name, resource.collection_name, **kwargs)
+        new_resource = self.add(resource.member_name,
+                                resource.collection_name, **kwargs)
         for child in resource.children:
             new_resource.add_from(child, **kwargs)

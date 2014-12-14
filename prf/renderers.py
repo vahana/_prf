@@ -9,7 +9,7 @@ class _JSONEncoder(json.JSONEncoder):
 
     def default(self, obj):
         if isinstance(obj, (datetime, date)):
-            return obj.strftime("%Y-%m-%dT%H:%M:%SZ")  # iso
+            return obj.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
         try:
             return super(_JSONEncoder, self).default(obj)
         except TypeError:
