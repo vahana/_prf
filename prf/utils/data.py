@@ -18,7 +18,7 @@ class DataProxy(object):
                 if hasattr(val, 'to_dict'):
                     _dict[attr] = val.to_dict(**kw)
                 elif isinstance(val, list):
-                    _dict[attr] = to_dicts(**kw)
+                    _dict[attr] = to_dicts(val, **kw)
 
         return _dict
 

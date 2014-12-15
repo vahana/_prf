@@ -45,7 +45,7 @@ class ViewMapper(object):
             if isinstance(resp, Response):
                 return resp
 
-            elif action_name in ['index', 'show']
+            elif action_name in ['index', 'show']:
                 resp = wrappers.wrap_in_dict(request, resp)
 
             return resp
