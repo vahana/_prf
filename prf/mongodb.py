@@ -4,7 +4,7 @@ from bson import ObjectId, DBRef
 import mongoengine as mongo
 
 from prf.json_httpexceptions import *
-from prf.utils import process_fields, process_limit, _split, dictset, \
+from prf.utils import process_fields, process_limit, split_strip, dictset, \
     DataProxy, to_dicts, dict2obj
 from prf.utils.dictset import asbool
 
@@ -127,8 +127,8 @@ class BaseMixin(object):
         params.pop('__confirmation', False)
         __strict = params.pop('__strict', True)
 
-        _sort = _split(params.pop('_sort', []))
-        _fields = _split(params.pop('_fields', []))
+        _sort = split_strip(params.pop('_sort', []))
+        _fields = split_strip(params.pop('_fields', []))
         _limit = params.pop('_limit', None)
         _page = params.pop('_page', None)
         _start = params.pop('_start', None)

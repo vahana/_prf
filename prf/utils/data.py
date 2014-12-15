@@ -6,9 +6,9 @@ class DataProxy(object):
     def __init__(self, data={}):
         self._data = dictset(data)
 
-    def to_dict(self, keys=None, nested=False, depth=10):
-        keys = keys or []
-        data = (self._data.subset(keys) if keys else self._data)
+    def to_dict(self, fields=None, nested=False, depth=10):
+        fields = fields or []
+        data = (self._data.subset(fields) if fields else self._data)
         _dict = dictset()
 
         for attr, val in data.items():
@@ -18,7 +18,7 @@ class DataProxy(object):
                 if hasattr(val, 'to_dict'):
                     _dict[attr] = val.to_dict(**kw)
                 elif isinstance(val, list):
-                    _dict[attr] = to_dicts(val, **kw)
+                    _dict[attr] = to_dicts(**kw)
 
         return _dict
 
@@ -66,21 +66,3 @@ def to_dicts(collection, key=None, **kw):
         return collection
 
     return _dicts
-
-
-def obj2dict(obj, classkey=None):
-    if isinstance(obj, dict):
-        for k in obj.keys():
-            obj[k] = obj2dict(obj[k], classkey)
-        return obj
-    elif hasattr(obj, '__iter__'):
-        return [obj2dict(v, classkey) for v in obj]
-    elif hasattr(obj, '__dict__'):
-        data = dictset([(key, obj2dict(value, classkey)) for (key, value) in
-                       obj.__dict__.iteritems() if not callable(value)
-                       and not key.startswith('_')])
-        if classkey is not None and hasattr(obj, '__class__'):
-            data[classkey] = obj.__class__.__name__
-        return data
-    else:
-        return obj

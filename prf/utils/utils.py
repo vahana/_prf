@@ -1,12 +1,8 @@
-import os
-import re
 import logging
-from contextlib import contextmanager
 import json
 
 import mongoengine as mongo
 from pyramid.config import Configurator
-
 from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
@@ -63,14 +59,14 @@ def extend_list(param):
     return _new
 
 
-def process_fields(_fields):
+def process_fields(fields):
     fields_only = []
     fields_exclude = []
 
-    if isinstance(_fields, basestring):
-        _fields = split_strip(_fields)
+    if isinstance(fields, basestring):
+        fields = split_strip(fields)
 
-    for field in extend_list(_fields):
+    for field in extend_list(fields):
         field = field.strip()
         if not field:
             continue
@@ -97,29 +93,6 @@ def maybe_dotted(modul, throw=True):
         else:
             log.error(err)
             return None
-
-
-@contextmanager
-def chdir(path):
-    old_dir = os.getcwd()
-    os.chdir(path)
-    yield None
-    os.chdir(old_dir)
-
-
-def isnumeric(value):
-    """Return True if `value` can be converted to a float."""
-    try:
-        float(value)
-        return True
-    except ValueError:
-        return False
-
-
-def issequence(arg):
-    """Return True if `arg` acts as a list and does not look like a string."""
-    return not hasattr(arg, 'strip') and hasattr(arg, '__getitem__') \
-        or hasattr(arg, '__iter__')
 
 
 def get_document_cls(name):

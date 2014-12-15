@@ -1,5 +1,4 @@
 from datetime import datetime
-from urllib3 import util
 from pyramid.settings import asbool
 
 from prf.utils.utils import process_fields, split_strip

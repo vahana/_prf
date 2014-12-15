@@ -5,8 +5,6 @@ from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.security import ALL_PERMISSIONS, Allow
 
-from prf.utility_views import AccountView
-
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
 PROJECTDIR = _DIST.location

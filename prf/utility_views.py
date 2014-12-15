@@ -63,10 +63,6 @@ class MongoView(BaseView):
 
             return result
 
-        self.add_after_call('show', add_self)
-        # wrap in a dict so it acts as "index"
-        self.add_after_call('show', wrappers.wrap_in_dict(self.request), pos=0)
-
     def index(self):
         return 'Implement index action to return list of models'
 
