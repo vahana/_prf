@@ -1,5 +1,6 @@
 import urllib
 from urlparse import urlparse
+from prf.json_httpexceptions import *
 
 
 def issequence(arg):
@@ -70,3 +71,12 @@ def add_confirmation_url(request, result):
     return dict(method=request.method, count=len(result),
                 confirmation_url=request.url + '%s__confirmation&_m=%s'
                 % (q_or_a, request.method))
+
+
+def wrap_in_http_created(request, result):
+    return JHTTPCreated(location=request.current_route_url(result.id),
+                        resource=result.to_dict())
+
+
+def wrap_in_http_ok(request, result):
+    return JHTTPOk()

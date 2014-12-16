@@ -47,6 +47,10 @@ class ViewMapper(object):
 
             elif action_name in ['index', 'show']:
                 resp = wrappers.wrap_in_dict(request, resp)
+            elif action_name == 'create':
+                resp = wrappers.wrap_in_http_created(request, resp)
+            elif action_name in ['update', 'delete']:
+                resp = wrappers.wrap_in_http_ok(request, resp)
 
             return resp
 
