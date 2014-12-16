@@ -5,6 +5,7 @@ from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.security import ALL_PERMISSIONS, Allow
 
+
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
 PROJECTDIR = _DIST.location
@@ -38,6 +39,7 @@ def enable_auth(config, user_model=None, root_factory=RootACL,
                 login_path='/login', logout_path='/logout'):
 
     secret = config.registry.settings['auth_tkt_secret']
+
     user_model = config.maybe_dotted(user_model)
 
     from prf.utility_views import AccountView

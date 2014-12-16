@@ -66,7 +66,7 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
                or DEFAULT_ID_NAME) if collection_name else '')
     path = path_prefix.strip('/') + '/' + (collection_name or member_name)
 
-    _factory = kwargs.pop('factory', None)
+    _acl = kwargs.pop('acl', None)
     _auth = config.registry._auth
     _traverse = kwargs.pop('traverse', None) or id_name
 
@@ -74,8 +74,8 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
 
     def add_route_and_view(config, action, route_name, path, request_method,
                            **route_kwargs):
-        if _factory:
-            route_kwargs['factory'] = _factory
+        if _acl:
+            route_kwargs['factory'] = _acl
 
         if route_name not in added_routes:
             config.add_route(route_name, path, **route_kwargs)
