@@ -173,28 +173,28 @@ class AccountView(object):
 
     @classmethod
     def set_user_model(cls, model):
+
+        def check_callable(model, name):
+            if not getattr(model, name, None):
+                raise AttributeError("%s model must have '%s' class method"
+                                     % (model, name))
+
+        check_callable(model, 'groupfinder')
+        check_callable(model, 'authenticate')
+
         cls.__user_model = model
 
     @classmethod
     def groupfinder(cls, userid, request):
-        if cls.__user_model:
-            return cls.__user_model.groupfinder(userid, request)
-
-        return ['g:admin']
-
-    @classmethod
-    def authenticate(cls, login, password):
-        if cls.__user_model:
-            return cls.__user_model.authenticate(login, password)
-
-        return True
+        return cls.__user_model.groupfinder(userid, request)
 
     def login(self):
         login = self.request.params['login']
         password = self.request.params['password']
 
-        if self.authenticate(login, password):
-            headers = remember(self.request, login)
+        success, user = self.__user_model.authenticate(login, password)
+        if success:
+            headers = remember(self.request, user)
             return JHTTPOk(headers=headers)
         else:
             raise JHTTPUnauthorized("User '%s' failed to Login" % login)
