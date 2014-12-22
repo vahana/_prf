@@ -74,6 +74,9 @@ def add_confirmation_url(request, result):
 
 
 def wrap_in_http_created(request, result):
+    if not result:
+        return JHTTPCreated()
+
     return JHTTPCreated(location=request.current_route_url(result.id),
                         resource=result.to_dict())
 
