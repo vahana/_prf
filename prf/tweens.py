@@ -2,8 +2,27 @@ import time
 from pyramid.settings import asbool
 import logging
 import json
+import traceback
 
 log = logging.getLogger(__name__)
+
+
+def sqla_exc(handler, registry):
+    from prf.json_httpexceptions import JHTTPBadRequest, \
+        JHTTPInternalServerError
+    from sqlalchemy.exc import SQLAlchemyError
+
+    def exc_dict(e):
+        return {'class': e.__class__, 'message': e.message}
+
+    def exc(request):
+
+        try:
+            return handler(request)
+        except SQLAlchemyError as e:
+            raise JHTTPBadRequest('', request=request, exception=exc_dict(e))
+
+    return exc
 
 
 def request_timing(handler, registry):

@@ -35,7 +35,6 @@ def process_limit(start, page, limit):
         if limit < 0 or start < 0:
             raise ValueError('_limit/_page or _limit/_start can not be < 0')
     except (ValueError, TypeError), e:
-
         raise ValueError(e)
     except mongo.InvalidQueryError, e:
 

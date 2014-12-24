@@ -30,7 +30,8 @@ def create_json_response(obj, request=None, log_it=False, show_stack=False,
     for attr in BASE_ATTRS:
         body[attr] = extra.pop(attr, None) or getattr(obj, attr, None)
 
-    extra['timestamp'] = datetime.utcnow()
+    body['timestamp'] = extra['timestamp'] = datetime.utcnow()
+
     if request:
         extra['request_url'] = request.url
         if obj.status_int in [403, 401]:
@@ -40,14 +41,12 @@ def create_json_response(obj, request=None, log_it=False, show_stack=False,
     if obj.location:
         body['id'] = obj.location.split('/')[-1]
 
-    body.update(extra)
-
     obj.body = json_dumps(body)
     show_stack = log_it or show_stack
     status = obj.status_int
 
     if 400 <= status < 600 and status not in BLACKLIST_LOG or log_it:
-        msg = '%s: %s' % (obj.status.upper(), obj.body)
+        msg = '%s: %s' % (obj.status.upper(), json_dumps(extra))
         if obj.status_int in [400, 500] or show_stack:
             msg += '''
 STACK BEGIN>>
