@@ -1,10 +1,14 @@
 import logging
+import uuid
+
+import pyramid
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import as_declarative, declared_attr
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy_utils import UUIDType
 
 from prf.utils import dictset, DataProxy, split_strip, process_limit
 from prf.json_httpexceptions import *
@@ -15,11 +19,56 @@ Session = scoped_session(sessionmaker())
 
 
 def includeme(config):
+    config.add_tween('prf.sqla.sqla_exc_tween', over=pyramid.tweens.MAIN)
+
     Settings = dictset(config.registry.settings)
     engine = engine_from_config(Settings, 'sqlalchemy.')
 
     Session.configure(bind=engine)
     BaseDocument.metadata.bind = engine
+
+
+def sqla_exc_tween(handler, registry):
+    def exc_dict(e):
+        return {'class': e.__class__, 'message': e.message}
+
+    def exc(request):
+        try:
+            return handler(request)
+        except SQLAlchemyError, e:
+            Session.rollback()
+            raise JHTTPBadRequest('', request=request, exception=exc_dict(e))
+
+    return exc
+
+
+def order_by_clauses(model, _sort):
+    _sort_param = []
+
+    def _raise(attr):
+        raise JHTTPBadRequest("Resource `%s` has not attribute `%s`" %
+                              (model.__name__, attr))
+
+    for each in split_strip(_sort):
+        if each.startswith('-'):
+            each = each[1:]
+            attr = getattr(model, each, None)
+            if not attr:
+                _raise(each)
+
+            _sort_param.append(attr.desc())
+            continue
+
+        elif each.startswith('+'):
+            each = each[1:]
+
+        attr = getattr(model, each, None)
+        if not attr:
+            _raise(each)
+
+        _sort_param.append(attr.asc())
+
+    return _sort_param
 
 
 @as_declarative()
@@ -31,7 +80,9 @@ class BaseDocument(object):
     def __tablename__(cls):
         return cls.__name__.lower()
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUIDType(binary=False), default=uuid.uuid4, primary_key=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, onupdate=datetime.utcnow)
 
     def to_dict(self, request=None, **kw):
         _data = dictset({c.name: getattr(self, c.name)
@@ -44,17 +95,17 @@ class BaseDocument(object):
         Session.add(self)
         try:
             Session.commit()
-        except IntegrityError as e:
+        except IntegrityError, e:
             Session.rollback()
-
             if 'unique' in e.message.lower():
                 raise JHTTPConflict('Resource `%s` already exists.'
-                                % self.__class__.__name__, extra={'data': e})
-
+                                    % self.__class__.__name__,
+                                    extra={'data': e})
             else:
-                raise JHTTPBadRequest("Resource `%s` could not be created: missing params"
-                                  % (self.__class__.__name__),
-                                  extra={'data': e})
+
+                raise JHTTPBadRequest('Resource `%s`: %s'
+                                      % (self.__class__.__name__, e.message),
+                                      extra={'data': e})
 
         return self
 
@@ -68,7 +119,7 @@ class BaseDocument(object):
         Session.delete(self)
         try:
             Session.commit()
-        except IntegrityError as e:
+        except IntegrityError, e:
             Session.rollback()
 
     @classmethod
@@ -86,30 +137,41 @@ class BaseDocument(object):
         _count = '_count' in params
         params.pop('_count', None)
 
-        if _limit is None:
-            raise KeyError('Missing _limit')
-
         return params, locals()
+
+    @classmethod
+    def objects(cls, **params):
+        params, specials = cls.prep_params(params)
+        return Session.query(cls).filter_by(**params)
 
     @classmethod
     def get_collection(cls, **params):
         params, specials = cls.prep_params(params)
 
-        query_set = Session.query(cls).filter_by(**params)
+        if specials['_limit'] is None:
+            raise KeyError('Missing _limit')
 
-        _start, _limit = process_limit(specials['_start'],
-                        specials['_page'], specials['_limit'])
+        query = Session.query(cls)
 
-        _total = query_set.count()
+        if params:
+            query = Session.query(cls).filter_by(**params)
 
-        query_set = query_set.offset(_start).limit(_limit)
+        if specials['_sort']:
+            query = query.order_by(*order_by_clauses(cls, specials['_sort']))
+
+        start, limit = process_limit(specials['_start'], specials['_page'],
+                                       specials['_limit'])
+
+        total = query.count()
+
+        query = query.offset(start).limit(limit)
 
         if specials['_count']:
-            return _total
+            return total
 
-        query_set._prf_meta = dict(total=_total, start=_start,
-                            fields=specials['_fields'])
-        return query_set
+        query._prf_meta = dict(total=total, start=start,
+                                   fields=specials['_fields'])
+        return query
 
     @classmethod
     def get_resource(cls, _raise=True, **params):
@@ -119,8 +181,8 @@ class BaseDocument(object):
             obj = Session.query(cls).filter_by(**params).one()
             obj._prf_meta = dict(fields=specials['_fields'])
             return obj
+        except NoResultFound, e:
 
-        except NoResultFound as e:
             msg = "'%s(%s)' resource not found" % (cls.__name__, params)
             if _raise:
                 raise JHTTPNotFound(msg)
