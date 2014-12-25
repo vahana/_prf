@@ -5,7 +5,7 @@ import prf
 from prf.json_httpexceptions import *
 from prf import wrappers
 from prf.view import BaseView
-from prf.utils import get_document_cls, to_dicts, dictset
+from prf.utils import to_dicts, dictset
 
 log = logging.getLogger(__name__)
 
@@ -42,44 +42,6 @@ class OptionsView(object):
                 'origin, x-requested-with, content-type'
 
         return request.response
-
-
-class MongoView(BaseView):
-
-    def __init__(self, context, request):
-        super(MongoView, self).__init__(context, request)
-        self._params.process_int_param('_limit', 20)
-
-        def add_self(**kwargs):
-            result = kwargs['result']
-            request = kwargs['request']
-
-            try:
-                for each in result['data']:
-                    each['self'] = '%s?id=%s' % (request.current_route_url(),
-                            each['id'])
-            except KeyError:
-                pass
-
-            return result
-
-    def index(self):
-        return 'Implement index action to return list of models'
-
-    def show(self, id):
-        cls = get_document_cls(id)
-        return cls.get_collection(**self._params)
-
-    def delete(self, id):
-        cls = get_document_cls(id)
-        objs = cls.get_collection(**self._params)
-
-        if self.needs_confirmation():
-            return objs
-
-        count = len(objs)
-        objs.delete()
-        return JHTTPOk('Deleted %s %s objects' % (count, id))
 
 
 LOGNAME_MAP = dict(NOTSET=logging.NOTSET, DEBUG=logging.DEBUG,

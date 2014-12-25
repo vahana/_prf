@@ -5,9 +5,9 @@ import mongoengine as mongo
 
 from prf.json_httpexceptions import *
 from prf.utils import process_fields, process_limit, split_strip, dictset, \
-    DataProxy, to_dicts, dict2obj
+                      DataProxy, to_dicts, dict2obj
 from prf.utils.dictset import asbool
-
+from prf.view import BaseView
 from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
@@ -391,3 +391,47 @@ class BaseDocument(BaseMixin, mongo.Document):
             raise JHTTPBadRequest("Resource '%s': %s"
                                   % (self.__class__.__name__, e),
                                   extra={'data': e})
+
+
+def get_document_cls(name):
+    try:
+        return mongo.document.get_document(name)
+    except Exception, e:
+        raise ValueError('`%s` does not exist in mongo db' % name)
+
+class MongoView(BaseView):
+
+    def __init__(self, context, request):
+        super(MongoView, self).__init__(context, request)
+        self._params.process_int_param('_limit', 20)
+
+        def add_self(**kwargs):
+            result = kwargs['result']
+            request = kwargs['request']
+
+            try:
+                for each in result['data']:
+                    each['self'] = '%s?id=%s' % (request.current_route_url(),
+                            each['id'])
+            except KeyError:
+                pass
+
+            return result
+
+    def index(self):
+        return 'Implement index action to return list of models'
+
+    def show(self, id):
+        cls = get_document_cls(id)
+        return cls.get_collection(**self._params)
+
+    def delete(self, id):
+        cls = get_document_cls(id)
+        objs = cls.get_collection(**self._params)
+
+        if self.needs_confirmation():
+            return objs
+
+        count = len(objs)
+        objs.delete()
+        return JHTTPOk('Deleted %s %s objects' % (count, id))

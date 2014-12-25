@@ -1,7 +1,6 @@
 import logging
 import json
 
-import mongoengine as mongo
 from pyramid.config import Configurator
 from prf.renderers import _JSONEncoder
 
@@ -34,10 +33,10 @@ def process_limit(start, page, limit):
 
         if limit < 0 or start < 0:
             raise ValueError('_limit/_page or _limit/_start can not be < 0')
-    except (ValueError, TypeError), e:
+    except (ValueError, TypeError) as e:
         raise ValueError(e)
-    except mongo.InvalidQueryError, e:
 
+    except Exception as e:
         raise ValueError('Bad _limit param: %s ' % e)
 
     return start, limit
@@ -94,8 +93,3 @@ def maybe_dotted(modul, throw=True):
             return None
 
 
-def get_document_cls(name):
-    try:
-        return mongo.document.get_document(name)
-    except Exception, e:
-        raise ValueError('`%s` does not exist in mongo db' % name)

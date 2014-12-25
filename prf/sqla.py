@@ -4,11 +4,9 @@ import uuid
 import pyramid
 from sqlalchemy import engine_from_config
 from sqlalchemy.orm import scoped_session, sessionmaker
-from sqlalchemy.ext.declarative import as_declarative, declared_attr
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlalchemy_utils import UUIDType
 
 from prf.utils import dictset, DataProxy, split_strip, process_limit
 from prf.json_httpexceptions import *
@@ -25,7 +23,6 @@ def includeme(config):
     engine = engine_from_config(Settings, 'sqlalchemy.')
 
     Session.configure(bind=engine)
-    BaseDocument.metadata.bind = engine
 
 
 def sqla_exc_tween(handler, registry):
@@ -71,18 +68,16 @@ def order_by_clauses(model, _sort):
     return _sort_param
 
 
-@as_declarative()
-class BaseDocument(object):
+class BaseMixin(object):
 
     _type = property(lambda self: self.__class__.__name__)
+
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
 
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()
-
-    id = Column(UUIDType(binary=False), default=uuid.uuid4, primary_key=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, onupdate=datetime.utcnow)
 
     def to_dict(self, request=None, **kw):
         _data = dictset({c.name: getattr(self, c.name)
@@ -91,11 +86,28 @@ class BaseDocument(object):
         _data.update(kw.pop('override', {}))
         return DataProxy(_data).to_dict(**kw)
 
+    def repr_parts(self):
+        return []
+
+    def __repr__(self):
+        parts = []
+
+        if hasattr(self, 'id'):
+            parts.append('id=%s' % self.id)
+
+        if hasattr(self, '_version'):
+            parts.append('v=%s' % self._version)
+
+        parts.extend(self.repr_parts())
+
+        return '<%s: %s>' % (self.__class__.__name__, ', '.join(parts))
+
     def save(self, commit=True):
         Session.add(self)
         try:
             Session.commit()
         except IntegrityError, e:
+            raise
             Session.rollback()
             if 'unique' in e.message.lower():
                 raise JHTTPConflict('Resource `%s` already exists.'
@@ -193,3 +205,13 @@ class BaseDocument(object):
     @classmethod
     def get(cls, **params):
         return cls.get_resource(_raise=False, **params)
+
+    @classmethod
+    def get_or_create(cls, **kw):
+        params = kw.pop('defaults', {})
+        params.update(kw)
+        obj = cls.get(**kw)
+        if obj:
+            return obj, False
+        else:
+            return cls(**params).save(), True

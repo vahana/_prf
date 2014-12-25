@@ -6,7 +6,7 @@ import logging
 from pyramid.paster import bootstrap
 
 from prf.elasticsearch import ES
-from prf.utils import dictset, get_document_cls, split_strip
+from prf.utils import dictset, split_strip
 
 
 def main(argv=sys.argv, quiet=False):
