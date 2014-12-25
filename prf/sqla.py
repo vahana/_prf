@@ -13,19 +13,41 @@ from prf.json_httpexceptions import *
 
 log = logging.getLogger(__name__)
 
-Session = scoped_session(sessionmaker())
+Session = None
 
 
 def includeme(config):
     config.add_tween('prf.sqla.sqla_exc_tween', over=pyramid.tweens.MAIN)
 
-    Settings = dictset(config.registry.settings)
-    engine = engine_from_config(Settings, 'sqlalchemy.')
 
+def setup(config, session=None, base=None):
+    global Session
+
+    engine = engine_from_config(config.registry.settings, 'sqlalchemy.')
+    Session = session or scoped_session(sessionmaker())
     Session.configure(bind=engine)
+
+    if base:
+        base = config.maybe_dotted(base)
+        base.metadata.bind = Session.bind
+        base.metadata.create_all()
+
+
+def sqla2http(exc):
+    _, _, failed = exc.message.partition(':')
+    _, _, param = failed.partition('.')
+
+    if isinstance(exc, IntegrityError) and 'unique' in exc.message.lower():
+        msg = "Must be unique '%s'" % param
+        return JHTTPConflict(msg, extra={'data': exc})
+    elif isinstance(exc, IntegrityError) and 'not null' in exc.message.lower():
+
+        msg = "Missing '%s'" % param
+        return JHTTPBadRequest(msg, extra={'data': exc})
 
 
 def sqla_exc_tween(handler, registry):
+
     def exc_dict(e):
         return {'class': e.__class__, 'message': e.message}
 
@@ -34,7 +56,9 @@ def sqla_exc_tween(handler, registry):
             return handler(request)
         except SQLAlchemyError, e:
             Session.rollback()
-            raise JHTTPBadRequest('', request=request, exception=exc_dict(e))
+            import traceback
+            log.error(traceback.format_exc())
+            raise JHTTPBadRequest('Unknown', request=request, exception=exc_dict(e))
 
     return exc
 
@@ -43,8 +67,7 @@ def order_by_clauses(model, _sort):
     _sort_param = []
 
     def _raise(attr):
-        raise JHTTPBadRequest("Resource `%s` has not attribute `%s`" %
-                              (model.__name__, attr))
+        raise JHTTPBadRequest("Bad attribute '%s'" % attr)
 
     for each in split_strip(_sort):
         if each.startswith('-'):
@@ -55,8 +78,8 @@ def order_by_clauses(model, _sort):
 
             _sort_param.append(attr.desc())
             continue
-
         elif each.startswith('+'):
+
             each = each[1:]
 
         attr = getattr(model, each, None)
@@ -68,12 +91,9 @@ def order_by_clauses(model, _sort):
     return _sort_param
 
 
-class BaseMixin(object):
+class Base(object):
 
     _type = property(lambda self: self.__class__.__name__)
-
-    def __init__(self, **kw):
-        self.__dict__.update(kw)
 
     @declared_attr
     def __tablename__(cls):
@@ -82,6 +102,7 @@ class BaseMixin(object):
     def to_dict(self, request=None, **kw):
         _data = dictset({c.name: getattr(self, c.name)
                         for c in self.__table__.columns})
+
         _data['_type'] = self._type
         _data.update(kw.pop('override', {}))
         return DataProxy(_data).to_dict(**kw)
@@ -107,17 +128,8 @@ class BaseMixin(object):
         try:
             Session.commit()
         except IntegrityError, e:
-            raise
             Session.rollback()
-            if 'unique' in e.message.lower():
-                raise JHTTPConflict('Resource `%s` already exists.'
-                                    % self.__class__.__name__,
-                                    extra={'data': e})
-            else:
-
-                raise JHTTPBadRequest('Resource `%s`: %s'
-                                      % (self.__class__.__name__, e.message),
-                                      extra={'data': e})
+            raise sqla2http(e)
 
         return self
 
@@ -172,7 +184,7 @@ class BaseMixin(object):
             query = query.order_by(*order_by_clauses(cls, specials['_sort']))
 
         start, limit = process_limit(specials['_start'], specials['_page'],
-                                       specials['_limit'])
+                                     specials['_limit'])
 
         total = query.count()
 
@@ -182,7 +194,7 @@ class BaseMixin(object):
             return total
 
         query._prf_meta = dict(total=total, start=start,
-                                   fields=specials['_fields'])
+                               fields=specials['_fields'])
         return query
 
     @classmethod
