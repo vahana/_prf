@@ -44,6 +44,8 @@ def sqla2http(exc):
 
         msg = "Missing '%s'" % param
         return JHTTPBadRequest(msg, extra={'data': exc})
+    else:
+        raise exc
 
 
 def sqla_exc_tween(handler, registry):
@@ -58,7 +60,8 @@ def sqla_exc_tween(handler, registry):
             Session.rollback()
             import traceback
             log.error(traceback.format_exc())
-            raise JHTTPBadRequest('Unknown', request=request, exception=exc_dict(e))
+            raise JHTTPBadRequest('Unknown', request=request,
+                                  exception=exc_dict(e))
 
     return exc
 
@@ -100,8 +103,19 @@ class Base(object):
         return cls.__name__.lower()
 
     def to_dict(self, request=None, **kw):
-        _data = dictset({c.name: getattr(self, c.name)
-                        for c in self.__table__.columns})
+
+        def get_data():
+            _dict = dictset()
+            att_names = [attr for attr in dir(self)
+                         if not callable(getattr(self, attr))
+                         and not attr.startswith('__')]
+
+            for attr in att_names:
+                _dict[attr] = getattr(self, attr)
+
+            return _dict
+
+        _data = get_data()
 
         _data['_type'] = self._type
         _data.update(kw.pop('override', {}))
@@ -164,18 +178,25 @@ class Base(object):
         return params, locals()
 
     @classmethod
+    def query(cls, *args, **kw):
+        return Session.query(cls)
+
+    @classmethod
     def objects(cls, **params):
         params, specials = cls.prep_params(params)
         return Session.query(cls).filter_by(**params)
 
     @classmethod
-    def get_collection(cls, **params):
+    def get_collection(cls, *args, **params):
         params, specials = cls.prep_params(params)
 
         if specials['_limit'] is None:
             raise KeyError('Missing _limit')
 
         query = Session.query(cls)
+
+        if args:
+            query = query.filter(*args)
 
         if params:
             query = Session.query(cls).filter_by(**params)
@@ -195,6 +216,7 @@ class Base(object):
 
         query._prf_meta = dict(total=total, start=start,
                                fields=specials['_fields'])
+
         return query
 
     @classmethod

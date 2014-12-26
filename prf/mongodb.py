@@ -55,7 +55,7 @@ def process_bools(_dict):
     for k in _dict:
         new_k, _, _t = k.partition('__')
         if _t == 'bool':
-            _dict[new_k] = _dict.pop_bool_param(k)
+            _dict[new_k] = _dict.asbool(k, pop=True)
 
     return _dict
 
@@ -403,7 +403,7 @@ class MongoView(BaseView):
 
     def __init__(self, context, request):
         super(MongoView, self).__init__(context, request)
-        self._params.process_int_param('_limit', 20)
+        self._params.asint('_limit', default=20)
 
         def add_self(**kwargs):
             result = kwargs['result']
