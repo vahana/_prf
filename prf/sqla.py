@@ -22,10 +22,14 @@ def sqla2http(exc, session):
         if isinstance(exc, IntegrityError) and 'unique' in exc.message.lower():
             msg = "Must be unique '%s'" % param
             return JHTTPConflict(msg, extra={'data': exc})
-        elif isinstance(exc, IntegrityError) and 'not null' in exc.message.lower():
 
+        elif isinstance(exc, IntegrityError) and 'not null' in exc.message.lower():
             msg = "Missing '%s'" % param
             return JHTTPBadRequest(msg, extra={'data': exc})
+
+        elif isinstance(exc, NoResultFound):
+            return JHTTPNotFound()
+
         else:
             return exc
     finally:
@@ -40,7 +44,9 @@ def sqla_exc_tween(handler, registry):
     def exc(request):
         try:
             return handler(request)
-        except SQLAlchemyError, e:
+        except (IntegrityError, NoResultFound) as e:
+            raise sqla2http(e, request.db)
+        except SQLAlchemyError as e:
             import traceback
             log.error(traceback.format_exc())
             raise JHTTPBadRequest('Unknown', request=request,
@@ -173,7 +179,7 @@ class Base(object):
 
     @classmethod
     def query(cls, *args, **kw):
-        return cls.get_session().query(cls)
+        return cls.get_session().query(cls, *args, **kw)
 
     @classmethod
     def objects(cls, **params):
@@ -217,10 +223,11 @@ class Base(object):
 
     @classmethod
     def get_resource(cls, _raise=True, **params):
+        session = cls.get_session()
         params['_limit'] = 1
         params, specials = cls.prep_params(params)
         try:
-            obj = cls.get_session().query(cls).filter_by(**params).one()
+            obj = session.query(cls).filter_by(**params).one()
             obj._prf_meta = dict(fields=specials['_fields'])
             return obj
         except NoResultFound, e:
