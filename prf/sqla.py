@@ -1,51 +1,35 @@
 import logging
-import uuid
-
-import pyramid
-from sqlalchemy import engine_from_config
-from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from prf.utils import dictset, DataProxy, split_strip, process_limit
-from prf.json_httpexceptions import *
+from prf.json_httpexceptions import JHTTPConflict, JHTTPBadRequest, JHTTPNotFound
 
 log = logging.getLogger(__name__)
 
-Session = None
-
 
 def includeme(config):
+    import pyramid
     config.add_tween('prf.sqla.sqla_exc_tween', over=pyramid.tweens.MAIN)
 
 
-def setup(config, session=None, base=None):
-    global Session
-
-    engine = engine_from_config(config.registry.settings, 'sqlalchemy.')
-    Session = session or scoped_session(sessionmaker())
-    Session.configure(bind=engine)
-
-    if base:
-        base = config.maybe_dotted(base)
-        base.metadata.bind = Session.bind
-        base.metadata.create_all()
-
-
-def sqla2http(exc):
+def sqla2http(exc, session):
     _, _, failed = exc.message.partition(':')
     _, _, param = failed.partition('.')
 
-    if isinstance(exc, IntegrityError) and 'unique' in exc.message.lower():
-        msg = "Must be unique '%s'" % param
-        return JHTTPConflict(msg, extra={'data': exc})
-    elif isinstance(exc, IntegrityError) and 'not null' in exc.message.lower():
+    try:
+        if isinstance(exc, IntegrityError) and 'unique' in exc.message.lower():
+            msg = "Must be unique '%s'" % param
+            return JHTTPConflict(msg, extra={'data': exc})
+        elif isinstance(exc, IntegrityError) and 'not null' in exc.message.lower():
 
-        msg = "Missing '%s'" % param
-        return JHTTPBadRequest(msg, extra={'data': exc})
-    else:
-        raise exc
+            msg = "Missing '%s'" % param
+            return JHTTPBadRequest(msg, extra={'data': exc})
+        else:
+            return exc
+    finally:
+        session.rollback()
 
 
 def sqla_exc_tween(handler, registry):
@@ -57,11 +41,14 @@ def sqla_exc_tween(handler, registry):
         try:
             return handler(request)
         except SQLAlchemyError, e:
-            Session.rollback()
             import traceback
             log.error(traceback.format_exc())
             raise JHTTPBadRequest('Unknown', request=request,
                                   exception=exc_dict(e))
+        except:
+            raise
+        finally:
+            request.db.rollback()
 
     return exc
 
@@ -70,6 +57,7 @@ def order_by_clauses(model, _sort):
     _sort_param = []
 
     def _raise(attr):
+        model.get_session().rollback()
         raise JHTTPBadRequest("Bad attribute '%s'" % attr)
 
     for each in split_strip(_sort):
@@ -97,6 +85,10 @@ def order_by_clauses(model, _sort):
 class Base(object):
 
     _type = property(lambda self: self.__class__.__name__)
+
+    @classmethod
+    def get_session(cls):
+        raise NotImplementedError('Must return a session')
 
     @declared_attr
     def __tablename__(cls):
@@ -138,12 +130,13 @@ class Base(object):
         return '<%s: %s>' % (self.__class__.__name__, ', '.join(parts))
 
     def save(self, commit=True):
-        Session.add(self)
+        session = self.get_session()
+
+        session.add(self)
         try:
-            Session.commit()
+            session.commit()
         except IntegrityError, e:
-            Session.rollback()
-            raise sqla2http(e)
+            raise sqla2http(e, session)
 
         return self
 
@@ -154,11 +147,12 @@ class Base(object):
         return self.save(**kw)
 
     def delete(self):
-        Session.delete(self)
+        session = self.get_session()
+        session.delete(self)
         try:
-            Session.commit()
-        except IntegrityError, e:
-            Session.rollback()
+            session.commit()
+        except IntegrityError as e:
+            raise sqla2http(e, session)
 
     @classmethod
     def prep_params(cls, params):
@@ -179,27 +173,29 @@ class Base(object):
 
     @classmethod
     def query(cls, *args, **kw):
-        return Session.query(cls)
+        return cls.get_session().query(cls)
 
     @classmethod
     def objects(cls, **params):
         params, specials = cls.prep_params(params)
-        return Session.query(cls).filter_by(**params)
+        return cls.get_session().query(cls).filter_by(**params)
 
     @classmethod
     def get_collection(cls, *args, **params):
+        session = cls.get_session()
         params, specials = cls.prep_params(params)
 
         if specials['_limit'] is None:
+            session.rollback()
             raise KeyError('Missing _limit')
 
-        query = Session.query(cls)
+        query = session.query(cls)
 
         if args:
             query = query.filter(*args)
 
         if params:
-            query = Session.query(cls).filter_by(**params)
+            query = session.query(cls).filter_by(**params)
 
         if specials['_sort']:
             query = query.order_by(*order_by_clauses(cls, specials['_sort']))
@@ -224,13 +220,13 @@ class Base(object):
         params['_limit'] = 1
         params, specials = cls.prep_params(params)
         try:
-            obj = Session.query(cls).filter_by(**params).one()
+            obj = cls.get_session().query(cls).filter_by(**params).one()
             obj._prf_meta = dict(fields=specials['_fields'])
             return obj
         except NoResultFound, e:
-
             msg = "'%s(%s)' resource not found" % (cls.__name__, params)
             if _raise:
+                session.rollback()
                 raise JHTTPNotFound(msg)
             else:
                 log.debug(msg)

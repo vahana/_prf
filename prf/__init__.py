@@ -83,15 +83,6 @@ def includeme(config):
 
     config.set_root_factory(RootACL)
 
-    from prf.json_httpexceptions import JHTTPBadRequest
-
-    def param_error(context, request):
-        return JHTTPBadRequest("Bad or missing param '%s'"
-                               % str(context.message))
-
-    config.add_view(param_error, context=KeyError)
-    config.add_view(param_error, context=ValueError)
-
     config.registry._auth = False
 
     config.add_directive('enable_auth', enable_auth)
