@@ -11,11 +11,11 @@ def includeme(config):
     Settings = dictset(config.registry.settings)
 
     try:
-        if not Settings.asbool('logstash.enable'):
+        if not Settings.asbool('logstash.enable', default=False):
             log.warning('Logstash is disabled')
             return
 
-        if Settings.asbool('logstash.check'):
+        if Settings.asbool('logstash.check', default=False):
             import socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             deftimeout = sock.gettimeout()

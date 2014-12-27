@@ -47,7 +47,7 @@ def process_lists(_dict):
     for k in _dict:
         new_k, _, _t = k.partition('__')
         if _t == 'in' or _t == 'all':
-            _dict[k] = _dict.aslist(k)
+            _dict[k] = _dict.aslist(k, default=[])
     return _dict
 
 

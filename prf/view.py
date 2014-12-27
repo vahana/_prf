@@ -2,7 +2,6 @@ import json
 import logging
 import urllib
 from collections import defaultdict
-from pyramid.settings import asbool
 from pyramid.request import Request
 from pyramid.response import Response
 

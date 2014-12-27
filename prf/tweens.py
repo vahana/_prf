@@ -129,7 +129,7 @@ def cors(handler, registry):
 
     if allow_credentials is None:
         log.warning('cors.allow_credentials is not set')
-    elif asbool(allow_credentials) and allow_origins == '*':
+    elif asbool(allow_credentials, default=False) and allow_origins == '*':
 
         log.error('Not allowed Access-Control-Allow-Credentials to set to TRUE if origin is *'
                   )

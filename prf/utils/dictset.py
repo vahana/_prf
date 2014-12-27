@@ -4,6 +4,30 @@ from pyramid.settings import asbool
 from prf.utils.utils import process_fields, split_strip
 
 
+def parametrize(func):
+    def wrapper(obj, name, default=None, raise_on_empty=False, pop=False,
+                **kw):
+
+        if default is None:
+            value = obj[name]
+        else:
+            value = obj.get(name, default)
+
+        if raise_on_empty and not value:
+            raise ValueError("'%s' can not be empty" % name)
+
+        result = func(obj, value, **kw)
+
+        if pop:
+            obj.pop(name, None)
+        else:
+            obj[name] = result
+
+        return result
+
+    return wrapper
+
+
 class dictset(dict):
 
     def copy(self):
@@ -35,47 +59,22 @@ class dictset(dict):
     def __setattr__(self, key, val):
         self[key] = val
 
-    def asbool(self, name, default=False, _set=False, pop=False):
-        val = asbool(self.get(name, default))
-        if _set:
-            self[name] = val
-        elif pop:
-            self.pop(name, None)
+    @parametrize
+    def asbool(self, value):
+        return asbool(value)
 
-        return val
+    @parametrize
+    def aslist(self, value, remove_empty=True):
+        _lst = (value if isinstance(value, list) else value.split(','))
+        return filter(bool, _lst) if remove_empty else _lst
 
-    def aslist(self, name, remove_empty=True, default=[], _set=False,
-               pop=False):
-        attr = self.get(name, default) or default
-        _lst = (attr if isinstance(attr, list) else attr.split(','))
+    @parametrize
+    def asint(self, value):
+        return int(value)
 
-        if remove_empty:
-            _lst = filter(bool, _lst)
-
-        if _set:
-            self[name] = _lst
-        elif pop:
-            self.pop(name, None)
-
-        return _lst
-
-    def asint(self, name, default=0, _set=False, pop=False):
-        val = int(self.get(name, default))
-        if _set:
-            self[name] = val
-        elif pop:
-            self.pop(name, None)
-
-        return val
-
-    def asfloat(self, name, default=0.0, _set=False, pop=False):
-        val = float(self.get(name, default))
-        if _set:
-            self[name] = val
-        elif pop:
-            self.pop(name, None)
-
-        return val
+    @parametrize
+    def asfloat(self, value):
+        return float(value)
 
     def asdict(self, name, _type=None, _set=False, pop=False):
         """

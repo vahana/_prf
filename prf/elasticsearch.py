@@ -149,7 +149,7 @@ class ES(object):
                 hosts.append(dict(host=host, port=port))
 
             params = {}
-            if ES.settings.asbool('sniff'):
+            if ES.settings.asbool('sniff', default=False):
                 params = dict(sniff_on_start=True,
                               sniff_on_connection_fail=True)
 
