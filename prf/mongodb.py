@@ -14,11 +14,11 @@ log = logging.getLogger(__name__)
 
 
 def includeme(config):
-    Settings = dictset(config.registry.settings)
+    settings = dictset(config.registry.settings)
 
-    db = Settings['mongodb.db']
-    host = Settings.get('mongodb.host', 'localhost')
-    port = Settings.asint('mongodb.port', 27017)
+    db = settings['mongodb.db']
+    host = settings.get('mongodb.host', 'localhost')
+    port = settings.asint('mongodb.port', 27017)
 
     log.info('MongoDB enabled with db:%s, host:%s, port:%s', db, host, port)
 

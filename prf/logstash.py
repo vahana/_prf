@@ -8,21 +8,21 @@ log = logging.getLogger(__name__)
 
 def includeme(config):
     log.info('Including logstash')
-    Settings = dictset(config.registry.settings)
+    settings = dictset(config.registry.settings)
 
     try:
-        if not Settings.asbool('logstash.enable', default=False):
+        if not settings.asbool('logstash.enable', default=False):
             log.warning('Logstash is disabled')
             return
 
-        if Settings.asbool('logstash.check', default=False):
+        if settings.asbool('logstash.check', default=False):
             import socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             deftimeout = sock.gettimeout()
             sock.settimeout(3)
             try:
-                sock.sendto('PING', 0, (Settings['logstash.host'],
-                            Settings.asint('logstash.port')))
+                sock.sendto('PING', 0, (settings['logstash.host'],
+                            settings.asint('logstash.port')))
                 recv, svr = sock.recvfrom(255)
                 sock.shutdown(2)
             except Exception, e:
@@ -31,8 +31,8 @@ def includeme(config):
                 sock.settimeout(deftimeout)
 
         logger = logging.getLogger()
-        handler = logstash.LogstashHandler(Settings['logstash.host'],
-                Settings.asint('logstash.port'), version=1)
+        handler = logstash.LogstashHandler(settings['logstash.host'],
+                settings.asint('logstash.port'), version=1)
         handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)-5.5s [%(name)s][%(threadName)s] %(module)s.%(funcName)s: %(message)s'
                              ))
         logger.addHandler(handler)

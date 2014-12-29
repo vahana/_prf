@@ -78,8 +78,8 @@ class MongoSerializer(elasticsearch.serializer.JSONSerializer):
 
 
 def includeme(config):
-    Settings = dictset(config.registry.settings)
-    ES.setup(Settings)
+    settings = dictset(config.registry.settings)
+    ES.setup(settings)
 
 
 def apply_sort(_sort):

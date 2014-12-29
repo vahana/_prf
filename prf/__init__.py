@@ -63,6 +63,15 @@ def enable_auth(config, user_model=None, root_factory=RootACL,
                     route_name='prf_logout', request_method='POST')
 
 
+def add400views(config, exc_list):
+    def view(context, request):
+        from prf.json_httpexceptions import JHTTPBadRequest
+        return JHTTPBadRequest(context.message)
+
+    for exc in exc_list:
+        config.add_view(view, context=exc)
+
+
 def includeme(config):
     from prf.renderers import JsonRendererFactory
 
@@ -75,9 +84,6 @@ def includeme(config):
 
     config.add_request_method(get_resource_map, 'resource_map', reify=True)
 
-    config.add_tween('prf.tweens.GET_tunneling')
-    config.add_tween('prf.tweens.cache_control')
-
     config.add_route('options', '/*path', request_method='OPTIONS')
     config.add_view('prf.utility_views.OptionsView', route_name='options')
 
@@ -86,3 +92,4 @@ def includeme(config):
     config.registry._auth = False
 
     config.add_directive('enable_auth', enable_auth)
+    config.add_directive('add400views', add400views)

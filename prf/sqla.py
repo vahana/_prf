@@ -1,70 +1,94 @@
 import logging
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+import sqlalchemy.exc as sqla_exc
 
 from prf.utils import dictset, DataProxy, split_strip, process_limit
-from prf.json_httpexceptions import JHTTPConflict, JHTTPBadRequest, JHTTPNotFound
+import prf.json_httpexceptions as prf_exc
 
 log = logging.getLogger(__name__)
+
+
+def set_db_session(config, session):
+    config.registry.db_session = session
+
+
+def db(request):
+    try:
+        return request.registry.db_session
+    except AttributeError as e:
+        raise AttributeError(
+                "%s: Make sure to call config.set_db_session(session)" % e)
 
 
 def includeme(config):
     import pyramid
     config.add_tween('prf.sqla.sqla_exc_tween', over=pyramid.tweens.MAIN)
+    config.add_directive('set_db_session', set_db_session)
+    config.add_request_method(db, reify=True)
 
 
-def sqla2http(exc, session):
+def sqla2http(exc, request=None):
     _, _, failed = exc.message.partition(':')
     _, _, param = failed.partition('.')
-
-    try:
-        if isinstance(exc, IntegrityError) and 'unique' in exc.message.lower():
-            msg = "Must be unique '%s'" % param
-            return JHTTPConflict(msg, extra={'data': exc})
-
-        elif isinstance(exc, IntegrityError) and 'not null' in exc.message.lower():
-            msg = "Missing '%s'" % param
-            return JHTTPBadRequest(msg, extra={'data': exc})
-
-        elif isinstance(exc, NoResultFound):
-            return JHTTPNotFound()
-
-        else:
-            return exc
-    finally:
-        session.rollback()
-
-
-def sqla_exc_tween(handler, registry):
 
     def exc_dict(e):
         return {'class': e.__class__, 'message': e.message}
 
-    def exc(request):
-        try:
-            return handler(request)
-        except (IntegrityError, NoResultFound) as e:
-            raise sqla2http(e, request.db)
-        except SQLAlchemyError as e:
-            import traceback
-            log.error(traceback.format_exc())
-            raise JHTTPBadRequest('Unknown', request=request,
-                                  exception=exc_dict(e))
-        except:
-            raise
-        finally:
-            request.db.rollback()
+    if isinstance(exc, sqla_exc.IntegrityError) and 'unique' \
+        in exc.message.lower():
+        msg = "Must be unique '%s'" % param
 
-    return exc
+        return prf_exc.JHTTPConflict(msg, request=request, exception=exc_dict(exc))
+
+    elif isinstance(exc, sqla_exc.IntegrityError) and 'not null' \
+        in exc.message.lower():
+
+        msg = "Missing '%s'" % param
+        return prf_exc.JHTTPBadRequest(msg, request=request, exception=exc_dict(exc))
+
+    elif isinstance(exc, NoResultFound):
+
+        return prf_exc.JHTTPNotFound(request=request, exception=exc_dict(exc))
+
+    elif isinstance(exc, sqla_exc.InvalidRequestError) and 'has no property' \
+        in exc.message.lower():
+
+        return prf_exc.JHTTPBadRequest('Bad params', request=request,
+                               exception=exc_dict(exc))
+
+    elif isinstance(exc, sqla_exc.SQLAlchemyError):
+        import traceback
+        log.error(traceback.format_exc())
+        return prf_exc.JHTTPBadRequest(exc, request=request, exception=exc_dict(exc))
+
+    else:
+        return exc
+
+
+def sqla_exc_tween(handler, registry):
+    log.info('sqla_exc_tween enabled')
+
+    def tween(request):
+        try:
+            resp = handler(request)
+            request.db.commit()
+            return resp
+        except sqla_exc.SQLAlchemyError, e:
+            request.db.rollback()
+            raise sqla2http(e)
+        except:
+            request.db.rollback()
+            raise
+
+    return tween
 
 
 def order_by_clauses(model, _sort):
     _sort_param = []
 
     def _raise(attr):
-        model.get_session().rollback()
-        raise JHTTPBadRequest("Bad attribute '%s'" % attr)
+        raise AttributeError("Bad attribute '%s'" % attr)
 
     for each in split_strip(_sort):
         if each.startswith('-'):
@@ -137,13 +161,7 @@ class Base(object):
 
     def save(self, commit=True):
         session = self.get_session()
-
         session.add(self)
-        try:
-            session.commit()
-        except IntegrityError, e:
-            raise sqla2http(e, session)
-
         return self
 
     def _update(self, params, **kw):
@@ -155,10 +173,6 @@ class Base(object):
     def delete(self):
         session = self.get_session()
         session.delete(self)
-        try:
-            session.commit()
-        except IntegrityError as e:
-            raise sqla2http(e, session)
 
     @classmethod
     def prep_params(cls, params):
@@ -192,7 +206,6 @@ class Base(object):
         params, specials = cls.prep_params(params)
 
         if specials['_limit'] is None:
-            session.rollback()
             raise KeyError('Missing _limit')
 
         query = session.query(cls)
@@ -231,12 +244,10 @@ class Base(object):
             obj._prf_meta = dict(fields=specials['_fields'])
             return obj
         except NoResultFound, e:
-            msg = "'%s(%s)' resource not found" % (cls.__name__, params)
             if _raise:
-                session.rollback()
-                raise JHTTPNotFound(msg)
+                raise
             else:
-                log.debug(msg)
+                log.debug("'%s(%s)' resource not found" % (cls.__name__, params))
                 return None
 
     @classmethod
