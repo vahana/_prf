@@ -1,3 +1,4 @@
+import re
 import logging
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm.exc import NoResultFound
@@ -8,10 +9,32 @@ import prf.json_httpexceptions as prf_exc
 
 log = logging.getLogger(__name__)
 
+def dbi2http(code, exc):
+    def exc_dict(e):
+        return {'class': e.__class__, 'message': e.message}
+
+    if code == '23502':
+        match = re.search(r'"([A-Za-z0-9_\./\\-]*)"', exc.message)
+        msg = 'Missing param %s' % match.group()
+        return prf_exc.JHTTPBadRequest(msg, exception=exc_dict(exc))
+    elif code == '23505':
+        msg = "Resource already exists"
+        return prf_exc.JHTTPConflict(msg, exception=exc_dict(exc))
+
+    else:
+        return prf_exc.JHTTPServerError(code, exception=exc_dict(exc))
 
 def set_db_session(config, session):
     config.registry.db_session = session
 
+    from sqlalchemy import event
+    import psycopg2
+
+    @event.listens_for(session.bind.engine, "handle_error")
+    def handle_exception(context):
+        if isinstance(context.original_exception, psycopg2.DatabaseError):
+            raise dbi2http(context.original_exception.pgcode,
+                           context.original_exception)
 
 def db(request):
     try:
@@ -35,20 +58,7 @@ def sqla2http(exc, request=None):
     def exc_dict(e):
         return {'class': e.__class__, 'message': e.message}
 
-    if isinstance(exc, sqla_exc.IntegrityError) and 'unique' \
-        in exc.message.lower():
-        msg = "Must be unique '%s'" % param
-
-        return prf_exc.JHTTPConflict(msg, request=request, exception=exc_dict(exc))
-
-    elif isinstance(exc, sqla_exc.IntegrityError) and 'not null' \
-        in exc.message.lower():
-
-        msg = "Missing '%s'" % param
-        return prf_exc.JHTTPBadRequest(msg, request=request, exception=exc_dict(exc))
-
-    elif isinstance(exc, NoResultFound):
-
+    if isinstance(exc, NoResultFound):
         return prf_exc.JHTTPNotFound(request=request, exception=exc_dict(exc))
 
     elif isinstance(exc, sqla_exc.InvalidRequestError) and 'has no property' \
@@ -60,7 +70,8 @@ def sqla2http(exc, request=None):
     elif isinstance(exc, sqla_exc.SQLAlchemyError):
         import traceback
         log.error(traceback.format_exc())
-        return prf_exc.JHTTPBadRequest(exc, request=request, exception=exc_dict(exc))
+        return prf_exc.JHTTPBadRequest('SQLA error', request=request,
+                                                    exception=exc_dict(exc))
 
     else:
         return exc
@@ -74,6 +85,7 @@ def sqla_exc_tween(handler, registry):
             resp = handler(request)
             request.db.commit()
             return resp
+
         except sqla_exc.SQLAlchemyError, e:
             request.db.rollback()
             raise sqla2http(e)

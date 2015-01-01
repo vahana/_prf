@@ -5,7 +5,6 @@ from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.security import ALL_PERMISSIONS, Allow
 
-
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
 PROJECTDIR = _DIST.location
@@ -64,9 +63,11 @@ def enable_auth(config, user_model=None, root_factory=RootACL,
 
 
 def add400views(config, exc_list):
+
     def view(context, request):
         from prf.json_httpexceptions import JHTTPBadRequest
-        return JHTTPBadRequest(context.message)
+        log.error(context)
+        return JHTTPBadRequest(context.message, request=request)
 
     for exc in exc_list:
         config.add_view(view, context=exc)

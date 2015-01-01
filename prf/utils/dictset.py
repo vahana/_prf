@@ -9,7 +9,10 @@ def parametrize(func):
                 **kw):
 
         if default is None:
-            value = obj[name]
+            try:
+                value = obj[name]
+            except KeyError:
+                raise KeyError("Missing '%s'" % name)
         else:
             value = obj.get(name, default)
 
