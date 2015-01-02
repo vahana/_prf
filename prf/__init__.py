@@ -59,7 +59,7 @@ def enable_auth(config, user_model=None, root_factory=RootACL,
 
     config.add_route('prf_logout', logout_path)
     config.add_view(view='prf.utility_views.AccountView', attr='logout',
-                    route_name='prf_logout', request_method='POST')
+                    route_name='prf_logout')
 
 
 def add400views(config, exc_list):

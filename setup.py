@@ -10,9 +10,6 @@ VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 install_requires = [
     'pyramid',
     'tempita',
-    'mongoengine',
-    'elasticsearch',
-    'blinker',
     'requests',
 ]
 

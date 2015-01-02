@@ -153,14 +153,23 @@ class AccountView(object):
     def login(self):
         login = self.request.params['login']
         password = self.request.params['password']
+        next = self.request.params.get('next', '')
 
         success, user = self.__user_model.authenticate(login, password)
         if success:
             headers = remember(self.request, user)
+            if next :
+                return JHTTPFound(headers=headers, location=next)
             return JHTTPOk(headers=headers)
         else:
             raise JHTTPUnauthorized("User '%s' failed to Login" % login)
 
     def logout(self):
+        next = self.request.params.get('next', '')
+
         headers = forget(self.request)
+
+        if next:
+            return JHTTPFound(headers=headers, location=next)
+
         return JHTTPOk(headers=headers)
