@@ -176,7 +176,7 @@ class Base(object):
         session.add(self)
         return self
 
-    def _update(self, params, **kw):
+    def update(self, params, **kw):
         for key, value in params.items():
             setattr(self, key, value)
 
