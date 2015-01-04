@@ -70,11 +70,9 @@ class LogLevelsView(BaseView):
     def update(self, id=None):
         level = self._params['value'].upper()
         self.setlevel(level)
-        return JHTTPOk()
 
     def delete(self, id=None):
         self.setlevel('INFO')
-        return JHTTPOk()
 
 
 class SettingsView(BaseView):
@@ -97,7 +95,6 @@ class SettingsView(BaseView):
 
     def update(self, id):
         self.settings[id] = self._params['value']
-        return JHTTPOk()
 
     def create(self):
         key = self._params['key']
@@ -105,15 +102,11 @@ class SettingsView(BaseView):
 
         self.settings[key] = value
 
-        return JHTTPCreate()
-
     def delete(self, id):
         if 'reset' in self._params:
             self.settings[id] = self.request.registry.settings[id]
         else:
             self.settings.pop(id, None)
-
-        return JHTTPOk()
 
     def delete_many(self):
         if self.needs_confirmation():
