@@ -1,5 +1,4 @@
 from pyramid.view import view_config
-from pyramid.security import remember, forget
 
 import prf
 from prf.json_httpexceptions import *
