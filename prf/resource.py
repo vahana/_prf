@@ -1,4 +1,5 @@
 import logging
+import types
 from prf.utils import snake2camel, maybe_dotted
 
 log = logging.getLogger(__name__)
@@ -6,19 +7,27 @@ log = logging.getLogger(__name__)
 DEFAULT_ID_NAME = 'id'
 
 
-def default_view(resource):
+def get_view_class(view_param, resource):
     '''Returns the dotted path to the default view class.'''
 
     parts = [a.member_name for a in resource.ancestors] \
         + [resource.collection_name or resource.member_name]
-
     if resource.prefix:
         parts.insert(-1, resource.prefix)
 
     view_file = '%s' % '_'.join(parts)
-    view = '%s:%sView' % (view_file, snake2camel(view_file))
+    view_class = '%sView' % snake2camel(view_file)
 
-    return '%s.views.%s' % (resource.config.package_name, view)
+    view = maybe_dotted(view_param)
+
+    if isinstance(view, types.TypeType):
+        return view
+
+    elif isinstance(view, types.ModuleType):
+        return getattr(view, view_class)
+
+    view = '%s:%s' % (view_file, view_class)
+    return maybe_dotted('%s.views.%s' % (resource.config.package_name, view))
 
 
 def get_uri_elements(resource):
@@ -191,9 +200,7 @@ class Resource(object):
                                   id_name=kwargs.get('id_name', ''),
                                   prefix=prefix)
 
-        child_view = maybe_dotted(kwargs.pop('view', None)
-                                  or default_view(child_resource))
-
+        child_view = get_view_class(kwargs.pop('view', None), child_resource)
         root_resource = self.config.get_root_resource()
 
         kwargs['path_prefix'], kwargs['name_prefix'] = \

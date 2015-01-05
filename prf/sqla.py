@@ -1,8 +1,11 @@
 import re
 import logging
+
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm.exc import NoResultFound
 import sqlalchemy.exc as sqla_exc
+from sqlalchemy.orm import class_mapper
+from sqlalchemy.orm.properties import ColumnProperty
 
 from prf.utils import dictset, DataProxy, split_strip, process_limit
 import prf.json_httpexceptions as prf_exc
@@ -124,6 +127,12 @@ def order_by_clauses(model, _sort):
     return _sort_param
 
 
+def get_column_names(cls):
+    mapper = class_mapper(cls)
+    return [prop.key for prop in mapper.iterate_properties
+            if isinstance(prop, ColumnProperty)]
+
+
 class Base(object):
 
     _type = property(lambda self: self.__class__.__name__)
@@ -137,14 +146,9 @@ class Base(object):
         return cls.__name__.lower()
 
     def to_dict(self, request=None, **kw):
-
         def get_data():
             _dict = dictset()
-            att_names = [attr for attr in dir(self)
-                         if not callable(getattr(self, attr))
-                         and not attr.startswith('__')]
-
-            for attr in att_names:
+            for attr in get_column_names(self.__class__):
                 _dict[attr] = getattr(self, attr)
 
             return _dict

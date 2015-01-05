@@ -6,6 +6,7 @@ from pyramid.security import remember, forget
 from prf.json_httpexceptions import *
 from prf.utils import dictset
 
+
 class RootACL(object):
 
     __acl__ = [(Allow, 'g:admin', ALL_PERMISSIONS)]
@@ -14,12 +15,14 @@ class RootACL(object):
         pass
 
     def __getitem__(self, key):
-        return type('Dummy', (object, ), {'__acl__': RootACL.__acl__})()
+        return type('DummyContext', (object, ), {'__acl__': RootACL.__acl__,
+                    '__repr__': lambda self: \
+                    '%s: ACL for this resource is not provided.' \
+                    % self.__class__})()
 
 
 def enable_auth(config, user_model=None, root_factory=RootACL,
-                login_path='login', logout_path='logout',
-                route_prefix=''):
+                login_path='login', logout_path='logout', route_prefix=''):
 
     secret = config.registry.settings['auth_tkt_secret']
 
@@ -37,12 +40,12 @@ def enable_auth(config, user_model=None, root_factory=RootACL,
     config.registry._auth = True
 
     config.add_route('prf_login', '%s/%s' % (route_prefix, login_path))
-    config.add_view(view=AccountView, attr='login',
-                    route_name='prf_login', request_method='POST')
+    config.add_view(view=AccountView, attr='login', route_name='prf_login',
+                    request_method='POST')
 
     config.add_route('prf_logout', '%s/%s' % (route_prefix, logout_path))
-    config.add_view(view=AccountView, attr='logout',
-                    route_name='prf_logout')
+    config.add_view(view=AccountView, attr='logout', route_name='prf_logout')
+
 
 def includeme(config):
     config.add_directive('enable_auth', enable_auth)
@@ -80,7 +83,7 @@ class AccountView(object):
         success, user = self.__user_model.authenticate(login, password)
         if success:
             headers = remember(self.request, user)
-            if next :
+            if next:
                 return JHTTPFound(headers=headers, location=next)
             return JHTTPOk(headers=headers)
         else:
