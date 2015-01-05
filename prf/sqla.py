@@ -12,6 +12,7 @@ import prf.json_httpexceptions as prf_exc
 
 log = logging.getLogger(__name__)
 
+
 def dbi2http(code, exc):
     def exc_dict(e):
         return {'class': e.__class__, 'message': e.message}
@@ -27,6 +28,7 @@ def dbi2http(code, exc):
     else:
         return prf_exc.JHTTPServerError(code, exception=exc_dict(exc))
 
+
 def set_db_session(config, session):
     config.registry.db_session = session
 
@@ -38,6 +40,7 @@ def set_db_session(config, session):
         if isinstance(context.original_exception, psycopg2.DatabaseError):
             raise dbi2http(context.original_exception.pgcode,
                            context.original_exception)
+
 
 def db(request):
     try:
@@ -127,12 +130,6 @@ def order_by_clauses(model, _sort):
     return _sort_param
 
 
-def get_column_names(cls):
-    mapper = class_mapper(cls)
-    return [prop.key for prop in mapper.iterate_properties
-            if isinstance(prop, ColumnProperty)]
-
-
 class Base(object):
 
     _type = property(lambda self: self.__class__.__name__)
@@ -141,6 +138,12 @@ class Base(object):
     def get_session(cls):
         raise NotImplementedError('Must return a session')
 
+    @classmethod
+    def get_field_names(cls):
+        mapper = class_mapper(cls)
+        return [prop.key for prop in mapper.iterate_properties
+                if isinstance(prop, ColumnProperty)]
+
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()
@@ -148,7 +151,7 @@ class Base(object):
     def to_dict(self, request=None, **kw):
         def get_data():
             _dict = dictset()
-            for attr in get_column_names(self.__class__):
+            for attr in self.get_field_names():
                 _dict[attr] = getattr(self, attr)
 
             return _dict
