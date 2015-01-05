@@ -183,11 +183,11 @@ class Base(object):
         session.add(self)
         return self
 
-    def update(self, params, **kw):
+    def update(self, **params):
         for key, value in params.items():
             setattr(self, key, value)
 
-        return self.save(**kw)
+        return self.save()
 
     def delete(self):
         session = self.get_session()
