@@ -138,15 +138,12 @@ class Base(object):
     def get_session(cls):
         raise NotImplementedError('Must return a session')
 
-    @classmethod
-    def get_field_names(cls):
-        mapper = class_mapper(cls)
-        return [prop.key for prop in mapper.iterate_properties
-                if isinstance(prop, ColumnProperty)]
-
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()
+
+    def get_field_names(self):
+        return set(self.__table__.columns.keys())
 
     def to_dict(self, request=None, **kw):
         def get_data():
