@@ -148,7 +148,11 @@ class Base(object):
     def to_dict(self, request=None, **kw):
         def get_data():
             _dict = dictset()
-            for attr in self.get_field_names():
+            fields = self.get_field_names()
+            if kw.get('fields', []):
+                fields &= set(kw['fields'])
+
+            for attr in fields:
                 _dict[attr] = getattr(self, attr)
 
             return _dict
