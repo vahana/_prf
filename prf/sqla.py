@@ -142,25 +142,23 @@ class Base(object):
     def __tablename__(cls):
         return cls.__name__.lower()
 
-    def get_field_names(self):
+    def get_field_names(self, **kw):
         return set(self.__table__.columns.keys())
 
     def to_dict(self, request=None, **kw):
         def get_data():
-            _dict = dictset()
-            fields = self.get_field_names()
+            data = dictset()
+            fields = self.get_field_names(**kw)
             if kw.get('fields', []):
                 fields &= set(kw['fields'])
 
             for attr in fields:
-                _dict[attr] = getattr(self, attr)
+                data[attr] = getattr(self, attr)
 
-            return _dict
+            return data
 
         _data = get_data()
-
         _data['_type'] = self._type
-        _data.update(kw.pop('override', {}))
         return DataProxy(_data).to_dict(**kw)
 
     def repr_parts(self):
