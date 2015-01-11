@@ -95,9 +95,12 @@ def sqla_exc_tween(handler, registry):
         except sqla_exc.SQLAlchemyError, e:
             request.db.rollback()
             raise sqla2http(e)
+
         except:
             request.db.rollback()
-            raise
+            import traceback
+            log.error(traceback.format_exc())
+            raise prf_exc.JHTTPServerError(request=request)
 
     return tween
 
