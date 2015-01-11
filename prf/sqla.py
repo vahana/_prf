@@ -100,7 +100,7 @@ def sqla_exc_tween(handler, registry):
             request.db.rollback()
             import traceback
             log.error(traceback.format_exc())
-            raise prf_exc.JHTTPServerError(request=request)
+            raise
 
     return tween
 
@@ -145,16 +145,18 @@ class Base(object):
     def __tablename__(cls):
         return cls.__name__.lower()
 
-    def get_field_names(self, **kw):
+    @property
+    def column_names(self):
         return set(self.__table__.columns.keys())
+
+    @property
+    def field_names(self):
+        return self.column_names
 
     def to_dict(self, request=None, **kw):
         def get_data():
             data = dictset()
-            fields = self.get_field_names(**kw)
-            if kw.get('fields', []):
-                fields &= set(kw['fields'])
-
+            fields = self.field_names | set(kw.get('fields', []))
             for attr in fields:
                 data[attr] = getattr(self, attr)
 
