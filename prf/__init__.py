@@ -20,12 +20,19 @@ def get_resource_map(request):
     return request.registry._resources_map
 
 
+MSG_MAP = {
+    KeyError: 'Missing param: %s',
+    ValueError: 'Bad value: %s',
+    AttributeError: 'Missing value: %s',
+    TypeError: 'Bad type: %s'
+}
+
 def add400views(config, exc_list):
 
     def view(context, request):
         from prf.json_httpexceptions import JHTTPBadRequest
-        log.error(context)
-        return JHTTPBadRequest(context.message, request=request)
+        msg = MSG_MAP.get(context.__class__, '%s')
+        return JHTTPBadRequest(msg % context.message, request=request)
 
     for exc in exc_list:
         config.add_view(view, context=exc)

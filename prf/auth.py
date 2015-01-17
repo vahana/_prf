@@ -1,3 +1,4 @@
+import logging
 from pyramid.security import ALL_PERMISSIONS, Allow
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
@@ -5,6 +6,8 @@ from pyramid.security import remember, forget
 
 from prf.json_httpexceptions import *
 from prf.utils import dictset
+
+log = logging.getLogger(__name__)
 
 
 class RootACL(object):
@@ -24,14 +27,24 @@ class RootACL(object):
 def enable_auth(config, user_model=None, root_factory=RootACL,
                 login_path='login', logout_path='logout', route_prefix=''):
 
-    secret = config.registry.settings['auth_tkt_secret']
+    settings = dictset(config.registry.settings)
+    auth_params = settings.mget('auth', defaults=dict(hashalg='sha512',
+                                http_only=True,
+                                callback=config.maybe_dotted(AccountView.groupfinder)))
+
+    if 'secret' not in auth_params:
+        # try old place before cursing
+        try:
+            auth_params['secret'] = settings.auth_tkt_secret
+            log.warning('Deprecated: auth_tkt_secret is deprecated, use auth.secret instead')
+        except KeyError:
+            raise KeyError('auth.secret is missing')
 
     user_model = config.maybe_dotted(user_model)
 
     AccountView.set_user_model(user_model)
 
-    authn_policy = AuthTktAuthenticationPolicy(secret,
-            callback=config.maybe_dotted(AccountView.groupfinder))
+    authn_policy = AuthTktAuthenticationPolicy(**auth_params)
 
     config.set_authentication_policy(authn_policy)
     config.set_authorization_policy(ACLAuthorizationPolicy())

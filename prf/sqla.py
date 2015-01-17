@@ -21,6 +21,9 @@ def dbi2http(code, exc):
         match = re.search(r'"([A-Za-z0-9_\./\\-]*)"', exc.message)
         msg = 'Missing param %s' % match.group()
         return prf_exc.JHTTPBadRequest(msg, exception=exc_dict(exc))
+    elif code == '23503':
+        msg = 'Can not update or delete resource: child resource(s) exist'
+        return prf_exc.JHTTPConflict(msg, exception=exc_dict(exc))
     elif code == '23505':
         msg = "Resource already exists"
         return prf_exc.JHTTPConflict(msg, exception=exc_dict(exc))
