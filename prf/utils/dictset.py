@@ -56,6 +56,10 @@ class dictset(dict):
         super(dictset, self).update(*args, **kw)
         return self
 
+    def __getitem__(self, key):
+        val = super(dictset, self).__getitem__(key)
+        return dictset(val) if isinstance(val, dict) else val
+
     def __getattr__(self, key):
         return self[key]
 
