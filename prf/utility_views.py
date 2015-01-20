@@ -116,3 +116,14 @@ class SettingsView(BaseView):
             self.settings[name] = self.__orig[name]
 
         return JHTTPOk('Reset the settings to original values')
+
+
+class APIView(BaseView):
+    def _get_routes(self):
+        root = self.request.registry._root_resources.values()[0]
+        mapper = root.config.get_routes_mapper()
+        return mapper.routes
+
+    def show(self):
+        return {'api':['%s'% (r.path)
+                    for r in self._get_routes().values()]}

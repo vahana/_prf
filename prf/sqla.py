@@ -27,7 +27,9 @@ def dbi2http(code, exc):
     elif code == '23505':
         msg = "Resource already exists"
         return prf_exc.JHTTPConflict(msg, exception=exc_dict(exc))
-
+    elif code == '22P02':
+        msg = "Bad value"
+        return prf_exc.JHTTPBadRequest(msg, exception=exc_dict(exc))
     else:
         return prf_exc.JHTTPServerError(code, exception=exc_dict(exc))
 
@@ -270,11 +272,11 @@ class Base(object):
             obj._prf_meta = dict(fields=specials['_fields'])
             return obj
         except NoResultFound, e:
+            msg = "'%s(%s)' resource not found" % (cls.__name__, params)
             if _raise:
-                raise
+                raise prf_exc.JHTTPNotFound(msg)
             else:
-                log.debug("'%s(%s)' resource not found" % (cls.__name__, params))
-                return None
+                log.debug(msg)
 
     @classmethod
     def get(cls, **params):
