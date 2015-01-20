@@ -32,6 +32,24 @@ def parametrize(func):
 
 
 class dictset(dict):
+    def __init__(self, *arg, **kw):
+        super(dictset, self).__init__(*arg, **kw)
+        self.to_dictset()
+
+    def to_dictset(self):
+        for key, val in self.items():
+            if isinstance(val, dict):
+                self[key] = dictset(val)
+            if isinstance(val, list):
+                new_list = []
+                for each in val:
+                    if isinstance(each, dict):
+                        new_list.append(dictset(each))
+                    else:
+                        new_list.append(each)
+                self[key] = new_list
+
+        return self
 
     def copy(self):
         return dictset(super(dictset, self).copy())
@@ -52,13 +70,9 @@ class dictset(dict):
         only, _ = process_fields(keys)
         return dictset([[k, v] for (k, v) in self.items() if k not in only])
 
-    def update(self, *args, **kw):
-        super(dictset, self).update(*args, **kw)
+    def update(self, d_):
+        super(dictset, self).update(dictset(d_))
         return self
-
-    def __getitem__(self, key):
-        val = super(dictset, self).__getitem__(key)
-        return dictset(val) if isinstance(val, dict) else val
 
     def __getattr__(self, key):
         return self[key]
