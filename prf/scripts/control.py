@@ -1,21 +1,11 @@
 import sys
 import subprocess
 
-from prf.utils import dictset
 from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars
 
-
-def package_name(argv):
-    return argv[0].split('/')[-1].split('.')[0]
-
-
-def pid_arg(package_name):
-    return '--pid-file=%s.pid' % package_name
-
-
-def config_uri(package_name):
-    return '%s.ini' % package_name
+from prf.utils import dictset
+from prf.scripts.common import package_name, pid_arg, config_uri
 
 
 def call_pserve(argv):
