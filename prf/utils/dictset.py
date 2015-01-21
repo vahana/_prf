@@ -1,40 +1,23 @@
-from datetime import datetime
-from pyramid.settings import asbool
-
-from prf.utils.utils import process_fields, split_strip
-
-
-def parametrize(func):
-    def wrapper(obj, name, default=None, raise_on_empty=False, pop=False,
-                **kw):
-
-        if default is None:
-            try:
-                value = obj[name]
-            except KeyError:
-                raise KeyError("Missing '%s'" % name)
-        else:
-            value = obj.get(name, default)
-
-        if raise_on_empty and not value:
-            raise ValueError("'%s' can not be empty" % name)
-
-        result = func(obj, value, **kw)
-
-        if pop:
-            obj.pop(name, None)
-        else:
-            obj[name] = result
-
-        return result
-
-    return wrapper
+from prf.utils.utils import process_fields
+from prf.utils.convert import *
 
 
 class dictset(dict):
+
     def __init__(self, *arg, **kw):
         super(dictset, self).__init__(*arg, **kw)
         self.to_dictset()
+
+    def __getattr__(self, key):
+        return self[key]
+
+    def __setattr__(self, key, val):
+        if isinstance(val, dict):
+            val = dictset(val)
+        self[key] = val
+
+    def __delattr__(self, key):
+        self.pop(key)
 
     def to_dictset(self):
         for key, val in self.items():
@@ -57,10 +40,13 @@ class dictset(dict):
     def subset(self, keys):
         only, exclude = process_fields(keys)
 
-        if only and not exclude:
-            return dictset([[k, v] for (k, v) in self.items() if k in only])
+        if only and exclude:
+            raise ValueError('Can only supply either positive or negative keys, but not both'
+                             )
 
-        if exclude:
+        if only:
+            return dictset([[k, v] for (k, v) in self.items() if k in only])
+        elif exclude:
             return dictset([[k, v] for (k, v) in self.items() if k
                            not in exclude])
 
@@ -74,70 +60,11 @@ class dictset(dict):
         super(dictset, self).update(dictset(d_))
         return self
 
-    def __getattr__(self, key):
-        return self[key]
-
-    def __setattr__(self, key, val):
-        self[key] = val
-
-    @parametrize
-    def asbool(self, value):
-        return asbool(value)
-
-    @parametrize
-    def aslist(self, value, remove_empty=True):
-        _lst = (value if isinstance(value, list) else value.split(','))
-        return filter(bool, _lst) if remove_empty else _lst
-
-    @parametrize
-    def asint(self, value):
-        return int(value)
-
-    @parametrize
-    def asfloat(self, value):
-        return float(value)
-
-    def asdict(self, name, _type=None, _set=False, pop=False):
-        """
-        Turn this 'a:2,b:blabla,c:True,a:'d' to {a:[2, 'd'], b:'blabla', c:True}
-
-        """
-
-        if _type is None:
-            _type = lambda t: t
-
-        dict_str = self.pop(name, None)
-        if not dict_str:
-            return {}
-
-        _dict = {}
-        for item in split_strip(dict_str):
-            key, _, val = item.partition(':')
-            if key in _dict:
-                if type(_dict[key]) is list:
-                    _dict[key].append(val)
-                else:
-                    _dict[key] = [_dict[key], val]
-            else:
-                _dict[key] = _type(val)
-
-        if _set:
-            self[name] = _dict
-        elif pop:
-            self.pop(name, None)
-
-        return _dict
-
-    def as_datetime(self, name):
-        if name in self:
-            try:
-                self[name] = datetime.strptime(self[name], '%Y-%m-%dT%H:%M:%SZ'
-                        )
-            except ValueError:
-                raise ValueError("Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ"
-                                  % name)
-
-        return self.get(name, None)
+    def pop_by_values(self, val):
+        for k, v in self.items():
+            if v == val:
+                self.pop(k)
+        return self
 
     def mget(self, prefix, defaults={}):
         if prefix[-1] != '.':
@@ -151,8 +78,20 @@ class dictset(dict):
                     _dict[_k] = val
         return _dict
 
-    def pop_by_values(self, val):
-        for k, v in self.items():
-            if v == val:
-                self.pop(k)
-        return self
+    def asbool(self, *arg, **kw):
+        return asbool(self, *arg, **kw)
+
+    def aslist(self, *arg, **kw):
+        return aslist(self, *arg, **kw)
+
+    def asint(self, *arg, **kw):
+        return asing(self, *arg, **kw)
+
+    def asfloat(self, *arg, **kw):
+        return asfloat(self, *arg, **kw)
+
+    def asdict(self, *arg, **kw):
+        return asdict(self, *arg, **kw)
+
+    def as_datetime(self, *arg, **kw):
+        return as_datetime(self, *arg, **kw)
