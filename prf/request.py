@@ -1,15 +1,15 @@
 import logging
 import requests
 import urllib
-from pyramid.response import Response
 
 from prf.utils.utils import json_dumps
-from prf.json_httpexceptions import *
+import prf.json_httpexceptions as prf_exc
 
 log = logging.getLogger(__name__)
 
 
 def pyramid_resp(resp, **kw):
+    from pyramid.response import Response
     return Response(status_code=resp.status_code, headers=resp.headers,
                     body=resp.text, **kw)
 
@@ -42,7 +42,7 @@ class Requests(object):
                 raise exception_response(**resp.json())
             return resp.json()
         except requests.ConnectionError, e:
-            raise JHTTPServerError('Server is down? %s' % e)
+            raise prf_exc.JHTTPServerError('Server is down? %s' % e)
 
     def mget(self, path, params={}, page_size=None):
         total = params['_limit']
@@ -72,7 +72,7 @@ class Requests(object):
 
             return pyramid_resp(resp)
         except requests.ConnectionError, e:
-            raise JHTTPServerError('Server is down? %s' % e)
+            raise prf_exc.JHTTPServerError('Server is down? %s' % e)
 
     def mpost(self, path='', data={}, bulk_size=None, bulk_key=None):
         bulk_data = data[bulk_key]
@@ -102,7 +102,7 @@ class Requests(object):
 
             return resp.json()
         except requests.ConnectionError, e:
-            raise JHTTPServerError('Server is down? %s' % e)
+            raise prf_exc.JHTTPServerError('Server is down? %s' % e)
 
     def head(self, path='', params={}):
         try:
@@ -111,7 +111,7 @@ class Requests(object):
                 raise exception_response(**resp.json())
         except requests.ConnectionError, e:
 
-            raise JHTTPServerError('Server is down? %s' % e)
+            raise prf_exc.JHTTPServerError('Server is down? %s' % e)
 
     def delete(self, path='', **kw):
         url = self.prepare_url(path)
@@ -125,4 +125,4 @@ class Requests(object):
 
             return resp.json()
         except requests.ConnectionError, e:
-            raise JHTTPServerError('Server is down? %s' % e)
+            raise prf_exc.JHTTPServerError('Server is down? %s' % e)

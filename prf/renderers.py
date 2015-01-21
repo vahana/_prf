@@ -1,19 +1,9 @@
 import json
 import logging
 from datetime import date, datetime
+from prf.utils import JSONEncoder as _JSONEncoder
 
 log = logging.getLogger(__name__)
-
-
-class _JSONEncoder(json.JSONEncoder):
-
-    def default(self, obj):
-        if isinstance(obj, (datetime, date)):
-            return obj.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
-        try:
-            return super(_JSONEncoder, self).default(obj)
-        except TypeError:
-            return unicode(obj)  # fallback to unicode
 
 
 class JsonRendererFactory(object):

@@ -1,14 +1,23 @@
-import logging
 import json
-
-from pyramid.config import Configurator
-from prf.renderers import _JSONEncoder
+import logging
+from datetime import date, datetime
 
 log = logging.getLogger(__name__)
 
 
+class JSONEncoder(json.JSONEncoder):
+
+    def default(self, obj):
+        if isinstance(obj, (datetime, date)):
+            return obj.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
+        try:
+            return super(JSONEncoder, self).default(obj)
+        except TypeError:
+            return unicode(obj)  # fallback to unicode
+
+
 def json_dumps(body):
-    return json.dumps(body, cls=_JSONEncoder)
+    return json.dumps(body, cls=JSONEncoder)
 
 
 def split_strip(_str, on=','):
@@ -33,10 +42,10 @@ def process_limit(start, page, limit):
 
         if limit < 0 or start < 0:
             raise ValueError('_limit/_page or _limit/_start can not be < 0')
-    except (ValueError, TypeError) as e:
+    except (ValueError, TypeError), e:
         raise ValueError(e)
+    except Exception, e:
 
-    except Exception as e:
         raise ValueError('Bad _limit param: %s ' % e)
 
     return start, limit
@@ -80,16 +89,47 @@ def snake2camel(text):
     return ''.join([a.title() for a in text.split('_')])
 
 
-def maybe_dotted(modul, throw=True):
-    '''if ``modul`` is a dotted string pointing to the modul, imports and returns the modul object.'''
+def resolve(name, module=None):
+    """Resole dotted name to python module
+    """
+    name = name.split('.')
+    if not name[0]:
+        if module is None:
+            raise ValueError('relative name without base module')
+        module = module.split('.')
+        name.pop(0)
+        while not name[0]:
+            module.pop()
+            name.pop(0)
+        name = module + name
+
+    used = name.pop(0)
+    found = __import__(used)
+    for n in name:
+        used += '.' + n
+        try:
+            found = getattr(found, n)
+        except AttributeError:
+            __import__(used)
+            found = getattr(found, n)
+
+    return found
+
+
+def maybe_dotted(module, throw=True):
     try:
-        return Configurator().maybe_dotted(modul)
+        if isinstance(module, basestring):
+            module, _, cls = module.partition(':')
+            module = resolve(module)
+            if cls:
+                return getattr(module, cls)
+
+        return module
     except ImportError, e:
-        err = '%s not found. %s' % (modul, e)
+
+        err = '%s not found. %s' % (module, e)
         if throw:
             raise ImportError(err)
         else:
             log.error(err)
             return None
-
-

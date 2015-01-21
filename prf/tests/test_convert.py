@@ -16,5 +16,3 @@ class TestConvert(unittest.TestCase):
         self.assertFalse(asbool(d_, 'NOTHERE', default=False))
 
         asbool(d_, 'NOTHERE', default=False) == False
-
-

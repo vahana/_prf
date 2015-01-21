@@ -4,6 +4,15 @@ from prf.utils.convert import *
 
 class dictset(dict):
 
+    """Named dict, with some set functionalities
+
+        dset = dictset(a=1,b={'c':1})
+        dset.a == dset['a'] == 1
+        dset.b.c == 1
+        dset.subset(['a']) == {'a':1} == dset.subset('-b')
+
+    """
+
     def __init__(self, *arg, **kw):
         super(dictset, self).__init__(*arg, **kw)
         self.to_dictset()

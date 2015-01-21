@@ -1,6 +1,4 @@
 from datetime import datetime
-from pyramid.settings import asbool as p_asbool
-
 
 def parametrize(func):
 
@@ -31,24 +29,31 @@ def parametrize(func):
 
 
 @parametrize
-def asbool(dset, key):
-    return p_asbool(key)
+def asbool(dset, value):
+    truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
+
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    value = str(value).strip()
+    return value.lower() in truthy
 
 
 @parametrize
-def aslist(dset, key, remove_empty=True):
-    _lst = (key if isinstance(key, list) else key.split(','))
+def aslist(dset, value, remove_empty=True):
+    _lst = (value if isinstance(value, list) else value.split(','))
     return (filter(bool, _lst) if remove_empty else _lst)
 
 
 @parametrize
-def asint(dset, key):
-    return int(key)
+def asint(dset, value):
+    return int(value)
 
 
 @parametrize
-def asfloat(dset, key):
-    return float(key)
+def asfloat(dset, value):
+    return float(value)
 
 
 def asdict(dset, name, _type=None, _set=False, pop=False):
