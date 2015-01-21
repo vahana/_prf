@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 
 def usage(argv):
     cmd = os.path.basename(argv[0])
-    print('usage: %s <config_uri> [var=value]\n'
-          '(example: "%s development.ini")' % (cmd, cmd))
+    print('usage: %s <config_uri> [--drop]\n'
+          '(example: "%s development.ini --drop")' % (cmd, cmd))
     sys.exit(1)
 
 
@@ -28,18 +28,28 @@ def main(argv=sys.argv):
 
     pname = package_name(argv)
     config = argv[1]
-    options = parse_vars(argv[2:])
 
+    if len(argv) > 2 and '--drop' == argv[2]:
+        drop = True
+    else:
+        drop = False
+
+    # options = parse_vars(argv[2:])
     setup_logging(config)
-    settings = dictset(get_appsettings(config, pname, options=options))
+    settings = dictset(get_appsettings(config, pname))
 
     engine = engine_from_config(settings, 'sqlalchemy.')
 
-    if database_exists(engine.url):
-        drop_database(engine.url)
-    create_database(engine.url)
+    if drop and database_exists(engine.url):
+        in_ = raw_input('Are you sure you want to drop?(y/n): ')
+        if in_ == 'y':
+            drop_database(engine.url)
+            create_database(engine.url)
+        else:
+            print 'Canceled'
+            return
 
     module = __import__(pname)
     base = module.model.configure_session(settings)
     base.metadata.create_all()
-    print('DB initialized')
+    print('DB initialized' + (' (new)' if drop else ''))
