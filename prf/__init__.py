@@ -1,6 +1,6 @@
 import logging
 from pkg_resources import get_distribution
-
+from prf.utils import maybe_dotted
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
@@ -20,14 +20,13 @@ def get_resource_map(request):
     return request.registry._resources_map
 
 
-MSG_MAP = {
-    KeyError: 'Missing param: %s',
-    ValueError: 'Bad value: %s',
-    AttributeError: 'Missing value: %s',
-    TypeError: 'Bad type: %s'
-}
-
 def add400views(config, exc_list):
+    MSG_MAP = {
+        KeyError: 'Missing param: %s',
+        ValueError: 'Bad value: %s',
+        AttributeError: 'Missing value: %s',
+        TypeError: 'Bad type: %s'
+    }
 
     def view(context, request):
         from prf.json_httpexceptions import JHTTPBadRequest
@@ -39,11 +38,9 @@ def add400views(config, exc_list):
 
 
 def includeme(config):
-    from prf.renderers import JsonRendererFactory
-
     log.info('%s %s' % (APP_NAME, __version__))
     config.add_directive('get_root_resource', get_root_resource)
-    config.add_renderer('json', JsonRendererFactory)
+    config.add_renderer('json', maybe_dotted('prf.renderers.JsonRenderer'))
 
     config.registry._root_resources = {}
     config.registry._resources_map = {}

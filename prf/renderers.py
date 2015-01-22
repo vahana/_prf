@@ -1,12 +1,8 @@
 import json
-import logging
-from datetime import date, datetime
 from prf.utils import JSONEncoder as _JSONEncoder
 
-log = logging.getLogger(__name__)
 
-
-class JsonRendererFactory(object):
+class JsonRenderer(object):
 
     def __init__(self, info):
         pass

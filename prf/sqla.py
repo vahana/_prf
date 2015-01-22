@@ -6,6 +6,7 @@ from sqlalchemy.orm.exc import NoResultFound
 import sqlalchemy.exc as sqla_exc
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.properties import ColumnProperty
+from sqlalchemy_utils import get_columns, get_hybrid_properties, get_mapper
 
 from prf.utils import dictset, DataProxy, split_strip, process_limit
 import prf.json_httpexceptions as prf_exc
@@ -156,12 +157,14 @@ class Base(object):
 
     @property
     def field_names(self):
-        return self.column_names
+        return set(get_columns(self).keys() +\
+                   get_hybrid_properties(self.__class__).keys() +\
+                   get_mapper(self).relationships.keys())
 
     def to_dict(self, request=None, **kw):
         def get_data():
             data = dictset()
-            fields = self.field_names | set(kw.get('fields', []))
+            fields = set(self.field_names) | set(kw.get('fields', []))
             for attr in fields:
                 data[attr] = getattr(self, attr)
 
