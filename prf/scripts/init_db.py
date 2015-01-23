@@ -5,7 +5,6 @@ import logging
 from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars
 
-from prf.utils import dictset
 from prf.scripts.common import package_name, pid_arg, config_uri
 
 log = logging.getLogger(__name__)
@@ -36,18 +35,25 @@ def main(argv=sys.argv):
         drop = False
 
     setup_logging(config)
-    settings = dictset(get_appsettings(config, pname))
-
+    settings = get_appsettings(config, pname)
     engine = engine_from_config(settings, 'sqlalchemy.')
 
-    if drop and database_exists(engine.url):
-        in_ = raw_input('Are you sure you want to drop?(y/n): ')
-        if in_ == 'y':
-            drop_database(engine.url)
-            create_database(engine.url)
+    if drop:
+        if database_exists(engine.url):
+            in_ = raw_input('Are you sure you want to drop?(y/n): ')
+            if in_ == 'y':
+                drop_database(engine.url)
+            else:
+                print 'Canceled'
+                return
         else:
-            print 'Canceled'
-            return
+            print 'Nothing to drop'
+
+    if database_exists(engine.url):
+        print "DB exists already. Use --drop to drop and recreate"
+        return
+
+    create_database(engine.url)
 
     module = __import__(pname)
     base = module.model.configure_session(settings)

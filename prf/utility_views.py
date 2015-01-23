@@ -125,5 +125,5 @@ class APIView(BaseView):
         return mapper.routes
 
     def show(self):
-        return {'api':['%s'% (r.path)
-                    for r in self._get_routes().values()]}
+        return {'api': sorted(['%s'% (r.path)
+                    for r in self._get_routes().values()])}
