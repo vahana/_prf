@@ -2,11 +2,6 @@ import os
 import sys
 import logging
 
-from sqlalchemy import engine_from_config
-from sqlalchemy_utils.functions import database_exists, create_database,\
-                                       drop_database
-from sqlalchemy.orm import scoped_session, sessionmaker
-
 from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars
 
@@ -23,6 +18,12 @@ def usage(argv):
 
 
 def main(argv=sys.argv):
+    from sqlalchemy import engine_from_config
+    from sqlalchemy_utils.functions import database_exists, create_database,\
+                                       drop_database
+    from alembic.config import Config
+    from alembic import command
+
     if len(argv) < 2:
         usage(argv)
 
@@ -34,7 +35,6 @@ def main(argv=sys.argv):
     else:
         drop = False
 
-    # options = parse_vars(argv[2:])
     setup_logging(config)
     settings = dictset(get_appsettings(config, pname))
 
@@ -52,4 +52,10 @@ def main(argv=sys.argv):
     module = __import__(pname)
     base = module.model.configure_session(settings)
     base.metadata.create_all()
+
+    # load the Alembic configuration and generate the
+    # version table, "stamping" it with the most recent rev:
+    alembic_cfg = Config(config)
+    command.stamp(alembic_cfg, "head")
+
     print('DB initialized' + (' (new)' if drop else ''))

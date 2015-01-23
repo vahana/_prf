@@ -9,8 +9,10 @@ VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 
 install_requires = [
     'pyramid',
-    'tempita',
     'requests',
+    'SQLAlchemy',
+    'SQLAlchemy-Utils',
+    'alembic'
 ]
 
 setup(

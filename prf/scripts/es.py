@@ -5,7 +5,6 @@ import urlparse
 import logging
 from pyramid.paster import bootstrap
 
-from prf.elasticsearch import ES
 from prf.utils import dictset, split_strip
 
 
@@ -55,6 +54,8 @@ class ESCommand(object):
         self.settings = dictset(registry.settings)
 
     def run(self, quiet=False):
+        from prf.elasticsearch import ES
+
         ES.setup(self.settings, index_name=self.options.index)
         models = split_strip(self.options.models)
 
