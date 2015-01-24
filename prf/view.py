@@ -5,7 +5,7 @@ from pyramid.request import Request
 from pyramid.response import Response
 
 from prf.json_httpexceptions import *
-from prf.utils import dictset, issequence, process_fields
+from prf.utils import dictset, issequence, prep_params, process_fields
 from prf import wrappers
 from prf.resource import Action
 
@@ -32,12 +32,18 @@ class ViewMapper(object):
 
             if isinstance(resp, Response):
                 return resp
-            elif action_name in [Action.INDEX, Action.SHOW]:
-                resp = wrappers.wrap_in_dict(request, resp)
+
+            elif action_name == Action.INDEX:
+                return wrappers.add_meta(request, resp)
+
+            # elif action_name == Action.SHOW:
+            #     return resp
+
             elif action_name == Action.CREATE:
-                resp = wrappers.wrap_in_http_created(request, resp)
+                return wrappers.wrap_in_http_created(request, resp)
+
             elif action_name in [Action.UPDATE, Action.DELETE]:
-                resp = wrappers.wrap_in_http_ok(request, resp)
+                return wrappers.wrap_in_http_ok(request, resp)
 
             return resp
 
@@ -76,6 +82,7 @@ class BaseView(object):
 
             request.override_renderer = 'string'
 
+
     def __getattr__(self, attr):
         if attr in [
             'index',
@@ -90,20 +97,41 @@ class BaseView(object):
 
         raise AttributeError(attr)
 
-    def serialize(self, objs):
-        if self._serializer:
-            kw = {}
-            _fields = self._params.get('_fields', [])
-            if _fields:
-                kw['only'], kw['exclude'] = process_fields(_fields)
-            return self._serializer(many=issequence(objs), **kw).dump(objs).data
-        return objs
+    def serialize(self, objs, many=False):
+        if not self._serializer:
+            return objs
+
+        kw = {}
+        fields = self._params.get('_fields')
+
+        if fields is not None:
+            kw['only'], kw['exclude'] = process_fields(fields)
+
+        return self._serializer(many=many, strict=True, **kw).\
+                                dump(objs).data
 
     def _index(self, **kw):
-        return self.serialize(self.index(**kw))
+        objs = self.index(**kw)
+        serielized = self.serialize(objs, many=True)
+
+        count = len(serielized)
+        total = getattr(objs, '_total', count)
+
+        dict_ = dict(
+            total = total,
+            count = count,
+            data = serielized
+        )
+        return dict_
 
     def _show(self, **kw):
-        return self.serialize(self.show(**kw))
+        obj = self.show(**kw)
+
+        if isinstance(obj, dict):
+            fields = self._params.get('_fields')
+            return dictset(obj).subset(fields) if fields else objs
+
+        return self.serialize(obj, many=False)
 
     def _create(self, **kw):
         obj = self.create(**kw)

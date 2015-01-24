@@ -31,7 +31,7 @@ def wrap_in_dict(request, result, fields=None):
     else:
         _meta = {}
 
-    # result = obj2dict(request, result, fields=fields)
+    result = obj2dict(request, result, fields=fields)
 
     if isinstance(result, dict):
         return result
@@ -44,9 +44,7 @@ def wrap_in_dict(request, result, fields=None):
 
 
 def add_meta(request, result):
-
     try:
-        result['count'] = len(result['data'])
         for each in result['data']:
             try:
                 url = urlparse(request.current_route_url())._replace(query='')

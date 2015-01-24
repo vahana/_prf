@@ -198,9 +198,6 @@ class Base(object):
         session = cls.get_session()
         params, specials = prep_params(params)
 
-        if specials['_limit'] is None:
-            raise KeyError('Missing _limit')
-
         query = session.query(cls)
 
         if args:
@@ -209,32 +206,19 @@ class Base(object):
         if params:
             query = session.query(cls).filter_by(**params)
 
-        if specials['_sort']:
-            query = query.order_by(*order_by_clauses(cls, specials['_sort']))
+        query._total = query.count()
 
-        start, limit = process_limit(specials['_start'], specials['_page'],
-                                     specials['_limit'])
+        if specials._sort:
+            query = query.order_by(*order_by_clauses(cls, specials._sort))
 
-        total = query.count()
-
-        query = query.offset(start).limit(limit)
-
-        if specials['_count']:
-            return total
-
-        query._prf_meta = dict(total=total, start=start,
-                               fields=specials['_fields'])
-
-        return query
+        return query.offset(specials._offset).limit(specials._limit)
 
     @classmethod
     def get_resource(cls, _raise=True, **params):
         session = cls.get_session()
-        params['_limit'] = 1
-        params, specials = prep_params(params)
+        params, _ = prep_params(params)
         try:
             obj = session.query(cls).filter_by(**params).one()
-            obj._prf_meta = dict(fields=specials['_fields'])
             return obj
         except NoResultFound, e:
             msg = "'%s(%s)' resource not found" % (cls.__name__, params)
