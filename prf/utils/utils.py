@@ -138,3 +138,18 @@ def issequence(arg):
     """Return True if `arg` acts as a list and does not look like a string."""
     return not hasattr(arg, 'strip') and hasattr(arg, '__getitem__') \
         or hasattr(arg, '__iter__')
+
+
+def prep_params(params):
+    __confirmation = '__confirmation' in params
+    params.pop('__confirmation', False)
+
+    _sort = split_strip(params.pop('_sort', []))
+    _fields = split_strip(params.pop('_fields', []))
+    _limit = params.pop('_limit', None)
+    _page = params.pop('_page', None)
+    _start = params.pop('_start', None)
+    _count = '_count' in params
+    params.pop('_count', None)
+
+    return params, locals()

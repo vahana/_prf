@@ -10,10 +10,10 @@ class Action(object):
     INDEX = '_index'
     SHOW = '_show'
     CREATE = '_create'
-    UPDATE = 'update'
-    DELETE = 'delete'
-    DELETE_MANY = 'delete_many'
-    UPDATE_MANY = 'update_many'
+    UPDATE = '_update'
+    DELETE = '_delete'
+    DELETE_MANY = '_delete_many'
+    UPDATE_MANY = '_update_many'
 
 
 def get_view_class(view_param, resource):

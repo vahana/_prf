@@ -5,7 +5,7 @@ from pyramid.request import Request
 from pyramid.response import Response
 
 from prf.json_httpexceptions import *
-from prf.utils import dictset, issequence
+from prf.utils import dictset, issequence, process_fields
 from prf import wrappers
 from prf.resource import Action
 
@@ -92,7 +92,11 @@ class BaseView(object):
 
     def serialize(self, objs):
         if self._serializer:
-            return self._serializer(many=issequence(objs)).dump(objs).data
+            kw = {}
+            _fields = self._params.get('_fields', [])
+            if _fields:
+                kw['only'], kw['exclude'] = process_fields(_fields)
+            return self._serializer(many=issequence(objs), **kw).dump(objs).data
         return objs
 
     def _index(self, **kw):
@@ -108,6 +112,18 @@ class BaseView(object):
 
         assert self._serializer
         return self._serializer().dump(obj).data
+
+    def _update(self, **kw):
+        return self.update(**kw)
+
+    def _delete(self, **kw):
+        return self.delete(**kw)
+
+    def _update_many(self, **kw):
+        return self.update_many(**kw)
+
+    def _delete_many(self, **kw):
+        return self.delete_many(**kw)
 
     def not_allowed_action(self, *a, **k):
         raise JHTTPMethodNotAllowed()

@@ -10,7 +10,7 @@ from sqlalchemy.orm.properties import ColumnProperty
 from sqlalchemy_utils import get_columns, get_hybrid_properties, get_mapper
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from prf.utils import dictset, split_strip, process_limit
+from prf.utils import dictset, split_strip, process_limit, prep_params
 import prf.json_httpexceptions as prf_exc
 
 log = logging.getLogger(__name__)
@@ -185,35 +185,18 @@ class Base(object):
         session.delete(self)
 
     @classmethod
-    def prep_params(cls, params):
-        params = dictset(params)
-
-        __confirmation = '__confirmation' in params
-        params.pop('__confirmation', False)
-
-        _sort = split_strip(params.pop('_sort', []))
-        _fields = split_strip(params.pop('_fields', []))
-        _limit = params.pop('_limit', None)
-        _page = params.pop('_page', None)
-        _start = params.pop('_start', None)
-        _count = '_count' in params
-        params.pop('_count', None)
-
-        return params, locals()
-
-    @classmethod
     def query(cls, *args, **kw):
         return cls.get_session().query(cls, *args, **kw)
 
     @classmethod
     def objects(cls, **params):
-        params, specials = cls.prep_params(params)
+        params, specials = prep_params(params)
         return cls.get_session().query(cls).filter_by(**params)
 
     @classmethod
     def get_collection(cls, *args, **params):
         session = cls.get_session()
-        params, specials = cls.prep_params(params)
+        params, specials = prep_params(params)
 
         if specials['_limit'] is None:
             raise KeyError('Missing _limit')
@@ -248,7 +231,7 @@ class Base(object):
     def get_resource(cls, _raise=True, **params):
         session = cls.get_session()
         params['_limit'] = 1
-        params, specials = cls.prep_params(params)
+        params, specials = prep_params(params)
         try:
             obj = session.query(cls).filter_by(**params).one()
             obj._prf_meta = dict(fields=specials['_fields'])
