@@ -1,8 +1,7 @@
+import logging
 from pyramid.view import view_config
 
 import prf
-from prf.json_httpexceptions import *
-from prf import wrappers
 from prf.view import BaseView
 from prf.utils import dictset
 
@@ -114,8 +113,6 @@ class SettingsView(BaseView):
 
         for name, val in self.settings.items():
             self.settings[name] = self.__orig[name]
-
-        return JHTTPOk('Reset the settings to original values')
 
 
 class APIView(BaseView):

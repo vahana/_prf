@@ -1,6 +1,8 @@
 import json
 import logging
 from datetime import date, datetime
+from urlparse import urlparse
+import urllib
 
 log = logging.getLogger(__name__)
 
@@ -161,3 +163,17 @@ def prep_params(params):
 
 
     return dictset(params), specials
+
+def add_meta(request, collection):
+    try:
+        for each in collection:
+            try:
+                url = urlparse(request.current_route_url())._replace(query='')
+                each.setdefault('self', '%s/%s' % (url.geturl(),
+                                urllib.quote(str(each['id']))))
+            except TypeError:
+                pass
+    except (TypeError, KeyError):
+        pass
+    finally:
+        return collection

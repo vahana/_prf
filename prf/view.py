@@ -4,9 +4,8 @@ import urllib
 from pyramid.request import Request
 from pyramid.response import Response
 
-from prf.json_httpexceptions import *
-from prf.utils import dictset, issequence, prep_params, process_fields
-from prf import wrappers
+import prf.json_httpexceptions as prf_exc
+from prf.utils import dictset, issequence, prep_params, process_fields, add_meta
 from prf.resource import Action
 
 log = logging.getLogger(__name__)
@@ -27,25 +26,7 @@ class ViewMapper(object):
 
             view_obj = view(context, request)
             action = getattr(view_obj, action_name)
-
-            resp = action(**matchdict)
-
-            if isinstance(resp, Response):
-                return resp
-
-            elif action_name == Action.INDEX:
-                return wrappers.add_meta(request, resp)
-
-            # elif action_name == Action.SHOW:
-            #     return resp
-
-            elif action_name == Action.CREATE:
-                return wrappers.wrap_in_http_created(request, resp)
-
-            elif action_name in [Action.UPDATE, Action.DELETE]:
-                return wrappers.wrap_in_http_ok(request, resp)
-
-            return resp
+            return action(**matchdict)
 
         return view_mapper_wrapper
 
@@ -117,6 +98,8 @@ class BaseView(object):
         count = len(serielized)
         total = getattr(objs, '_total', count)
 
+        serielized = add_meta(self.request, serielized)
+
         dict_ = dict(
             total = total,
             count = count,
@@ -135,26 +118,36 @@ class BaseView(object):
 
     def _create(self, **kw):
         obj = self.create(**kw)
+
         if not obj:
-            return None
+            return prf_exc.JHTTPCreated()
 
         assert self._serializer
-        return self._serializer().dump(obj).data
+        serielized  = self._serializer().dump(obj).data
+
+        return prf_exc.JHTTPCreated(
+                        location=self.request.current_route_url(serielized['id']),
+                        resource=serielized)
+
 
     def _update(self, **kw):
-        return self.update(**kw)
+        self.update(**kw)
+        return prf_exc.JHTTPOk()
 
     def _delete(self, **kw):
-        return self.delete(**kw)
+        self.delete(**kw)
+        return prf_exc.JHTTPOk()
 
     def _update_many(self, **kw):
-        return self.update_many(**kw)
+        self.update_many(**kw)
+        return prf_exc.JHTTPOk()
 
     def _delete_many(self, **kw):
-        return self.delete_many(**kw)
+        self.delete_many(**kw)
+        return prf_exc.JHTTPOk()
 
     def not_allowed_action(self, *a, **k):
-        raise JHTTPMethodNotAllowed()
+        raise prf_exc.JHTTPMethodNotAllowed()
 
     def subrequest(self, url, params={}, method='GET'):
         req = Request.blank(url, cookies=self.request.cookies,
@@ -175,7 +168,7 @@ class BaseView(object):
         if not self._model_class:
             log.error('%s _model_class in invalid: %s',
                       self.__class__.__name__, self._model_class)
-            raise JHTTPBadRequest
+            raise prf_exc.JHTTPBadRequest
 
         objs = self._model_class.get_collection(**self._params)
 
@@ -184,7 +177,7 @@ class BaseView(object):
 
         count = len(objs)
         objs.delete()
-        return JHTTPOk('Deleted %s %s objects' % (count,
+        return prf_exc.JHTTPOk('Deleted %s %s objects' % (count,
                        self._model_class.__name__))
 
 
