@@ -7,6 +7,7 @@ from pyramid.response import Response
 from prf.json_httpexceptions import *
 from prf.utils import dictset, issequence
 from prf import wrappers
+from prf.resource import Action
 
 log = logging.getLogger(__name__)
 
@@ -31,12 +32,11 @@ class ViewMapper(object):
 
             if isinstance(resp, Response):
                 return resp
-            elif action_name in ['_index', 'show']:
-
+            elif action_name in [Action.INDEX, Action.SHOW]:
                 resp = wrappers.wrap_in_dict(request, resp)
-            elif action_name == '_create':
+            elif action_name == Action.CREATE:
                 resp = wrappers.wrap_in_http_created(request, resp)
-            elif action_name in ['update', 'delete']:
+            elif action_name in [Action.UPDATE, Action.DELETE]:
                 resp = wrappers.wrap_in_http_ok(request, resp)
 
             return resp

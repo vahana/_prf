@@ -153,21 +153,6 @@ class Base(object):
     def __tablename__(cls):
         return cls.__name__.lower()
 
-    @hybrid_property
-    def column_names(self):
-        return self.__table__.columns.keys()
-
-    @hybrid_property
-    def field_names(self):
-        if isinstance(self, type):
-            cls = self
-        else:
-            cls = self.__class__
-
-        return get_columns(self).keys() +\
-                   get_hybrid_properties(cls).keys() +\
-                   get_mapper(self).relationships.keys()
-
     def repr_parts(self):
         return []
 
