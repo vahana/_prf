@@ -1,11 +1,12 @@
 import json
 import logging
 import urllib
+from urlparse import urlparse
 from pyramid.request import Request
 from pyramid.response import Response
 
 import prf.json_httpexceptions as prf_exc
-from prf.utils import dictset, issequence, prep_params, process_fields, add_meta
+from prf.utils import dictset, issequence, prep_params, process_fields
 from prf.resource import Action
 
 log = logging.getLogger(__name__)
@@ -98,7 +99,7 @@ class BaseView(object):
         count = len(serielized)
         total = getattr(objs, '_total', count)
 
-        serielized = add_meta(self.request, serielized)
+        serielized = self.add_meta(serielized)
 
         dict_ = dict(
             total = total,
@@ -179,6 +180,20 @@ class BaseView(object):
         objs.delete()
         return prf_exc.JHTTPOk('Deleted %s %s objects' % (count,
                        self._model_class.__name__))
+
+    def add_meta(self, collection):
+        try:
+            for each in collection:
+                try:
+                    url = urlparse(self.request.current_route_url())._replace(query='')
+                    each.setdefault('self', '%s/%s' % (url.geturl(),
+                                    urllib.quote(str(each['id']))))
+                except TypeError:
+                    pass
+        except (TypeError, KeyError):
+            pass
+        finally:
+            return collection
 
 
 class NoOp(BaseView):
