@@ -4,9 +4,11 @@ import logging
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm.exc import NoResultFound
 import sqlalchemy.exc as sqla_exc
+
 from sqlalchemy.orm import class_mapper
 from sqlalchemy.orm.properties import ColumnProperty
 from sqlalchemy_utils import get_columns, get_hybrid_properties, get_mapper
+from sqlalchemy.ext.hybrid import hybrid_property
 
 from prf.utils import dictset, DataProxy, split_strip, process_limit
 import prf.json_httpexceptions as prf_exc
@@ -151,28 +153,20 @@ class Base(object):
     def __tablename__(cls):
         return cls.__name__.lower()
 
-    @property
+    @hybrid_property
     def column_names(self):
-        return set(self.__table__.columns.keys())
+        return self.__table__.columns.keys()
 
-    @property
+    @hybrid_property
     def field_names(self):
-        return set(get_columns(self).keys() +\
-                   get_hybrid_properties(self.__class__).keys() +\
-                   get_mapper(self).relationships.keys())
+        if isinstance(self, type):
+            cls = self
+        else:
+            cls = self.__class__
 
-    def to_dict(self, request=None, **kw):
-        def get_data():
-            data = dictset()
-            fields = set(self.field_names) | set(kw.get('fields', []))
-            for attr in fields:
-                data[attr] = getattr(self, attr)
-
-            return data
-
-        _data = get_data()
-        _data['_type'] = self._type
-        return DataProxy(_data).to_dict(**kw)
+        return get_columns(self).keys() +\
+                   get_hybrid_properties(cls).keys() +\
+                   get_mapper(self).relationships.keys()
 
     def repr_parts(self):
         return []

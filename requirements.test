@@ -1,0 +1,13 @@
+pyramid
+requests
+SQLAlchemy
+SQLAlchemy-Utils
+alembic
+elasticsearch
+bson
+nose
+coverage
+mongoengine
+blinker
+python-logstash
+-e .

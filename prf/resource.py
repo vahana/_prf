@@ -6,6 +6,15 @@ log = logging.getLogger(__name__)
 
 DEFAULT_ID_NAME = 'id'
 
+class Action(object):
+    INDEX = '_index'
+    SHOW = '_show'
+    CREATE = '_create'
+    UPDATE = 'update'
+    DELETE = 'delete'
+    DELETE_MANY = 'delete_many'
+    UPDATE_MANY = 'update_many'
+
 
 def get_view_class(view_param, resource):
     '''Returns the dotted path to the default view class.'''
@@ -75,7 +84,7 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
                or DEFAULT_ID_NAME) if collection_name else '')
     path = path_prefix.strip('/') + '/' + (collection_name or member_name)
 
-    _acl = kwargs.pop('acl', None)
+    _acl = kwargs.pop('acl', view._acl)
     _auth = config.registry._auth
     _traverse = kwargs.pop('traverse', None) or id_name
 
@@ -96,30 +105,30 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
         config.commit()
 
     if collection_name:
-        add_route_and_view(config, 'index', name_prefix + collection_name,
+        add_route_and_view(config, Action.INDEX, name_prefix + collection_name,
                            path, 'GET')
 
-    add_route_and_view(config, 'show', name_prefix + member_name, path
+    add_route_and_view(config, Action.SHOW, name_prefix + member_name, path
                        + id_name, 'GET', traverse=_traverse)
 
-    add_route_and_view(config, 'update', name_prefix + member_name, path
+    add_route_and_view(config, Action.UPDATE, name_prefix + member_name, path
                        + id_name, 'PUT', traverse=_traverse)
 
-    add_route_and_view(config, 'update', name_prefix + member_name, path
+    add_route_and_view(config, Action.UPDATE, name_prefix + member_name, path
                        + id_name, 'PATCH', traverse=_traverse)
 
-    add_route_and_view(config, 'create', name_prefix + (collection_name
+    add_route_and_view(config, Action.CREATE, name_prefix + (collection_name
                        or member_name), path, 'POST')
 
-    add_route_and_view(config, 'delete', name_prefix + member_name, path
+    add_route_and_view(config, Action.DELETE, name_prefix + member_name, path
                        + id_name, 'DELETE', traverse=_traverse)
 
     if collection_name:
-        add_route_and_view(config, 'update_many', name_prefix
+        add_route_and_view(config, Action.UPDATE_MANY, name_prefix
                            + (collection_name or member_name), path, 'PUT',
                            traverse=_traverse)
 
-        add_route_and_view(config, 'delete_many', name_prefix
+        add_route_and_view(config, Action.DELETE_MANY, name_prefix
                            + (collection_name or member_name), path, 'DELETE',
                            traverse=_traverse)
 
@@ -201,6 +210,9 @@ class Resource(object):
                                   prefix=prefix)
 
         child_view = get_view_class(kwargs.pop('view', None), child_resource)
+        child_view._serializer = maybe_dotted(
+                            kwargs.pop('serializer', child_view._serializer))
+
         root_resource = self.config.get_root_resource()
 
         kwargs['path_prefix'], kwargs['name_prefix'] = \

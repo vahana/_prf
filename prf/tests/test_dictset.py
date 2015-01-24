@@ -1,5 +1,5 @@
 import unittest
-from prf.utils import dictset
+from prf.utils.dictset import dictset
 
 
 class TestDictSet(unittest.TestCase):

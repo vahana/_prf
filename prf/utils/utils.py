@@ -133,3 +133,8 @@ def maybe_dotted(module, throw=True):
         else:
             log.error(err)
             return None
+
+def issequence(arg):
+    """Return True if `arg` acts as a list and does not look like a string."""
+    return not hasattr(arg, 'strip') and hasattr(arg, '__getitem__') \
+        or hasattr(arg, '__iter__')

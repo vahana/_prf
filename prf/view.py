@@ -5,20 +5,10 @@ from pyramid.request import Request
 from pyramid.response import Response
 
 from prf.json_httpexceptions import *
-from prf.utils import dictset
+from prf.utils import dictset, issequence
 from prf import wrappers
 
 log = logging.getLogger(__name__)
-
-ACTIONS = [
-    'index',
-    'show',
-    'create',
-    'update',
-    'delete',
-    'update_many',
-    'delete_many',
-    ]
 
 
 class ViewMapper(object):
@@ -27,7 +17,6 @@ class ViewMapper(object):
         self.kwargs = kwargs
 
     def __call__(self, view):
-        # i.e index, create etc.
         action_name = self.kwargs['attr']
 
         def view_mapper_wrapper(context, request):
@@ -42,10 +31,10 @@ class ViewMapper(object):
 
             if isinstance(resp, Response):
                 return resp
+            elif action_name in ['_index', 'show']:
 
-            elif action_name in ['index', 'show']:
                 resp = wrappers.wrap_in_dict(request, resp)
-            elif action_name == 'create':
+            elif action_name == '_create':
                 resp = wrappers.wrap_in_http_created(request, resp)
             elif action_name in ['update', 'delete']:
                 resp = wrappers.wrap_in_http_ok(request, resp)
@@ -59,6 +48,8 @@ class BaseView(object):
 
     __view_mapper__ = ViewMapper
     _default_renderer = 'json'
+    _serializer = None
+    _acl = None
 
     def __init__(self, context, request, _params={}):
         self.context = context
@@ -78,18 +69,45 @@ class BaseView(object):
         # no accept headers, use default
         if '' in request.accept:
             request.override_renderer = self._default_renderer
-
         elif 'application/json' in request.accept:
-            request.override_renderer = 'prf_json'
 
+            request.override_renderer = 'prf_json'
         elif 'text/plain' in request.accept:
+
             request.override_renderer = 'string'
 
     def __getattr__(self, attr):
-        if attr in ACTIONS:
+        if attr in [
+            'index',
+            'show',
+            'create',
+            'update',
+            'delete',
+            'update_many',
+            'delete_many',
+            ]:
             return self.not_allowed_action
 
         raise AttributeError(attr)
+
+    def serialize(self, objs):
+        if self._serializer:
+            return self._serializer(many=issequence(objs)).dump(objs).data
+        return objs
+
+    def _index(self, **kw):
+        return self.serialize(self.index(**kw))
+
+    def _show(self, **kw):
+        return self.serialize(self.show(**kw))
+
+    def _create(self, **kw):
+        obj = self.create(**kw)
+        if not obj:
+            return None
+
+        assert self._serializer
+        return self._serializer().dump(obj).data
 
     def not_allowed_action(self, *a, **k):
         raise JHTTPMethodNotAllowed()

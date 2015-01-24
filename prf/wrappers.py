@@ -1,13 +1,7 @@
 import urllib
 from urlparse import urlparse
 from prf.json_httpexceptions import *
-
-
-def issequence(arg):
-    """Return True if `arg` acts as a list and does not look like a string."""
-    return not hasattr(arg, 'strip') and hasattr(arg, '__getitem__') \
-        or hasattr(arg, '__iter__')
-
+from prf.utils import issequence
 
 def obj2dict(request, result, fields=None):
 
@@ -37,7 +31,7 @@ def wrap_in_dict(request, result, fields=None):
     else:
         _meta = {}
 
-    result = obj2dict(request, result, fields=fields)
+    # result = obj2dict(request, result, fields=fields)
 
     if isinstance(result, dict):
         return result
@@ -77,8 +71,8 @@ def wrap_in_http_created(request, result):
     if not result:
         return JHTTPCreated()
 
-    return JHTTPCreated(location=request.current_route_url(result.id),
-                        resource=result.to_dict())
+    return JHTTPCreated(location=request.current_route_url(result['id']),
+                        resource=result)
 
 
 def wrap_in_http_ok(request, result):

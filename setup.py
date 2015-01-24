@@ -7,14 +7,6 @@ README = open(os.path.join(here, 'README.txt')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 
-install_requires = [
-    'pyramid',
-    'requests',
-    'SQLAlchemy',
-    'SQLAlchemy-Utils',
-    'alembic'
-]
-
 setup(
     name='prf',
     version=VERSION,
@@ -33,6 +25,5 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-    test_suite='prf',
-    install_requires=install_requires,
+    # install_requires=install_requires,
 )

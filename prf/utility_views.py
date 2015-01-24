@@ -4,7 +4,7 @@ import prf
 from prf.json_httpexceptions import *
 from prf import wrappers
 from prf.view import BaseView
-from prf.utils import to_dicts, dictset
+from prf.utils import dictset
 
 log = logging.getLogger(__name__)
 
