@@ -10,7 +10,7 @@ from sqlalchemy.orm.properties import ColumnProperty
 from sqlalchemy_utils import get_columns, get_hybrid_properties, get_mapper
 from sqlalchemy.ext.hybrid import hybrid_property
 
-from prf.utils import dictset, DataProxy, split_strip, process_limit
+from prf.utils import dictset, split_strip, process_limit
 import prf.json_httpexceptions as prf_exc
 
 log = logging.getLogger(__name__)
