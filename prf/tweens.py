@@ -103,7 +103,6 @@ def GET_tunneling(handler, registry):
 
 def cors(handler, registry):
     log.info('cors_tunneling enabled')
-
     allow_origins = [each.strip() for each in
                      registry.settings.get('cors.allow_origins', '').split(','
                      )]
@@ -129,10 +128,8 @@ def cors(handler, registry):
 
     if allow_credentials is None:
         log.warning('cors.allow_credentials is not set')
-    elif asbool(allow_credentials, default=False) and allow_origins == '*':
-
-        log.error('Not allowed Access-Control-Allow-Credentials to set to TRUE if origin is *'
-                  )
+    elif asbool(allow_credentials) and allow_origins == '*':
+        log.error('Not allowed Access-Control-Allow-Credentials to set to TRUE if origin is *')
         return
     else:
         log.info('Access-Control-Allow-Credentials = %s ' % allow_credentials)
