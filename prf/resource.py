@@ -78,7 +78,8 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     name_prefix = kwargs.pop('name_prefix', '')
 
     if config.route_prefix:
-        name_prefix = '%s_%s' % (config.route_prefix, name_prefix)
+        name_prefix = '%s_%s' % (config.route_prefix.replace('/', '_'),
+                                 name_prefix)
 
     id_name = ('/{%s}' % (kwargs.pop('id_name', None)
                or DEFAULT_ID_NAME) if collection_name else '')
@@ -132,6 +133,7 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
                            + (collection_name or member_name), path, 'DELETE',
                            traverse=_traverse)
 
+    return path
 
 class Resource(object):
 
@@ -200,9 +202,6 @@ class Resource(object):
 
         uid = ':'.join(filter(bool, [parent.uid, prefix, member_name]))
 
-        if uid in self.resource_map:
-            raise ValueError('%s already exists in resource map' % uid)
-
         child_resource = Resource(self.config, member_name=member_name,
                                   collection_name=collection_name,
                                   parent=parent, uid=uid,
@@ -223,8 +222,13 @@ class Resource(object):
         kwargs.setdefault('http_cache', root_resource.http_cache)
 
         # add the routes for the resource
-        add_action_routes(self.config, child_view, member_name,
+        path = add_action_routes(self.config, child_view, member_name,
                           collection_name, **kwargs)
+
+        if uid in self.resource_map:
+            r_ = self.resource_map[uid]
+            log.warning('Resource override: %s%s becomes %s%s' %\
+                 (r_.config.package_name, path, self.config.package_name, path))
 
         self.resource_map[uid] = child_resource
         parent.children.append(child_resource)

@@ -1,3 +1,4 @@
+import os
 import logging
 from pyramid.security import ALL_PERMISSIONS, Allow
 from pyramid.authentication import AuthTktAuthenticationPolicy
@@ -27,6 +28,7 @@ class RootACL(object):
 def enable_auth(config, user_model=None, root_factory=RootACL,
                 login_path='login', logout_path='logout', route_prefix=''):
 
+
     settings = dictset(config.registry.settings)
     auth_params = settings.mget('auth', defaults=dict(hashalg='sha512',
                                 http_only=True,
@@ -52,12 +54,16 @@ def enable_auth(config, user_model=None, root_factory=RootACL,
 
     config.registry._auth = True
 
-    config.add_route('prf_login', '%s/%s' % (route_prefix, login_path))
-    config.add_view(view=AccountView, attr='login', route_name='prf_login',
+    route_name = '%s_login' % route_prefix
+    config.add_route(route_name,
+                     '%s' % os.path.join(route_prefix, login_path))
+    config.add_view(view=AccountView, attr='login', route_name=route_name,
                     request_method='POST')
 
-    config.add_route('prf_logout', '%s/%s' % (route_prefix, logout_path))
-    config.add_view(view=AccountView, attr='logout', route_name='prf_logout')
+    route_name = '%s_logout' % route_prefix
+    config.add_route(route_name,
+                     '%s' % os.path.join(route_prefix, logout_path))
+    config.add_view(view=AccountView, attr='logout', route_name=route_name)
 
 
 def includeme(config):

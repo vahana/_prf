@@ -113,7 +113,7 @@ class BaseView(object):
 
         if isinstance(obj, dict):
             fields = self._params.get('_fields')
-            return dictset(obj).subset(fields) if fields else objs
+            return dictset(obj).subset(fields) if fields else obj
 
         return self.serialize(obj, many=False)
 
