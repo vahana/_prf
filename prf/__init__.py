@@ -38,7 +38,7 @@ def add400views(config, exc_list):
 
 
 def process_tweens(config):
-    for tween in aslist(config.registry.settings, 'tweens', sep='\n'):
+    for tween in aslist(config.registry.settings, 'tweens', sep='\n', default=''):
         config.add_tween(tween)
 
 def includeme(config):
