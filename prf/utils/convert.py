@@ -41,8 +41,8 @@ def asbool(dset, value):
 
 
 @parametrize
-def aslist(dset, value, remove_empty=True):
-    _lst = (value if isinstance(value, list) else value.split(','))
+def aslist(dset, value, sep=',', remove_empty=True):
+    _lst = (value if isinstance(value, list) else value.split(sep))
     return (filter(bool, _lst) if remove_empty else _lst)
 
 

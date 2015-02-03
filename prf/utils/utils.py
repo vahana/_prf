@@ -45,7 +45,6 @@ def process_limit(start, page, limit):
     except (ValueError, TypeError), e:
         raise ValueError(e)
     except Exception, e:
-
         raise ValueError('Bad _limit param: %s ' % e)
 
     return start, limit
@@ -133,3 +132,32 @@ def maybe_dotted(module, throw=True):
         else:
             log.error(err)
             return None
+
+def issequence(arg):
+    """Return True if `arg` acts as a list and does not look like a string."""
+    return not hasattr(arg, 'strip') and hasattr(arg, '__getitem__') \
+        or hasattr(arg, '__iter__')
+
+
+def prep_params(params):
+    # import here to avoid circular import
+    from prf.utils import dictset
+
+    __confirmation = '__confirmation' in params
+    params.pop('__confirmation', False)
+
+    specials = dictset()
+
+    specials._sort = split_strip(params.pop('_sort', []))
+    specials._fields = split_strip(params.pop('_fields', []))
+    specials._count = '_count' in params
+    params.pop('_count', None)
+
+    _limit = params.pop('_limit', 1)
+    _page = params.pop('_page', None)
+    _start = params.pop('_start', None)
+
+    specials._offset, specials._limit = process_limit(_start, _page, _limit)
+
+
+    return dictset(params), specials

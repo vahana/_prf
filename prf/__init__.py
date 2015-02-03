@@ -1,6 +1,6 @@
 import logging
 from pkg_resources import get_distribution
-from prf.utils import maybe_dotted
+from prf.utils import maybe_dotted, dictset, aslist
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
@@ -37,6 +37,10 @@ def add400views(config, exc_list):
         config.add_view(view, context=exc)
 
 
+def process_tweens(config):
+    for tween in aslist(config.registry.settings, 'tweens', sep='\n', default=''):
+        config.add_tween(tween)
+
 def includeme(config):
     log.info('%s %s' % (APP_NAME, __version__))
     config.add_directive('get_root_resource', get_root_resource)
@@ -54,3 +58,5 @@ def includeme(config):
 
     config.set_root_factory('prf.auth.RootACL')
     config.add_directive('add400views', add400views)
+
+    process_tweens(config)

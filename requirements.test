@@ -1,0 +1,10 @@
+pyramid
+requests
+SQLAlchemy
+SQLAlchemy-Utils
+zope.sqlalchemy
+transaction
+alembic
+nose
+coverage
+-e .

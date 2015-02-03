@@ -1,24 +1,15 @@
 import json
 import logging
 import urllib
+from urlparse import urlparse
 from pyramid.request import Request
 from pyramid.response import Response
 
-from prf.json_httpexceptions import *
-from prf.utils import dictset
-from prf import wrappers
+import prf.json_httpexceptions as prf_exc
+from prf.utils import dictset, issequence, prep_params, process_fields
+from prf.resource import Action
 
 log = logging.getLogger(__name__)
-
-ACTIONS = [
-    'index',
-    'show',
-    'create',
-    'update',
-    'delete',
-    'update_many',
-    'delete_many',
-    ]
 
 
 class ViewMapper(object):
@@ -27,7 +18,6 @@ class ViewMapper(object):
         self.kwargs = kwargs
 
     def __call__(self, view):
-        # i.e index, create etc.
         action_name = self.kwargs['attr']
 
         def view_mapper_wrapper(context, request):
@@ -37,20 +27,7 @@ class ViewMapper(object):
 
             view_obj = view(context, request)
             action = getattr(view_obj, action_name)
-
-            resp = action(**matchdict)
-
-            if isinstance(resp, Response):
-                return resp
-
-            elif action_name in ['index', 'show']:
-                resp = wrappers.wrap_in_dict(request, resp)
-            elif action_name == 'create':
-                resp = wrappers.wrap_in_http_created(request, resp)
-            elif action_name in ['update', 'delete']:
-                resp = wrappers.wrap_in_http_ok(request, resp)
-
-            return resp
+            return action(**matchdict)
 
         return view_mapper_wrapper
 
@@ -59,6 +36,8 @@ class BaseView(object):
 
     __view_mapper__ = ViewMapper
     _default_renderer = 'json'
+    _serializer = None
+    _acl = None
 
     def __init__(self, context, request, _params={}):
         self.context = context
@@ -78,21 +57,98 @@ class BaseView(object):
         # no accept headers, use default
         if '' in request.accept:
             request.override_renderer = self._default_renderer
-
         elif 'application/json' in request.accept:
-            request.override_renderer = 'prf_json'
 
+            request.override_renderer = 'prf_json'
         elif 'text/plain' in request.accept:
+
             request.override_renderer = 'string'
 
+
     def __getattr__(self, attr):
-        if attr in ACTIONS:
+        if attr in [
+            'index',
+            'show',
+            'create',
+            'update',
+            'delete',
+            'update_many',
+            'delete_many',
+            ]:
             return self.not_allowed_action
 
         raise AttributeError(attr)
 
+    def serialize(self, objs, many=False):
+        if not self._serializer:
+            return objs
+
+        kw = {}
+        fields = self._params.get('_fields')
+
+        if fields is not None:
+            kw['only'], kw['exclude'] = process_fields(fields)
+
+        return self._serializer(many=many, strict=True, **kw).\
+                                dump(objs).data
+
+    def _index(self, **kw):
+        objs = self.index(**kw)
+        serielized = self.serialize(objs, many=True)
+
+        count = len(serielized)
+        total = getattr(objs, '_total', count)
+
+        serielized = self.add_meta(serielized)
+
+        dict_ = dict(
+            total = total,
+            count = count,
+            data = serielized
+        )
+        return dict_
+
+    def _show(self, **kw):
+        obj = self.show(**kw)
+
+        if isinstance(obj, dict):
+            fields = self._params.get('_fields')
+            return dictset(obj).subset(fields) if fields else obj
+
+        return self.serialize(obj, many=False)
+
+    def _create(self, **kw):
+        obj = self.create(**kw)
+
+        if not obj:
+            return prf_exc.JHTTPCreated()
+
+        assert self._serializer
+        serielized  = self._serializer().dump(obj).data
+
+        return prf_exc.JHTTPCreated(
+                        location=self.request.current_route_url(serielized['id']),
+                        resource=serielized)
+
+
+    def _update(self, **kw):
+        self.update(**kw)
+        return prf_exc.JHTTPOk()
+
+    def _delete(self, **kw):
+        self.delete(**kw)
+        return prf_exc.JHTTPOk()
+
+    def _update_many(self, **kw):
+        self.update_many(**kw)
+        return prf_exc.JHTTPOk()
+
+    def _delete_many(self, **kw):
+        self.delete_many(**kw)
+        return prf_exc.JHTTPOk()
+
     def not_allowed_action(self, *a, **k):
-        raise JHTTPMethodNotAllowed()
+        raise prf_exc.JHTTPMethodNotAllowed()
 
     def subrequest(self, url, params={}, method='GET'):
         req = Request.blank(url, cookies=self.request.cookies,
@@ -113,7 +169,7 @@ class BaseView(object):
         if not self._model_class:
             log.error('%s _model_class in invalid: %s',
                       self.__class__.__name__, self._model_class)
-            raise JHTTPBadRequest
+            raise prf_exc.JHTTPBadRequest
 
         objs = self._model_class.get_collection(**self._params)
 
@@ -122,8 +178,22 @@ class BaseView(object):
 
         count = len(objs)
         objs.delete()
-        return JHTTPOk('Deleted %s %s objects' % (count,
+        return prf_exc.JHTTPOk('Deleted %s %s objects' % (count,
                        self._model_class.__name__))
+
+    def add_meta(self, collection):
+        try:
+            for each in collection:
+                try:
+                    url = urlparse(self.request.current_route_url())._replace(query='')
+                    each.setdefault('self', '%s/%s' % (url.geturl(),
+                                    urllib.quote(str(each['id']))))
+                except TypeError:
+                    pass
+        except (TypeError, KeyError):
+            pass
+        finally:
+            return collection
 
 
 class NoOp(BaseView):
