@@ -1,6 +1,40 @@
 from prf.utils.utils import process_fields
 from prf.utils.convert import *
 
+class DKeyError(KeyError):
+    pass
+
+class DValueError(ValueError):
+    pass
+
+
+def get_rec(d, path):
+    for seg in path:
+        d = d[seg]
+    return d
+
+def extend(d1, d2, prefix_keys=None):
+    """
+    from prf.utils import dictset, extend
+    d1 = dictset({'a':{'b':{'c':1}}})
+    d2 = dictset({'a':{'b':{'d':1}}})
+    extend(d1, d2)
+
+    """
+    if prefix_keys is None:
+        prefix_keys = []
+
+    d1_ = get_rec(d1, prefix_keys)
+    d2_ = get_rec(d2, prefix_keys)
+
+    for key, val in d2_.items():
+        if key not in d1_:
+            d1_.update(d2_)
+            return
+
+        prefix_keys.append(key)
+        extend(d1, d2, prefix_keys)
+
 
 class dictset(dict):
 
@@ -18,7 +52,10 @@ class dictset(dict):
         self.to_dictset()
 
     def __getattr__(self, key):
-        return self[key]
+        try:
+            return self[key]
+        except KeyError as e:
+            raise DKeyError(e.message)
 
     def __setattr__(self, key, val):
         if isinstance(val, dict):
@@ -50,7 +87,7 @@ class dictset(dict):
         only, exclude = process_fields(keys)
 
         if only and exclude:
-            raise ValueError('Can only supply either positive or negative keys, but not both'
+            raise DValueError('Can only supply either positive or negative keys, but not both'
                              )
 
         if only:
@@ -67,6 +104,10 @@ class dictset(dict):
 
     def update(self, d_):
         super(dictset, self).update(dictset(d_))
+        return self
+
+    def extend(self, d_):
+        extend(self, d_)
         return self
 
     def pop_by_values(self, val):
@@ -86,6 +127,16 @@ class dictset(dict):
                 if val:
                     _dict[_k] = val
         return _dict
+
+    @classmethod
+    def from_dotted(cls, dotkey, val):
+        # 'a.b.c', 100 -> {a:{b:{c:100}}}
+
+        key, _, sufix = dotkey.partition('.')
+        if not sufix:
+            return cls({key:val})
+        return cls({key: cls.from_dotted(sufix, val)})
+
 
     def asbool(self, *arg, **kw):
         return asbool(self, *arg, **kw)

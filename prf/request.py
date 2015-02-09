@@ -3,7 +3,7 @@ import requests
 import urllib
 
 from prf.utils.utils import json_dumps
-import prf.json_httpexceptions as prf_exc
+import prf.exc
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class Requests(object):
                 raise exception_response(**resp.json())
             return resp.json()
         except requests.ConnectionError, e:
-            raise prf_exc.JHTTPServerError('Server is down? %s' % e)
+            raise prf.exc.JHTTPServerError('Server is down? %s' % e)
 
     def mget(self, path, params={}, page_size=None):
         total = params['_limit']
@@ -72,7 +72,7 @@ class Requests(object):
 
             return pyramid_resp(resp)
         except requests.ConnectionError, e:
-            raise prf_exc.JHTTPServerError('Server is down? %s' % e)
+            raise prf.exc.JHTTPServerError('Server is down? %s' % e)
 
     def mpost(self, path='', data={}, bulk_size=None, bulk_key=None):
         bulk_data = data[bulk_key]
@@ -102,7 +102,7 @@ class Requests(object):
 
             return resp.json()
         except requests.ConnectionError, e:
-            raise prf_exc.JHTTPServerError('Server is down? %s' % e)
+            raise prf.exc.JHTTPServerError('Server is down? %s' % e)
 
     def head(self, path='', params={}):
         try:
@@ -111,7 +111,7 @@ class Requests(object):
                 raise exception_response(**resp.json())
         except requests.ConnectionError, e:
 
-            raise prf_exc.JHTTPServerError('Server is down? %s' % e)
+            raise prf.exc.JHTTPServerError('Server is down? %s' % e)
 
     def delete(self, path='', **kw):
         url = self.prepare_url(path)
@@ -125,4 +125,4 @@ class Requests(object):
 
             return resp.json()
         except requests.ConnectionError, e:
-            raise prf_exc.JHTTPServerError('Server is down? %s' % e)
+            raise prf.exc.JHTTPServerError('Server is down? %s' % e)

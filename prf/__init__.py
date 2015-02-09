@@ -1,6 +1,9 @@
 import logging
 from pkg_resources import get_distribution
-from prf.utils import maybe_dotted, dictset, aslist
+
+import prf.exc
+from prf.utils import maybe_dotted, aslist
+from prf.utils.dictset import DKeyError, DValueError
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
@@ -20,30 +23,27 @@ def get_resource_map(request):
     return request.registry._resources_map
 
 
-def add400views(config, exc_list):
-    MSG_MAP = {
-        KeyError: 'Missing param: %s',
-        ValueError: 'Bad value: %s',
-        AttributeError: 'Missing value: %s',
-        TypeError: 'Bad type: %s'
-    }
+def add_error_view(config, exc, http_exc=None, cond='', error=''):
+    http_exc = maybe_dotted(http_exc or prf.exc.JHTTPBadRequest)
 
     def view(context, request):
-        from prf.json_httpexceptions import JHTTPBadRequest
-        msg = MSG_MAP.get(context.__class__, '%s')
-        return JHTTPBadRequest(msg % context.message, request=request)
+        if cond in context.message:
+            msg = error % context.message if error else context.message
+            return http_exc(msg, request=request)
 
-    for exc in exc_list:
-        config.add_view(view, context=exc)
+    config.add_view(view, context=exc)
 
 
 def process_tweens(config):
     for tween in aslist(config.registry.settings, 'tweens', sep='\n', default=''):
         config.add_tween(tween)
 
+
 def includeme(config):
     log.info('%s %s' % (APP_NAME, __version__))
     config.add_directive('get_root_resource', get_root_resource)
+    config.add_directive('add_error_view', add_error_view)
+
     config.add_renderer('json', maybe_dotted('prf.renderers.JsonRenderer'))
 
     config.registry._root_resources = {}
@@ -57,6 +57,8 @@ def includeme(config):
     config.registry._auth = False
 
     config.set_root_factory('prf.auth.RootACL')
-    config.add_directive('add400views', add400views)
 
     process_tweens(config)
+
+    add_error_view(config, DKeyError, error='Missing param: %s')
+    add_error_view(config, DValueError, error='Bad value: %s')

@@ -5,12 +5,14 @@ from urlparse import urlparse
 from pyramid.request import Request
 from pyramid.response import Response
 
-import prf.json_httpexceptions as prf_exc
+import prf.exc
 from prf.utils import dictset, issequence, prep_params, process_fields
 from prf.resource import Action
 
 log = logging.getLogger(__name__)
 
+ALLOWED_ACTIONS = ['index', 'show', 'create', 'update', 'delete',
+                    'update_many', 'delete_many']
 
 class ViewMapper(object):
 
@@ -39,20 +41,12 @@ class BaseView(object):
     _serializer = None
     _acl = None
 
-    def __init__(self, context, request, _params={}):
+    def __init__(self, context, request):
         self.context = context
         self.request = request
         self._model_class = None
 
-        self._params = dictset(_params or request.params.mixed())
-        ctype = request.content_type
-        if request.method in ['POST', 'PUT', 'PATCH']:
-            if ctype == 'application/json':
-                try:
-                    self._params.update(request.json)
-                except ValueError, e:
-                    log.error("Excpeting JSON. Received: '%s'. Request: %s %s"
-                              , request.body, request.method, request.url)
+        self.process_params()
 
         # no accept headers, use default
         if '' in request.accept:
@@ -64,24 +58,30 @@ class BaseView(object):
 
             request.override_renderer = 'string'
 
+    def process_params(self):
+        params = self.request.params.mixed()
+        ctype = self.request.content_type
+        if self.request.method in ['POST', 'PUT', 'PATCH']:
+            if ctype == 'application/json':
+                try:
+                    params.update(self.request.json)
+                except ValueError, e:
+                    log.error("Excpeting JSON. Received: '%s'. Request: %s %s"
+                              , self.request.body, self.request.method, self.request.url)
+
+        self._params = dictset()
+        for key, val in params.items():
+            self._params.extend(dictset.from_dotted(key, val))
 
     def __getattr__(self, attr):
-        if attr in [
-            'index',
-            'show',
-            'create',
-            'update',
-            'delete',
-            'update_many',
-            'delete_many',
-            ]:
+        if attr in ALLOWED_ACTIONS:
             return self.not_allowed_action
 
         raise AttributeError(attr)
 
     def serialize(self, objs, many=False):
         if not self._serializer:
-            return objs
+            return objs.all()
 
         kw = {}
         fields = self._params.get('_fields')
@@ -121,34 +121,34 @@ class BaseView(object):
         obj = self.create(**kw)
 
         if not obj:
-            return prf_exc.JHTTPCreated()
+            return prf.exc.JHTTPCreated()
 
         assert self._serializer
         serielized  = self._serializer().dump(obj).data
 
-        return prf_exc.JHTTPCreated(
+        return prf.exc.JHTTPCreated(
                         location=self.request.current_route_url(serielized['id']),
                         resource=serielized)
 
 
     def _update(self, **kw):
         self.update(**kw)
-        return prf_exc.JHTTPOk()
+        return prf.exc.JHTTPOk()
 
     def _delete(self, **kw):
         self.delete(**kw)
-        return prf_exc.JHTTPOk()
+        return prf.exc.JHTTPOk()
 
     def _update_many(self, **kw):
         self.update_many(**kw)
-        return prf_exc.JHTTPOk()
+        return prf.exc.JHTTPOk()
 
     def _delete_many(self, **kw):
         self.delete_many(**kw)
-        return prf_exc.JHTTPOk()
+        return prf.exc.JHTTPOk()
 
     def not_allowed_action(self, *a, **k):
-        raise prf_exc.JHTTPMethodNotAllowed()
+        raise prf.exc.JHTTPMethodNotAllowed()
 
     def subrequest(self, url, params={}, method='GET'):
         req = Request.blank(url, cookies=self.request.cookies,
@@ -169,7 +169,7 @@ class BaseView(object):
         if not self._model_class:
             log.error('%s _model_class in invalid: %s',
                       self.__class__.__name__, self._model_class)
-            raise prf_exc.JHTTPBadRequest
+            raise prf.exc.JHTTPBadRequest
 
         objs = self._model_class.get_collection(**self._params)
 
@@ -178,7 +178,7 @@ class BaseView(object):
 
         count = len(objs)
         objs.delete()
-        return prf_exc.JHTTPOk('Deleted %s %s objects' % (count,
+        return prf.exc.JHTTPOk('Deleted %s %s objects' % (count,
                        self._model_class.__name__))
 
     def add_meta(self, collection):

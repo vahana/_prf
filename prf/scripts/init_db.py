@@ -31,7 +31,8 @@ class InitDB(object):
         self.config, _, section = self.options.c.partition('#')
         self.settings = get_appsettings(self.config, section)
         self.package_name = package_name(argv)
-        self.db = engine_from_config(self.settings, '%s.db.' % self.package_name)
+        self.db = engine_from_config(self.settings, 'db.')
+
     def run(self):
 
         if self.options.drop:
@@ -52,7 +53,7 @@ class InitDB(object):
         create_database(self.db.url)
 
         module = __import__(self.package_name)
-        base = module.model.configure_session(self.settings)
+        base = module.model.init_session(self.db.url)
         base.metadata.create_all()
 
         # load the Alembic configuration and generate the
