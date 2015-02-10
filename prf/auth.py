@@ -5,7 +5,7 @@ from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.security import remember, forget
 
-from prf.json_httpexceptions import *
+import prf.exc
 from prf.utils import dictset
 
 log = logging.getLogger(__name__)
@@ -103,10 +103,10 @@ class AccountView(object):
         if success:
             headers = remember(self.request, user)
             if next:
-                return JHTTPFound(headers=headers, location=next)
-            return JHTTPOk(headers=headers)
+                return prf.exc.JHTTPFound(headers=headers, location=next)
+            return prf.exc.JHTTPOk(headers=headers)
         else:
-            raise JHTTPUnauthorized("User '%s' failed to Login" % login)
+            raise prf.exc.JHTTPUnauthorized("User '%s' failed to Login" % login)
 
     def logout(self):
         next = self.request.params.get('next', '')
@@ -114,6 +114,6 @@ class AccountView(object):
         headers = forget(self.request)
 
         if next:
-            return JHTTPFound(headers=headers, location=next)
+            return prf.exc.JHTTPFound(headers=headers, location=next)
 
-        return JHTTPOk(headers=headers)
+        return prf.exc.JHTTPOk(headers=headers)
