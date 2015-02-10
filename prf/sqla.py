@@ -24,6 +24,7 @@ def includeme(config):
     import pyramid
     config.add_tween('prf.sqla.sqla_exc_tween', over=pyramid.tweens.MAIN)
 
+
 def sqla_exc_tween(handler, registry):
     log.info('sqla_exc_tween enabled')
 
@@ -36,6 +37,7 @@ def sqla_exc_tween(handler, registry):
             raise sqla2http(e)
 
     return tween
+
 
 def init_session(db_url, base_model):
     base_model = maybe_dotted(base_model)

@@ -4,6 +4,13 @@ from datetime import date, datetime
 
 log = logging.getLogger(__name__)
 
+class DKeyError(KeyError):
+    pass
+
+
+class DValueError(ValueError):
+    pass
+
 
 class JSONEncoder(json.JSONEncoder):
 

@@ -1,11 +1,5 @@
-from prf.utils.utils import process_fields
+from prf.utils.utils import process_fields, DKeyError, DValueError
 from prf.utils.convert import *
-
-class DKeyError(KeyError):
-    pass
-
-class DValueError(ValueError):
-    pass
 
 
 def get_rec(d, path):

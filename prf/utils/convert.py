@@ -1,4 +1,5 @@
 from datetime import datetime
+from prf.utils.utils import DKeyError, DValueError
 
 def parametrize(func):
 
@@ -9,12 +10,12 @@ def parametrize(func):
             try:
                 value = dset[name]
             except KeyError:
-                raise KeyError("Missing '%s'" % name)
+                raise DKeyError("Missing '%s'" % name)
         else:
             value = dset.get(name, default)
 
         if raise_on_empty and not value:
-            raise ValueError("'%s' can not be empty" % name)
+            raise DValueError("'%s' can not be empty" % name)
 
         result = func(dset, value, **kw)
 
@@ -93,7 +94,7 @@ def as_datetime(dset, name):
         try:
             dset[name] = datetime.strptime(dset[name], '%Y-%m-%dT%H:%M:%SZ')
         except ValueError:
-            raise ValueError("Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ"
+            raise DValueError("Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ"
                               % name)
 
     return dset.get(name, None)

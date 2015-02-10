@@ -3,7 +3,7 @@ from pkg_resources import get_distribution
 
 import prf.exc
 from prf.utils import maybe_dotted, aslist
-from prf.utils.dictset import DKeyError, DValueError
+from prf.utils.utils import DKeyError, DValueError
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
@@ -31,6 +31,7 @@ def add_error_view(config, exc, http_exc=None, cond='', error=''):
             msg = error % context.message if error else context.message
             return http_exc(msg, request=request)
 
+    log.info('add_error_view: %s' % exc.__name__)
     config.add_view(view, context=exc)
 
 
