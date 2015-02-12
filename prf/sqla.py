@@ -39,10 +39,11 @@ def sqla_exc_tween(handler, registry):
     return tween
 
 
-def init_session(db_url, base_model):
+def init_session(db_url, base_model, session=None):
     base_model = maybe_dotted(base_model)
 
-    session = scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
+    session = session or \
+            scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
     engine = sa.create_engine(db_url)
     session.configure(bind=engine)
     base_model.metadata.bind = engine

@@ -81,7 +81,7 @@ class BaseView(object):
 
     def serialize(self, objs, many=False):
         if not self._serializer:
-            return objs.all()
+            return objs
 
         kw = {}
         fields = self._params.get('_fields')
@@ -89,8 +89,9 @@ class BaseView(object):
         if fields is not None:
             kw['only'], kw['exclude'] = process_fields(fields)
 
-        return self._serializer(many=many, strict=True, **kw).\
-                                dump(objs).data
+        obj = self._serializer(many=many, strict=True, **kw)
+        obj.context = {'request':self.request}
+        return obj.dump(objs).data
 
     def _index(self, **kw):
         objs = self.index(**kw)
@@ -119,12 +120,10 @@ class BaseView(object):
 
     def _create(self, **kw):
         obj = self.create(**kw)
-
         if not obj:
             return prf.exc.JHTTPCreated()
 
-        assert self._serializer
-        serielized  = self._serializer().dump(obj).data
+        serielized = self.serialize(obj, many=False)
 
         return prf.exc.JHTTPCreated(
                         location=self.request.current_route_url(serielized['id']),
