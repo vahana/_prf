@@ -1,3 +1,4 @@
+import os
 import logging
 import types
 from prf.utils import snake2camel, maybe_dotted
@@ -28,7 +29,6 @@ def get_view_class(view_param, resource):
     view_class = '%sView' % snake2camel(view_file)
 
     view = maybe_dotted(view_param)
-
     if isinstance(view, types.TypeType):
         return view
 
@@ -68,6 +68,10 @@ def get_uri_elements(resource):
     if name_segs:
         name_prefix = '_'.join(name_segs) + ':'
 
+    if resource.config.route_prefix:
+        name_prefix = '%s_%s' % (resource.config.route_prefix.replace('/', '_'),
+                                 name_prefix)
+
     return path_prefix, name_prefix
 
 
@@ -77,13 +81,10 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path_prefix = kwargs.pop('path_prefix', '')
     name_prefix = kwargs.pop('name_prefix', '')
 
-    if config.route_prefix:
-        name_prefix = '%s_%s' % (config.route_prefix.replace('/', '_'),
-                                 name_prefix)
-
     id_name = ('/{%s}' % (kwargs.pop('id_name', None)
                or DEFAULT_ID_NAME) if collection_name else '')
-    path = path_prefix.strip('/') + '/' + (collection_name or member_name)
+
+    path = os.path.join(path_prefix, (collection_name or member_name))
 
     _acl = kwargs.pop('acl', view._acl)
     _auth = config.registry._auth
@@ -215,7 +216,7 @@ class Resource(object):
         root_resource = self.config.get_root_resource()
 
         kwargs['path_prefix'], kwargs['name_prefix'] = \
-            get_uri_elements(child_resource)
+                            get_uri_elements(child_resource)
 
         # set some defaults
         kwargs.setdefault('renderer', child_view._default_renderer)
@@ -225,15 +226,20 @@ class Resource(object):
         path = add_action_routes(self.config, child_view, member_name,
                           collection_name, **kwargs)
 
-        if uid in self.resource_map:
-            r_ = self.resource_map[uid]
-            log.warning('Resource override: %s%s becomes %s%s' %\
-                 (r_.config.package_name, path, self.config.package_name, path))
-
-        self.resource_map[uid] = child_resource
+        # self.add_to_resource_map('%s:%s' % (kwargs['name_prefix'], uid),
+        #                             path, child_resource)
+        self.add_to_resource_map(uid, path, child_resource)
         parent.children.append(child_resource)
 
         return child_resource
+
+    def add_to_resource_map(self, key, path, child_resource):
+        if key in self.resource_map:
+            r_ = self.resource_map[key]
+            log.warning('Resource override: %s%s becomes %s%s' %\
+                 (r_.config.package_name, path, self.config.package_name, path))
+
+        self.resource_map[key] = child_resource
 
     def add_from(self, resource, **kwargs):
         '''add a resource with its all children resources to the current resource'''

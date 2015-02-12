@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 def get_root_resource(config):
     from prf.resource import Resource
     return config.registry._root_resources.setdefault(config.package_name,
-            Resource(config))
+            Resource(config, uid=config.route_prefix))
 
 
 def get_resource_map(request):
