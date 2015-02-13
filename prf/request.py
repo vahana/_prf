@@ -3,6 +3,7 @@ import requests
 import urllib
 
 from prf.utils.utils import json_dumps
+from prf.utils import dictset
 import prf.exc
 
 log = logging.getLogger(__name__)
@@ -18,6 +19,12 @@ class Requests(object):
 
     def __init__(self, base_url=''):
         self.base_url = base_url
+
+    def json(self, resp):
+        try:
+            return dictset(resp.json())
+        except:
+            return {}
 
     def prepare_url(self, path='', params={}):
         url = self.base_url
@@ -39,10 +46,11 @@ class Requests(object):
         try:
             resp = requests.get(url, **kw)
             if not resp.ok:
-                raise exception_response(**resp.json())
-            return resp.json()
+                raise prf.exc.exception_response(**self.json(resp))
+            return self.json(resp)
+
         except requests.ConnectionError, e:
-            raise prf.exc.JHTTPServerError('Server is down? %s' % e)
+            raise prf.exc.HTTPServerError('Server is down? %s' % e)
 
     def mget(self, path, params={}, page_size=None):
         total = params['_limit']
@@ -68,11 +76,13 @@ class Requests(object):
                                  headers={'content-type': 'application/json'},
                                  **kw)
             if not resp.ok:
-                raise exception_response(**resp.json())
+                raise prf.exc.exception_response(status_code=resp.status_code,
+                                                 **self.json(resp))
 
             return pyramid_resp(resp)
+
         except requests.ConnectionError, e:
-            raise prf.exc.JHTTPServerError('Server is down? %s' % e)
+            raise prf.exc.HTTPServerError('Server is down? %s' % e)
 
     def mpost(self, path='', data={}, bulk_size=None, bulk_key=None):
         bulk_data = data[bulk_key]
@@ -98,20 +108,23 @@ class Requests(object):
                                 headers={'content-type': 'application/json'},
                                 **kw)
             if not resp.ok:
-                raise exception_response(**resp.json())
+                raise prf.exc.exception_response(status_code=resp.status_code,
+                                                 **self.json(resp))
 
-            return resp.json()
+            return dictset(resp.json())
+
         except requests.ConnectionError, e:
-            raise prf.exc.JHTTPServerError('Server is down? %s' % e)
+            raise prf.exc.HTTPServerError('Server is down? %s' % e)
 
     def head(self, path='', params={}):
         try:
             resp = requests.head(self.prepare_url(path, params))
             if not resp.ok:
-                raise exception_response(**resp.json())
-        except requests.ConnectionError, e:
+                raise prf.exc.exception_response(status_code=resp.status_code,
+                                                 **self.json(resp))
 
-            raise prf.exc.JHTTPServerError('Server is down? %s' % e)
+        except requests.ConnectionError, e:
+            raise prf.exc.HTTPServerError('Server is down? %s' % e)
 
     def delete(self, path='', **kw):
         url = self.prepare_url(path)
@@ -121,8 +134,10 @@ class Requests(object):
                                    headers={'content-type': 'application/json'
                                    }, **kw)
             if not resp.ok:
-                raise exception_response(**resp.json())
+                raise prf.exc.exception_response(status_code=resp.status_code,
+                                                 **self.json(resp))
 
-            return resp.json()
+            return dictset(resp.json())
+
         except requests.ConnectionError, e:
-            raise prf.exc.JHTTPServerError('Server is down? %s' % e)
+            raise prf.exc.HTTPServerError('Server is down? %s' % e)

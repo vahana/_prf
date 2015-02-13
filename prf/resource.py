@@ -103,7 +103,8 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
 
         config.add_view(view=view, attr=action, route_name=route_name,
                         request_method=request_method,
-                        permission=(action if _auth else None), **kwargs)
+                        permission=(action if _auth else None),
+                        **kwargs)
         config.commit()
 
     if collection_name:

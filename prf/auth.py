@@ -103,10 +103,10 @@ class AccountView(object):
         if success:
             headers = remember(self.request, user)
             if next:
-                return prf.exc.JHTTPFound(headers=headers, location=next)
-            return prf.exc.JHTTPOk(headers=headers)
+                return prf.exc.HTTPFound(headers=headers, location=next)
+            return prf.exc.HTTPOk(headers=headers)
         else:
-            raise prf.exc.JHTTPUnauthorized("User '%s' failed to Login" % login)
+            raise prf.exc.HTTPUnauthorized("User '%s' failed to Login" % login)
 
     def logout(self):
         next = self.request.params.get('next', '')
@@ -114,6 +114,6 @@ class AccountView(object):
         headers = forget(self.request)
 
         if next:
-            return prf.exc.JHTTPFound(headers=headers, location=next)
+            return prf.exc.HTTPFound(headers=headers, location=next)
 
-        return prf.exc.JHTTPOk(headers=headers)
+        return prf.exc.HTTPOk(headers=headers)

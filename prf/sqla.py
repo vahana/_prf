@@ -22,7 +22,8 @@ log = logging.getLogger(__name__)
 
 def includeme(config):
     import pyramid
-    config.add_tween('prf.sqla.sqla_exc_tween', over=pyramid.tweens.MAIN)
+    config.add_tween('prf.sqla.sqla_exc_tween',
+                      under='pyramid.tweens.excview_tween_factory')
 
 
 def sqla_exc_tween(handler, registry):
@@ -67,21 +68,21 @@ def init_session(db_url, base_model, session=None):
 
 def sqla2http(exc, request=None):
     def exc_dict(e):
-        return {'class': e.__class__, 'message': e.message}
+        return e.message
 
     if isinstance(exc, orm_exc.NoResultFound):
-        return prf.exc.JHTTPNotFound(request=request, exception=exc_dict(exc))
+        return prf.exc.HTTPNotFound(request=request, exception=exc_dict(exc))
 
     elif isinstance(exc, sqla_exc.InvalidRequestError) and 'has no property' \
         in exc.message.lower():
 
-        return prf.exc.JHTTPBadRequest('Bad params', request=request,
+        return prf.exc.HTTPBadRequest('Bad params', request=request,
                                exception=exc_dict(exc))
 
     elif isinstance(exc, sqla_exc.SQLAlchemyError):
         import traceback
         log.error(traceback.format_exc())
-        return prf.exc.JHTTPBadRequest('SQLA error', request=request,
+        return prf.exc.HTTPBadRequest('SQLA error', request=request,
                                                     exception=exc_dict(exc))
 
     else:
@@ -90,23 +91,23 @@ def sqla2http(exc, request=None):
 
 def postgres2http(code, exc):
     def exc_dict(e):
-        return {'class': e.__class__, 'message': e.message}
+        return e.message
 
     if code == '23502':
         match = re.search(r'"([A-Za-z0-9_\./\\-]*)"', exc.message)
-        msg = 'Missing param %s' % match.group()
-        return prf.exc.JHTTPBadRequest(msg, exception=exc_dict(exc))
+        msg = 'Missing param: %s' % match.group()
+        return prf.exc.HTTPBadRequest(msg, exception=exc_dict(exc))
     elif code == '23503':
         msg = 'Can not update or delete resource: child resource(s) exist'
-        return prf.exc.JHTTPConflict(msg, exception=exc_dict(exc))
+        return prf.exc.HTTPConflict(msg, exception=exc_dict(exc))
     elif code == '23505':
         msg = "Resource already exists"
-        return prf.exc.JHTTPConflict(msg, exception=exc_dict(exc))
+        return prf.exc.HTTPConflict(msg, exception=exc_dict(exc))
     elif code == '22P02':
         msg = "Bad value"
-        return prf.exc.JHTTPBadRequest(msg, exception=exc_dict(exc))
+        return prf.exc.HTTPBadRequest(msg, exception=exc_dict(exc))
     else:
-        return prf.exc.JHTTPServerError(code, exception=exc_dict(exc))
+        return prf.exc.HTTPServerError(code, exception=exc_dict(exc))
 
 
 def order_by_clauses(model, _sort):
@@ -211,7 +212,7 @@ class Base(object):
         except orm_exc.NoResultFound, e:
             msg = "'%s(%s)' resource not found" % (cls.__name__, params)
             if _raise:
-                raise prf.exc.JHTTPNotFound(msg)
+                raise prf.exc.HTTPNotFound(msg)
             else:
                 log.debug(msg)
 

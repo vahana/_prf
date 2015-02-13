@@ -28,8 +28,9 @@ class InitDB(object):
         parser.add_argument('--drop', help='Drop DB', action='store_true')
 
         self.options = parser.parse_args()
-        self.config, _, section = self.options.c.partition('#')
-        self.settings = get_appsettings(self.config, section)
+        self.config = self.options.c
+        self.package_name = package_name(argv)
+        self.settings = get_appsettings(self.config, self.package_name)
         self.package_name = package_name(argv)
         self.db = engine_from_config(self.settings, 'db.')
 

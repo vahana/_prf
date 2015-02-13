@@ -1,5 +1,7 @@
 import logging
 from pkg_resources import get_distribution
+from pyramid import httpexceptions
+
 
 import prf.exc
 from prf.utils import maybe_dotted, aslist
@@ -24,20 +26,21 @@ def get_resource_map(request):
 
 
 def add_error_view(config, exc, http_exc=None, cond='', error=''):
-    http_exc = maybe_dotted(http_exc or prf.exc.JHTTPBadRequest)
+    http_exc = maybe_dotted(http_exc or prf.exc.HTTPBadRequest)
 
     def view(context, request):
-        if cond in context.message:
+        if cond in (context.message or context.detail or context.explanation or ''):
             msg = error % context.message if error else context.message
             return http_exc(msg, request=request)
 
-    log.info('add_error_view: %s' % exc.__name__)
+    log.info('add_error_view: %s -> %s' % (exc.__name__, http_exc.__name__))
     config.add_view(view, context=exc)
 
 
 def process_tweens(config):
+    import pyramid
     for tween in aslist(config.registry.settings, 'tweens', sep='\n', default=''):
-        config.add_tween(tween)
+        config.add_tween(tween, over=pyramid.tweens.MAIN)
 
 
 def includeme(config):
@@ -63,3 +66,8 @@ def includeme(config):
 
     add_error_view(config, DKeyError, error='Missing param: %s')
     add_error_view(config, DValueError, error='Bad value: %s')
+
+    # replace html versions of pyramid http exceptions with json versions
+    add_error_view(config, httpexceptions.HTTPUnauthorized, prf.exc.HTTPUnauthorized)
+    add_error_view(config, httpexceptions.HTTPForbidden, prf.exc.HTTPForbidden)
+    add_error_view(config, httpexceptions.HTTPNotFound, prf.exc.HTTPNotFound)

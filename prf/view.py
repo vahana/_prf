@@ -120,34 +120,35 @@ class BaseView(object):
 
     def _create(self, **kw):
         obj = self.create(**kw)
+
         if not obj:
-            return prf.exc.JHTTPCreated()
+            return prf.exc.HTTPCreated()
 
         serielized = self.serialize(obj, many=False)
 
-        return prf.exc.JHTTPCreated(
+        return prf.exc.HTTPCreated(
                         location=self.request.current_route_url(serielized['id']),
                         resource=serielized)
 
 
     def _update(self, **kw):
         self.update(**kw)
-        return prf.exc.JHTTPOk()
+        return prf.exc.HTTPOk()
 
     def _delete(self, **kw):
         self.delete(**kw)
-        return prf.exc.JHTTPOk()
+        return prf.exc.HTTPOk()
 
     def _update_many(self, **kw):
         self.update_many(**kw)
-        return prf.exc.JHTTPOk()
+        return prf.exc.HTTPOk()
 
     def _delete_many(self, **kw):
         self.delete_many(**kw)
-        return prf.exc.JHTTPOk()
+        return prf.exc.HTTPOk()
 
     def not_allowed_action(self, *a, **k):
-        raise prf.exc.JHTTPMethodNotAllowed()
+        raise prf.exc.HTTPMethodNotAllowed()
 
     def subrequest(self, url, params={}, method='GET'):
         req = Request.blank(url, cookies=self.request.cookies,
@@ -168,7 +169,7 @@ class BaseView(object):
         if not self._model_class:
             log.error('%s _model_class in invalid: %s',
                       self.__class__.__name__, self._model_class)
-            raise prf.exc.JHTTPBadRequest
+            raise prf.exc.HTTPBadRequest
 
         objs = self._model_class.get_collection(**self._params)
 
@@ -177,7 +178,7 @@ class BaseView(object):
 
         count = len(objs)
         objs.delete()
-        return prf.exc.JHTTPOk('Deleted %s %s objects' % (count,
+        return prf.exc.HTTPOk('Deleted %s %s objects' % (count,
                        self._model_class.__name__))
 
     def add_meta(self, collection):

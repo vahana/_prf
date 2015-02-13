@@ -14,7 +14,6 @@ def request_timing(handler, registry):
     log.info('request_timing enabled: slow_request_threshold = %s' % threshold)
 
     def timing(request):
-
         start = time.time()
         try:
             return handler(request)

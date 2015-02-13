@@ -1,98 +1,98 @@
-import json
 import logging
-import sys
 import traceback
 from datetime import datetime
+import uuid
 from pyramid import httpexceptions as http_exc
 
 from prf.utils import dictset, json_dumps
 
 logger = logging.getLogger(__name__)
 
-
-def includeme(config):
-    config.add_view(view=httperrors, context=http_exc.HTTPError)
-    logger.info('Include json_httpexceptions')
-
-
-STATUS_MAP = dict()
-BLACKLIST_LOG = [404]
-BASE_ATTRS = ['status_code', 'explanation', 'message', 'title']
-
-
 def add_stack():
     return ''.join(traceback.format_stack())
 
+def is_error(status_code):
+    return 400 <= status_code < 600
 
-def create_json_response(obj, request=None, log_it=False, show_stack=False,
-                         **extra):
-    body = dict()
-    for attr in BASE_ATTRS:
-        body[attr] = extra.pop(attr, None) or getattr(obj, attr, None)
+def log_exception(resp, params):
 
-    body['timestamp'] = extra['timestamp'] = datetime.utcnow()
-
-    if request:
-        extra['request_url'] = request.url
-        if obj.status_int in [403, 401]:
-            extra['client_addr'] = request.client_addr
-            extra['remote_addr'] = request.remote_addr
-
-    if obj.location:
-        body['id'] = obj.location.split('/')[-1]
-
-    body.update(extra)
-
-    obj.body = json_dumps(body)
-    show_stack = log_it or show_stack
-    status = obj.status_int
-
-    if 400 <= status < 600 and status not in BLACKLIST_LOG or log_it:
-        msg = '%s: %s' % (obj.status.upper(), json_dumps(extra))
-        if obj.status_int in [400, 500] or show_stack:
+    if is_error(resp.status_code) and resp.status_code != 404:
+        msg = '%s: %s' % (resp.status.upper(), json_dumps(params))
+        if resp.status_int in [400, 500]:
             msg += '\nSTACK BEGIN>>\n%s\nSTACK END<<' % add_stack()
         logger.error(msg)
 
-    obj.content_type = 'application/json'
-    return obj
+def create_response(resp, params, **extra):
+    resp.content_type = 'application/json'
 
+    body = dict(
+        code = resp.code,
+        title = resp.title,
+        explanation = resp.explanation,
+        detail = resp.detail,
+    )
+    body.update(extra)
+
+    if is_error(resp.status_code):
+        body['id'] = uuid.uuid4()
+        params['timestamp'] = datetime.utcnow()
+
+    params.update(body)
+    log_exception(resp, params)
+
+    resp.body = json_dumps(body)
+    return resp
 
 def exception_response(status_code, **kw):
-    return STATUS_MAP[status_code](**kw)
+    if status_code == 400:
+        return HTTPBadRequest(**kw)
 
+    return create_response(http_exc.exception_response(status_code), kw)
 
-class JBase(object):
+# 20x
+def HTTPOk(*arg, **kw):
+    return create_response(http_exc.HTTPOk(*arg), kw)
 
-    def __init__(self, *arg, **kw):
-        kw = dictset(kw)
-        self.__class__.__base__.__init__(self, *arg, **kw.subset(BASE_ATTRS
-                + ['headers', 'location']))
+def HTTPCreated(*arg, **kw):
+    resource = kw.pop('resource', None)
+    if resource and 'location' in kw:
+        resource['self'] = kw['location']
 
-        create_json_response(self, **kw)
+    resp = create_response(http_exc.HTTPCreated(*arg), kw, resource=resource)
+    return resp
 
+# 30x
+def HTTPFound(*arg, **kw):
+    return create_response(http_exc.HTTPFound(*arg), kw)
 
-thismodule = sys.modules[__name__]
+# 40x
+def HTTPNotFound(*arg, **kw):
+    return create_response(http_exc.HTTPNotFound(*arg), kw)
 
-http_exceptions = http_exc.status_map.values() + [http_exc.HTTPBadRequest,
-        http_exc.HTTPInternalServerError]
+def HTTPUnauthorized(*arg, **kw):
+    return create_response(http_exc.HTTPUnauthorized(*arg), kw)
 
-for exc_cls in http_exceptions:
-    name = 'J%s' % exc_cls.__name__
-    STATUS_MAP[exc_cls.code] = type(name, (JBase, exc_cls), {})
-    setattr(thismodule, name, STATUS_MAP[exc_cls.code])
+def HTTPForbidden(*arg, **kw):
+    return create_response(http_exc.HTTPForbidden(*arg), kw)
 
+def HTTPConflict(*arg, **kw):
+    return create_response(http_exc.HTTPConflict(*arg), kw)
 
-def httperrors(context, request):
-    return create_json_response(context, request=request)
+def HTTPBadRequest(*arg, **kw):
+    return create_response(http_exc.HTTPBadRequest(*arg), kw)
 
+def HTTPMethodNotAllowed(*arg, **kw):
+    return create_response(http_exc.HTTPMethodNotAllowed(*arg), kw)
 
-class JHTTPCreated(http_exc.HTTPCreated):
+# 50x
+def HTTPServerError(*arg, **kw):
+    return create_response(http_exc.HTTPServerError(*arg), kw)
 
-    def __init__(self, *args, **kwargs):
-        resource = kwargs.pop('resource', None)
-        super(JHTTPCreated, self).__init__(*args, **kwargs)
+def HTTPInternalServerError(*arg, **kw):
+    return create_response(http_exc.HTTPInternalServerError(*arg), kw)
 
-        if resource and 'location' in kwargs:
-            resource['self'] = kwargs['location']
+def HTTPNotImplemented(*arg, **kw):
+    return create_response(http_exc.HTTPNotImplemented(*arg), kw)
 
-        create_json_response(self, **dict(data=resource))
+def HTTPServiceUnavailable(*arg, **kw):
+    return create_response(http_exc.HTTPServiceUnavailable(*arg), kw)
