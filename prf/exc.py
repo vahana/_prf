@@ -44,8 +44,10 @@ def create_response(resp, params, **extra):
     return resp
 
 def exception_response(status_code, **kw):
+    # for some reason 400 is mapped to HTTPClientError in pyramid instead of HTTPBadRequest
+    # lets map it manually here
     if status_code == 400:
-        return HTTPBadRequest(**kw)
+        return HTTPBadRequest(kw.get('detail', ''), **kw)
 
     return create_response(http_exc.exception_response(status_code), kw)
 

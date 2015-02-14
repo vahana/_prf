@@ -75,6 +75,7 @@ class Requests(object):
             resp = requests.post(url, data=json_dumps(data),
                                  headers={'content-type': 'application/json'},
                                  **kw)
+            import ipdb;ipdb.set_trace()
             if not resp.ok:
                 raise prf.exc.exception_response(status_code=resp.status_code,
                                                  **self.json(resp))
