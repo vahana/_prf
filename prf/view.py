@@ -124,12 +124,9 @@ class BaseView(object):
         if not obj:
             return prf.exc.HTTPCreated()
 
-        serielized = self.serialize(obj, many=False)
-
         return prf.exc.HTTPCreated(
-                        location=self.request.current_route_url(serielized['id']),
-                        resource=serielized)
-
+                        location=self.request.current_route_url(obj.id),
+                        resource=self.serialize(obj, many=False))
 
     def _update(self, **kw):
         self.update(**kw)

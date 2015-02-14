@@ -8,10 +8,7 @@ from sqlalchemy.orm import class_mapper, exc as orm_exc
 from sqlalchemy.orm.properties import ColumnProperty
 from sqlalchemy_utils import get_columns, get_hybrid_properties, get_mapper
 from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy import event
-
-from zope.sqlalchemy import ZopeTransactionExtension
 
 from prf.utils import dictset, split_strip, process_limit, prep_params,\
                       maybe_dotted
@@ -40,11 +37,9 @@ def sqla_exc_tween(handler, registry):
     return tween
 
 
-def init_session(db_url, base_model, session=None):
+def init_session(db_url, base_model, session):
     base_model = maybe_dotted(base_model)
 
-    session = session or \
-            scoped_session(sessionmaker(extension=ZopeTransactionExtension()))
     engine = sa.create_engine(db_url)
     session.configure(bind=engine)
     base_model.metadata.bind = engine
@@ -141,7 +136,6 @@ def order_by_clauses(model, _sort):
 class Base(object):
 
     _type = property(lambda self: self.__class__.__name__)
-    session = None
 
     @declared_attr
     def __tablename__(cls):
@@ -164,7 +158,7 @@ class Base(object):
         return '<%s: %s>' % (self.__class__.__name__, ', '.join(parts))
 
     def save(self):
-        self.Session.add(self)
+        self.Session().add(self)
         return self
 
     def update(self, **params):
@@ -174,26 +168,28 @@ class Base(object):
         return self.save()
 
     def delete(self):
-        self.Session.delete(self)
+        self.Session().delete(self)
 
     @classmethod
     def query(cls, *args, **kw):
-        return cls.Session.query(cls, *args, **kw)
+        return cls.Session().query(cls, *args, **kw)
 
     @classmethod
     def objects(cls, **params):
         params, specials = prep_params(params)
-        return cls.Session.query(cls).filter_by(**params)
+        return cls.Session().query(cls).filter_by(**params)
 
     @classmethod
     def get_collection(cls, *args, **params):
         params, specials = prep_params(params)
-        query = cls.Session.query(cls)
+        session = cls.Session()
 
-        query = query.filter(*args) if args else cls.Session.query(cls)
+        query = session.query(cls)
+
+        query = query.filter(*args) if args else session.query(cls)
 
         if params:
-            query = cls.Session.query(cls).filter_by(**params)
+            query = session.query(cls).filter_by(**params)
 
         query._total = query.count()
 
@@ -207,7 +203,7 @@ class Base(object):
         params, _ = prep_params(params)
 
         try:
-            obj = cls.Session.query(cls).filter_by(**params).one()
+            obj = cls.Session().query(cls).filter_by(**params).one()
             return obj
         except orm_exc.NoResultFound, e:
             msg = "'%s(%s)' resource not found" % (cls.__name__, params)
