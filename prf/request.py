@@ -29,7 +29,9 @@ class Requests(object):
     def prepare_url(self, path='', params={}):
         url = self.base_url
 
-        if path:
+        if not url:
+            url = path
+        elif path:
             url = '%s%s' % (url, (path if path.startswith('/') else '/'
                             + path))
 
@@ -50,7 +52,7 @@ class Requests(object):
             return self.json(resp)
 
         except requests.ConnectionError, e:
-            raise prf.exc.HTTPServerError('Server is down? %s' % e)
+            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
 
     def mget(self, path, params={}, page_size=None):
         total = params['_limit']
@@ -75,7 +77,6 @@ class Requests(object):
             resp = requests.post(url, data=json_dumps(data),
                                  headers={'content-type': 'application/json'},
                                  **kw)
-            import ipdb;ipdb.set_trace()
             if not resp.ok:
                 raise prf.exc.exception_response(status_code=resp.status_code,
                                                  **self.json(resp))
@@ -83,7 +84,7 @@ class Requests(object):
             return pyramid_resp(resp)
 
         except requests.ConnectionError, e:
-            raise prf.exc.HTTPServerError('Server is down? %s' % e)
+            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
 
     def mpost(self, path='', data={}, bulk_size=None, bulk_key=None):
         bulk_data = data[bulk_key]
@@ -115,7 +116,7 @@ class Requests(object):
             return dictset(resp.json())
 
         except requests.ConnectionError, e:
-            raise prf.exc.HTTPServerError('Server is down? %s' % e)
+            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
 
     def head(self, path='', params={}):
         try:
@@ -125,7 +126,7 @@ class Requests(object):
                                                  **self.json(resp))
 
         except requests.ConnectionError, e:
-            raise prf.exc.HTTPServerError('Server is down? %s' % e)
+            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
 
     def delete(self, path='', **kw):
         url = self.prepare_url(path)
@@ -141,4 +142,4 @@ class Requests(object):
             return dictset(resp.json())
 
         except requests.ConnectionError, e:
-            raise prf.exc.HTTPServerError('Server is down? %s' % e)
+            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)

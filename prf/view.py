@@ -167,7 +167,7 @@ class BaseView(object):
         if not self._model_class:
             log.error('%s _model_class in invalid: %s',
                       self.__class__.__name__, self._model_class)
-            raise prf.exc.HTTPBadRequest
+            raise prf.exc.HTTPBadRequest()
 
         objs = self._model_class.get_collection(**self._params)
 

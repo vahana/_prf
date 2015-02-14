@@ -29,7 +29,7 @@ def create_response(resp, params, **extra):
         code = resp.code,
         title = resp.title,
         explanation = resp.explanation,
-        detail = resp.detail,
+        detail = resp.detail or params.get('detail', ''),
     )
     body.update(extra)
 
@@ -89,6 +89,9 @@ def HTTPMethodNotAllowed(*arg, **kw):
 # 50x
 def HTTPServerError(*arg, **kw):
     return create_response(http_exc.HTTPServerError(*arg), kw)
+
+def HTTPGatewayTimeout(*arg, **kw):
+    return create_response(http_exc.HTTPGatewayTimeout(*arg), kw)
 
 def HTTPInternalServerError(*arg, **kw):
     return create_response(http_exc.HTTPInternalServerError(*arg), kw)
