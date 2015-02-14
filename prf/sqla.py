@@ -17,10 +17,26 @@ import prf.exc
 log = logging.getLogger(__name__)
 
 
+def db(request):
+    session = request.registry.dbsession
+
+    def cleanup(request):
+        if request.exception is not None:
+            session.rollback()
+        else:
+            session.commit()
+        session.close()
+    request.add_finished_callback(cleanup)
+
+    return session
+
+
 def includeme(config):
     import pyramid
     config.add_tween('prf.sqla.sqla_exc_tween',
                       under='pyramid.tweens.excview_tween_factory')
+
+    config.add_request_method(db, reify=True)
 
 
 def sqla_exc_tween(handler, registry):
@@ -29,21 +45,29 @@ def sqla_exc_tween(handler, registry):
     def tween(request):
         try:
             resp = handler(request)
+            request.db.commit()
             return resp
 
         except sqla_exc.SQLAlchemyError, e:
+            request.db.rollback()
             raise sqla2http(e)
+
+        except:
+            request.db.rollback()
+            raise
 
     return tween
 
 
-def init_session(db_url, base_model, session):
-    base_model = maybe_dotted(base_model)
+def init_session(config, db_url, model, session):
+    config.registry.dbsession = session
 
     engine = sa.create_engine(db_url)
     session.configure(bind=engine)
-    base_model.metadata.bind = engine
-    base_model.Session = session
+
+    model = maybe_dotted(model)
+    model.metadata.bind = engine
+    model.Session = session
 
     @event.listens_for(engine, "handle_error")
     def handle_exception(context):
@@ -56,9 +80,10 @@ def init_session(db_url, base_model, session):
             pass
             #not psycopg2
 
+        session.rollback()
         raise sqla2http(context)
 
-    return base_model
+    return model
 
 
 def sqla2http(exc, request=None):

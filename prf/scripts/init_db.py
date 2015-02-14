@@ -4,6 +4,7 @@ import logging
 
 from argparse import ArgumentParser
 from pyramid.paster import get_appsettings
+from pyramid.config import Configurator
 from sqlalchemy import engine_from_config
 from sqlalchemy_utils.functions import database_exists, create_database, \
                                        drop_database
@@ -54,7 +55,8 @@ class InitDB(object):
         create_database(self.db.url)
 
         module = __import__(self.package_name)
-        base = module.model.init_session(self.db.url)
+        base = module.model.init_session(Configurator(settings=self.settings),
+                                         self.db.url)
         base.metadata.create_all()
 
         # load the Alembic configuration and generate the
