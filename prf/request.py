@@ -20,10 +20,11 @@ class Requests(object):
     def __init__(self, base_url=''):
         self.base_url = base_url
 
-    def json(self, resp):
+    def json_body(self, resp):
         try:
             return dictset(resp.json())
         except:
+            log.error('Response does not contain json body')
             return {}
 
     def prepare_url(self, path='', params={}):
@@ -48,8 +49,8 @@ class Requests(object):
         try:
             resp = requests.get(url, **kw)
             if not resp.ok:
-                raise prf.exc.exception_response(**self.json(resp))
-            return self.json(resp)
+                raise prf.exc.exception_response(**self.json_body(resp))
+            return self.json_body(resp)
 
         except requests.ConnectionError, e:
             raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
@@ -79,7 +80,7 @@ class Requests(object):
                                  **kw)
             if not resp.ok:
                 raise prf.exc.exception_response(status_code=resp.status_code,
-                                                 **self.json(resp))
+                                                 **self.json_body(resp))
 
             return pyramid_resp(resp)
 
@@ -111,7 +112,7 @@ class Requests(object):
                                 **kw)
             if not resp.ok:
                 raise prf.exc.exception_response(status_code=resp.status_code,
-                                                 **self.json(resp))
+                                                 **self.json_body(resp))
 
             return dictset(resp.json())
 
@@ -123,7 +124,7 @@ class Requests(object):
             resp = requests.head(self.prepare_url(path, params))
             if not resp.ok:
                 raise prf.exc.exception_response(status_code=resp.status_code,
-                                                 **self.json(resp))
+                                                 **self.json_body(resp))
 
         except requests.ConnectionError, e:
             raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
@@ -137,7 +138,7 @@ class Requests(object):
                                    }, **kw)
             if not resp.ok:
                 raise prf.exc.exception_response(status_code=resp.status_code,
-                                                 **self.json(resp))
+                                                 **self.json_body(resp))
 
             return dictset(resp.json())
 

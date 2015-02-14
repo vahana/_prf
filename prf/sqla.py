@@ -7,6 +7,7 @@ from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import class_mapper, exc as orm_exc
 from sqlalchemy.orm.properties import ColumnProperty
 from sqlalchemy_utils import get_columns, get_hybrid_properties, get_mapper
+from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import event
 
@@ -36,8 +37,6 @@ def includeme(config):
     config.add_tween('prf.sqla.sqla_exc_tween',
                       under='pyramid.tweens.excview_tween_factory')
 
-    config.add_request_method(db, reify=True)
-
 
 def sqla_exc_tween(handler, registry):
     log.info('sqla_exc_tween enabled')
@@ -59,8 +58,10 @@ def sqla_exc_tween(handler, registry):
     return tween
 
 
-def init_session(config, db_url, model, session):
+def init_db(config, db_url, model):
+    session = scoped_session(sessionmaker())
     config.registry.dbsession = session
+    config.add_request_method(db, reify=True)
 
     engine = sa.create_engine(db_url)
     session.configure(bind=engine)
