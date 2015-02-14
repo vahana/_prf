@@ -58,7 +58,8 @@ def sqla_exc_tween(handler, registry):
     return tween
 
 
-def init_db(config, db_url, model):
+def init_db(config, model):
+    db_url = config.registry.settings['db.url']
     session = scoped_session(sessionmaker())
     config.registry.dbsession = session
     config.add_request_method(db, reify=True)

@@ -69,7 +69,6 @@ def enable_auth(config, user_model=None, root_factory=RootACL,
 def includeme(config):
     config.add_directive('enable_auth', enable_auth)
 
-
 class AccountView(object):
 
     __user_model = None

@@ -35,6 +35,42 @@ class ViewMapper(object):
 
 
 class BaseView(object):
+    """Base class for inheriting the views.
+
+    Attributes:
+        _params (dict): stores parsed query string if its GET
+            or request json body if its POST or PUT. Standard values supported:
+            `_limit` (int): number of resources to return
+            `_start` (int): offset
+            `_page` (int): page number starting with 0, with _limit
+            `_sort` (str): comma separated list of fields to sort by (default DESC)
+            `_fields` (str): resource projection, list of fields to return
+                            (or exclude if name of the field starts with `-`)
+            `_count` (bool): return the count
+
+            Example: GET /users?_limit=10&start=100&_sort=created_at&_fields=id,email,created_at
+
+        request (Request): request object passed to the view by pyramid
+
+    Example:
+        class UsersView(BaseView):
+            def index(self):
+                return list_of_users
+
+            def show(self, id):
+                return get_user(user_id=id)
+
+            def create(self):
+                user = create_user(self._params)
+                return user
+
+            def update(self, id):
+                update_user(user_id, user_attr=self._params)
+
+            def delete(self, id):
+                delete_user(user_id=id)
+
+    """
 
     __view_mapper__ = ViewMapper
     _default_renderer = 'json'
@@ -58,6 +94,12 @@ class BaseView(object):
 
             request.override_renderer = 'string'
 
+        self.init()
+
+    def init(self):
+        pass
+        #to override in children
+
     def process_params(self):
         params = self.request.params.mixed()
         ctype = self.request.content_type
@@ -72,6 +114,9 @@ class BaseView(object):
         self._params = dictset()
         for key, val in params.items():
             self._params.extend(dictset.from_dotted(key, val))
+
+        if self.request.method == 'GET':
+            self._params.setdefault('_limit', 20)
 
     def __getattr__(self, attr):
         if attr in ALLOWED_ACTIONS:

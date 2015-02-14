@@ -55,7 +55,7 @@ class InitDB(object):
         create_database(self.db.url)
 
         module = __import__(self.package_name)
-        base = module.model.init_db(Configurator(settings=self.settings), self.db.url)
+        base = module.model.init_db(Configurator(settings=self.settings))
         base.metadata.create_all()
 
         # load the Alembic configuration and generate the
