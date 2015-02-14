@@ -28,7 +28,6 @@ class RootACL(object):
 def enable_auth(config, user_model=None, root_factory=RootACL,
                 login_path='login', logout_path='logout', route_prefix=''):
 
-
     settings = dictset(config.registry.settings)
     auth_params = settings.mget('auth', defaults=dict(hashalg='sha512',
                                 http_only=True,
@@ -75,6 +74,7 @@ class AccountView(object):
 
     def __init__(self, request):
         self.request = request
+        self._params = dictset(self.request.params)
 
     @classmethod
     def set_user_model(cls, model):
@@ -94,9 +94,9 @@ class AccountView(object):
         return cls.__user_model.groupfinder(userid, request)
 
     def login(self):
-        login = self.request.params['login']
-        password = self.request.params['password']
-        next = self.request.params.get('next', '')
+        login = self._params['login']
+        password = self._params['password']
+        next = self._params.get('next', '')
 
         success, user = self.__user_model.authenticate(login, password)
         if success:

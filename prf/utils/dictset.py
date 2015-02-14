@@ -51,6 +51,9 @@ class dictset(dict):
         except KeyError as e:
             raise DKeyError(e.message)
 
+    def __missing__(self, key):
+        raise DKeyError(key)
+
     def __setattr__(self, key, val):
         if isinstance(val, dict):
             val = dictset(val)

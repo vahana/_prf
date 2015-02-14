@@ -25,6 +25,8 @@ def log_exception(resp, params):
 def create_response(resp, params, **extra):
     resp.content_type = 'application/json'
 
+    resp.headers.extend(params.pop('headers', []))
+
     body = dict(
         code = resp.code,
         title = resp.title,
@@ -65,7 +67,8 @@ def HTTPCreated(*arg, **kw):
 
 # 30x
 def HTTPFound(*arg, **kw):
-    return create_response(http_exc.HTTPFound(*arg), kw)
+    return create_response(http_exc.HTTPFound(*arg,
+                            location=kw['location']), kw)
 
 # 40x
 def HTTPNotFound(*arg, **kw):
