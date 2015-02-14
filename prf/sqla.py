@@ -43,17 +43,9 @@ def sqla_exc_tween(handler, registry):
 
     def tween(request):
         try:
-            resp = handler(request)
-            request.db.commit()
-            return resp
-
+            return handler(request)
         except sqla_exc.SQLAlchemyError, e:
-            request.db.rollback()
             raise sqla2http(e)
-
-        except:
-            request.db.rollback()
-            raise
 
     return tween
 
@@ -82,7 +74,6 @@ def init_db(config, model):
             pass
             #not psycopg2
 
-        session.rollback()
         raise sqla2http(context)
 
     return model
