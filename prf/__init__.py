@@ -26,6 +26,7 @@ def get_resource_map(request):
 
 
 def add_error_view(config, exc, http_exc=None, cond='', error=''):
+    exc = maybe_dotted(exc)
     http_exc = maybe_dotted(http_exc or prf.exc.HTTPBadRequest)
 
     def view(context, request):
@@ -58,16 +59,17 @@ def includeme(config):
     config.add_route('options', '/*path', request_method='OPTIONS')
     config.add_view('prf.utility_views.OptionsView', route_name='options')
 
-    config.registry._auth = False
-
     config.set_root_factory('prf.auth.RootACL')
 
     process_tweens(config)
 
     add_error_view(config, DKeyError, error='Missing param: %s')
     add_error_view(config, DValueError, error='Bad value: %s')
+    add_error_view(config, TypeError)
 
     # replace html versions of pyramid http exceptions with json versions
     add_error_view(config, httpexceptions.HTTPUnauthorized, prf.exc.HTTPUnauthorized)
     add_error_view(config, httpexceptions.HTTPForbidden, prf.exc.HTTPForbidden)
     add_error_view(config, httpexceptions.HTTPNotFound, prf.exc.HTTPNotFound)
+
+    config.registry.validation_errors = []

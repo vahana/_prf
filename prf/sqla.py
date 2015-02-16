@@ -27,6 +27,7 @@ def db(request):
         else:
             session.commit()
         session.close()
+
     request.add_finished_callback(cleanup)
 
     return session
@@ -50,8 +51,8 @@ def sqla_exc_tween(handler, registry):
     return tween
 
 
-def init_db(config, model):
-    db_url = config.registry.settings['db.url']
+def init_db(config, model, db_url=None):
+    db_url = db_url or config.registry.settings['db.url']
     session = scoped_session(sessionmaker())
     config.registry.dbsession = session
     config.add_request_method(db, reify=True)
@@ -243,3 +244,6 @@ class Base(object):
             return obj, False
         else:
             return cls(**params).save(), True
+
+
+from sqlalchemy import event

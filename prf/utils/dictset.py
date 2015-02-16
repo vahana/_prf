@@ -5,6 +5,9 @@ from prf.utils.convert import *
 def get_rec(d, path):
     for seg in path:
         d = d[seg]
+    if not isinstance(d, dict):
+        raise DValueError('`%s` must be (derived from) dict' % d)
+
     return d
 
 def extend(d1, d2, prefix_keys=None):
@@ -61,6 +64,12 @@ class dictset(dict):
 
     def __delattr__(self, key):
         self.pop(key)
+
+    def __contains__(self, item):
+        if isinstance(item, (tuple, list, set)):
+            return bool(set(self.keys()) & set(item))
+        else:
+            return super(dictset, self).__contains__(item)
 
     def to_dictset(self):
         for key, val in self.items():
@@ -134,6 +143,12 @@ class dictset(dict):
             return cls({key:val})
         return cls({key: cls.from_dotted(sufix, val)})
 
+    def has(self, key, check_type):
+        if key in self:
+            if not isinstance(self[key], check_type):
+                raise DValueError('`%s` must be `%s`' % (key, check_type))
+            return True
+        return False
 
     def asbool(self, *arg, **kw):
         return asbool(self, *arg, **kw)

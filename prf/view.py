@@ -112,8 +112,12 @@ class BaseView(object):
                               , self.request.body, self.request.method, self.request.url)
 
         self._params = dictset()
+
         for key, val in params.items():
-            self._params.extend(dictset.from_dotted(key, val))
+            try:
+                self._params.extend(dictset.from_dotted(key, val))
+            except:
+                raise prf.exc.HTTPBadRequest('Can not mix dotted and regular params names')
 
         if self.request.method == 'GET':
             self._params.setdefault('_limit', 20)

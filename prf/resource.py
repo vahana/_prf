@@ -87,7 +87,7 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path = os.path.join(path_prefix, (collection_name or member_name))
 
     _acl = kwargs.pop('acl', view._acl)
-    _auth = config.registry._auth
+    _auth = config.registry.settings.get('auth', False)
     _traverse = kwargs.pop('traverse', None) or id_name
     added_routes = {}
 

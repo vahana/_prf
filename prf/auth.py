@@ -51,8 +51,6 @@ def enable_auth(config, user_model=None, root_factory=RootACL,
     config.set_authorization_policy(ACLAuthorizationPolicy())
     config.set_root_factory(config.maybe_dotted(root_factory))
 
-    config.registry._auth = True
-
     route_name = '%s_login' % route_prefix
     config.add_route(route_name,
                      '%s' % os.path.join(route_prefix, login_path))
@@ -67,6 +65,7 @@ def enable_auth(config, user_model=None, root_factory=RootACL,
 
 def includeme(config):
     config.add_directive('enable_auth', enable_auth)
+
 
 class AccountView(object):
 

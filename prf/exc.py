@@ -22,9 +22,10 @@ def log_exception(resp, params):
             msg += '\nSTACK BEGIN>>\n%s\nSTACK END<<' % add_stack()
         logger.error(msg)
 
-def create_response(resp, params, **extra):
+def create_response(resp, params):
     resp.content_type = 'application/json'
 
+    extra = params.get('extra', {})
     resp.headers.extend(params.pop('headers', []))
 
     body = dict(
@@ -36,7 +37,7 @@ def create_response(resp, params, **extra):
     body.update(extra)
 
     if is_error(resp.status_code):
-        body['id'] = uuid.uuid4()
+        body['error_id'] = uuid.uuid4()
         params['timestamp'] = datetime.utcnow()
 
     params.update(body)
@@ -62,7 +63,8 @@ def HTTPCreated(*arg, **kw):
     if resource and 'location' in kw:
         resource['self'] = kw['location']
 
-    resp = create_response(http_exc.HTTPCreated(*arg), kw, resource=resource)
+    kw['extra'] = {'resource':resource}
+    resp = create_response(http_exc.HTTPCreated(*arg), kw)
     return resp
 
 # 30x
