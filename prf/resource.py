@@ -87,7 +87,7 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path = os.path.join(path_prefix, (collection_name or member_name))
 
     _acl = kwargs.pop('acl', view._acl)
-    _auth = config.registry.settings.get('auth', False)
+    _auth = config.registry.get('prf.auth', False)
     _traverse = kwargs.pop('traverse', None) or id_name
     added_routes = {}
 
@@ -175,7 +175,7 @@ class Resource(object):
         return self._ancestors
 
     ancestors = property(get_ancestors)
-    resource_map = property(lambda self: self.config.registry._resources_map)
+    resource_map = property(lambda self: self.config.registry['prf.resources_map'])
     is_singular = property(lambda self: self.member_name \
                            and self.collection_name is None)
 

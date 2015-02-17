@@ -1,11 +1,14 @@
+import os
 import logging
 from pkg_resources import get_distribution
 from pyramid import httpexceptions
+from pyramid.security import  NO_PERMISSION_REQUIRED
 
 
 import prf.exc
-from prf.utils import maybe_dotted, aslist
+from prf.utils import maybe_dotted, aslist, dictset
 from prf.utils.utils import DKeyError, DValueError
+from prf.utility_views import AccountView
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
@@ -17,12 +20,12 @@ log = logging.getLogger(__name__)
 
 def get_root_resource(config):
     from prf.resource import Resource
-    return config.registry._root_resources.setdefault(config.package_name,
+    return config.registry['prf.root_resources'].setdefault(config.package_name,
             Resource(config, uid=config.route_prefix))
 
 
 def get_resource_map(request):
-    return request.registry._resources_map
+    return request.registry['prf.resources_map']
 
 
 def add_error_view(config, exc, http_exc=None, cond='', error=''):
@@ -38,6 +41,29 @@ def add_error_view(config, exc, http_exc=None, cond='', error=''):
     config.add_view(view, context=exc)
 
 
+def add_login_views(config, user_model, route_prefix=''):
+
+    user_model = config.maybe_dotted(user_model)
+    AccountView.set_user_model(user_model)
+
+    route_name = '%s_login' % route_prefix
+    config.add_route(route_name,
+                     '%s' % os.path.join(route_prefix, 'login'))
+
+    config.add_view(view=AccountView, attr='login', route_name=route_name,
+                    request_method='POST',
+                    renderer='json',
+                    permission=NO_PERMISSION_REQUIRED)
+
+    route_name = '%s_logout' % route_prefix
+    config.add_route(route_name,
+                     '%s' % os.path.join(route_prefix, 'logout'))
+
+    config.add_view(view=AccountView, attr='logout', route_name=route_name,
+                    renderer='json',
+                    permission=NO_PERMISSION_REQUIRED)
+
+
 def process_tweens(config):
     import pyramid
     for tween in aslist(config.registry.settings, 'tweens', sep='\n', default=''):
@@ -46,20 +72,21 @@ def process_tweens(config):
 
 def includeme(config):
     log.info('%s %s' % (APP_NAME, __version__))
+    settings = dictset(config.get_settings())
+
     config.add_directive('get_root_resource', get_root_resource)
     config.add_directive('add_error_view', add_error_view)
 
     config.add_renderer('json', maybe_dotted('prf.renderers.JsonRenderer'))
 
-    config.registry._root_resources = {}
-    config.registry._resources_map = {}
+    config.registry['prf.root_resources'] = {}
+    config.registry['prf.resources_map'] = {}
+    config.registry['prf.auth'] = settings.asbool('auth.enabled', False)
 
     config.add_request_method(get_resource_map, 'resource_map', reify=True)
 
     config.add_route('options', '/*path', request_method='OPTIONS')
     config.add_view('prf.utility_views.OptionsView', route_name='options')
-
-    config.set_root_factory('prf.auth.RootACL')
 
     process_tweens(config)
 
@@ -72,4 +99,4 @@ def includeme(config):
     add_error_view(config, httpexceptions.HTTPForbidden, prf.exc.HTTPForbidden)
     add_error_view(config, httpexceptions.HTTPNotFound, prf.exc.HTTPNotFound)
 
-    config.registry.validation_errors = []
+    config.add_directive('add_login_views', add_login_views)

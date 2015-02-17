@@ -1,5 +1,6 @@
 import logging
 from pyramid.view import view_config
+from pyramid.security import remember, forget, NO_PERMISSION_REQUIRED
 
 import prf
 from prf.view import BaseView
@@ -117,10 +118,55 @@ class SettingsView(BaseView):
 
 class APIView(BaseView):
     def _get_routes(self):
-        root = self.request.registry._root_resources.values()[0]
+        root = self.request.registry['prf.root_resources'].values()[0]
         mapper = root.config.get_routes_mapper()
         return mapper.routes
 
     def show(self):
         return {'api': sorted(['%s'% (r.path)
                     for r in self._get_routes().values()])}
+
+
+class AccountView(object):
+
+    _user_model = None
+
+    def __init__(self, request):
+        self.request = request
+        self._params = dictset(self.request.params)
+
+    @classmethod
+    def set_user_model(cls, model):
+
+        def check_callable(model, name):
+            if not getattr(model, name, None):
+                raise AttributeError("%s model must have '%s' class method"
+                                     % (model, name))
+
+        check_callable(model, 'authenticate')
+
+        cls._user_model = model
+
+    def login(self):
+        login = self._params['login']
+        password = self._params['password']
+        next = self._params.get('next', '')
+
+        success, user = self._user_model.authenticate(login, password)
+        if success:
+            headers = remember(self.request, user)
+            if next:
+                return prf.exc.HTTPFound(headers=headers, location=next)
+            return prf.exc.HTTPOk(headers=headers)
+        else:
+            raise prf.exc.HTTPUnauthorized("User '%s' failed to Login" % login)
+
+    def logout(self):
+        next = self.request.params.get('next', '')
+
+        headers = forget(self.request)
+
+        if next:
+            return prf.exc.HTTPFound(headers=headers, location=next)
+
+        return prf.exc.HTTPOk(headers=headers)
