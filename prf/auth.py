@@ -39,5 +39,4 @@ def includeme(config):
 
     config.set_authentication_policy(authn_policy)
     config.set_authorization_policy(ACLAuthorizationPolicy())
-    config.set_root_factory(RootACL)
 

@@ -4,7 +4,6 @@ from pkg_resources import get_distribution
 from pyramid import httpexceptions
 from pyramid.security import  NO_PERMISSION_REQUIRED
 
-
 import prf.exc
 from prf.utils import maybe_dotted, aslist, dictset
 from prf.utils.utils import DKeyError, DValueError
@@ -16,6 +15,14 @@ PROJECTDIR = _DIST.location
 __version__ = _DIST.version
 
 log = logging.getLogger(__name__)
+
+
+class RootFactory(object):
+    def __init__(self, request):
+        pass
+
+    def __getitem__(self, key):
+        return type('DummyContext', (object, ), {})()
 
 
 def get_root_resource(config):
@@ -100,3 +107,5 @@ def includeme(config):
     add_error_view(config, httpexceptions.HTTPNotFound, prf.exc.HTTPNotFound)
 
     config.add_directive('add_login_views', add_login_views)
+
+    config.set_root_factory(RootFactory)
