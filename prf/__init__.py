@@ -53,7 +53,9 @@ def add_login_views(config, user_model, route_prefix=''):
     user_model = config.maybe_dotted(user_model)
     AccountView.set_user_model(user_model)
 
-    route_name = '%s_login' % route_prefix
+    route_tmpl = '%s%%s' % (route_prefix + ':' if route_prefix else '')
+
+    route_name = route_tmpl % 'login'
     config.add_route(route_name,
                      '%s' % os.path.join(route_prefix, 'login'))
 
@@ -62,7 +64,7 @@ def add_login_views(config, user_model, route_prefix=''):
                     renderer='json',
                     permission=NO_PERMISSION_REQUIRED)
 
-    route_name = '%s_logout' % route_prefix
+    route_name = route_tmpl % 'logout'
     config.add_route(route_name,
                      '%s' % os.path.join(route_prefix, 'logout'))
 

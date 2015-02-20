@@ -66,11 +66,10 @@ def get_uri_elements(resource):
     name_segs.insert(1, resource.prefix)
     name_segs = filter(bool, name_segs)
     if name_segs:
-        name_prefix = '_'.join(name_segs) + ':'
+        name_prefix = ':'.join(name_segs) + ':'
 
     if resource.config.route_prefix:
-        name_prefix = '%s_%s' % (resource.config.route_prefix.replace('/', '_'),
-                                 name_prefix)
+        name_prefix = '%s:%s' % (resource.config.route_prefix, name_prefix)
 
     return path_prefix, name_prefix
 
@@ -226,8 +225,6 @@ class Resource(object):
         path = add_action_routes(self.config, child_view, member_name,
                           collection_name, **kwargs)
 
-        # self.add_to_resource_map('%s:%s' % (kwargs['name_prefix'], uid),
-        #                             path, child_resource)
         self.add_to_resource_map(uid, path, child_resource)
         parent.children.append(child_resource)
 
