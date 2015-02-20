@@ -15,7 +15,6 @@ def is_error(status_code):
     return 400 <= status_code < 600
 
 def log_exception(resp, params):
-
     if is_error(resp.status_code) and resp.status_code != 404:
         msg = '%s: %s' % (resp.status.upper(), json_dumps(params))
         if resp.status_int in [400, 500]:
@@ -24,6 +23,7 @@ def log_exception(resp, params):
 
 def create_response(resp, params):
     resp.content_type = 'application/json'
+    request = params.pop('request', None)
 
     extra = params.get('extra', {})
     resp.headers.extend(params.pop('headers', []))

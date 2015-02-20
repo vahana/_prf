@@ -49,7 +49,8 @@ class Requests(object):
         try:
             resp = requests.get(url, **kw)
             if not resp.ok:
-                raise prf.exc.exception_response(**self.json_body(resp))
+                raise prf.exc.exception_response(status_code=resp.status_code,
+                                            **self.json_body(resp))
             return self.json_body(resp)
 
         except requests.ConnectionError, e:
