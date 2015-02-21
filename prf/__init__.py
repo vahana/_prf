@@ -101,7 +101,6 @@ def includeme(config):
 
     add_error_view(config, DKeyError, error='Missing param: %s')
     add_error_view(config, DValueError, error='Bad value: %s')
-    add_error_view(config, TypeError)
 
     # replace html versions of pyramid http exceptions with json versions
     add_error_view(config, httpexceptions.HTTPUnauthorized, prf.exc.HTTPUnauthorized)

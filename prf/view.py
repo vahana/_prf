@@ -6,7 +6,8 @@ from pyramid.request import Request
 from pyramid.response import Response
 
 import prf.exc
-from prf.utils import dictset, issequence, prep_params, process_fields
+from prf.utils import dictset, issequence, prep_params, process_fields,\
+                      json_dumps
 from prf.resource import Action
 
 log = logging.getLogger(__name__)
@@ -109,7 +110,7 @@ class BaseView(object):
                     params.update(self.request.json)
                 except ValueError, e:
                     log.error("Excpeting JSON. Received: '%s'. Request: %s %s"
-                              , self.request.body, self.request.method, self.request.url)
+                              ,self.request.body, self.request.method, self.request.url)
 
         self._params = dictset()
 
@@ -138,8 +139,8 @@ class BaseView(object):
         if fields is not None:
             kw['only'], kw['exclude'] = process_fields(fields)
 
-        obj = self._serializer(many=many, strict=True, **kw)
-        obj.context = {'request':self.request}
+        obj = self._serializer(context={'request':self.request},
+                                many=many, strict=True, **kw)
         return obj.dump(objs).data
 
     def _index(self, **kw):
@@ -205,7 +206,7 @@ class BaseView(object):
             req.body = urllib.urlencode(params)
 
         if req.method == 'POST':
-            req.body = json.dumps(params)
+            req.body = json_dumps(params)
 
         return self.request.invoke_subrequest(req)
 
