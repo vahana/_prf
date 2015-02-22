@@ -176,8 +176,12 @@ class Base(object):
 
         return '<%s: %s>' % (self.__class__.__name__, ', '.join(parts))
 
-    def save(self):
-        self.Session().add(self)
+    def save(self, commit=False):
+        session = self.Session()
+        session.add(self)
+        if commit:
+            session.commit()
+
         return self
 
     def update(self, **params):

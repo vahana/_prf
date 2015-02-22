@@ -49,6 +49,9 @@ class dictset(dict):
         self.to_dictset()
 
     def __getattr__(self, key):
+        if key.startswith('__'): # dont touch the special attributes
+            return super(dictset, self).__getattr__(key)
+
         try:
             return self[key]
         except KeyError as e:

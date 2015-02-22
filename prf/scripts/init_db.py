@@ -5,9 +5,11 @@ import logging
 from argparse import ArgumentParser
 from pyramid.paster import get_appsettings
 from pyramid.config import Configurator
+import sqlalchemy as sa
 from sqlalchemy import engine_from_config
 from sqlalchemy_utils.functions import database_exists, create_database, \
                                        drop_database
+
 from alembic.config import Config
 from alembic import command
 

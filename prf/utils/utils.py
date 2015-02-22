@@ -123,7 +123,8 @@ def resolve(name, module=None):
 
 
 def maybe_dotted(module, throw=True):
-    try:
+
+    def _import(module):
         if isinstance(module, basestring):
             module, _, cls = module.partition(':')
             module = resolve(module)
@@ -131,14 +132,15 @@ def maybe_dotted(module, throw=True):
                 return getattr(module, cls)
 
         return module
-    except ImportError, e:
 
-        err = '%s not found. %s' % (module, e)
-        if throw:
-            raise ImportError(err)
-        else:
-            log.error(err)
-            return None
+    if throw:
+        return _import(module)
+    else:
+        try:
+            return _import(module)
+        except ImportError, e:
+            log.error('%s not found. %s' % (module, e))
+
 
 def issequence(arg):
     """Return True if `arg` acts as a list and does not look like a string."""
