@@ -94,8 +94,7 @@ def sqla2http(exc, request=None):
                                exception=exc_dict(exc))
 
     elif isinstance(exc, sqla_exc.SQLAlchemyError):
-        import traceback
-        log.error(traceback.format_exc())
+        log.exception()
         return prf.exc.HTTPBadRequest('SQLA error', request=request,
                                                     exception=exc_dict(exc))
 
@@ -184,11 +183,11 @@ class Base(object):
 
         return self
 
-    def update(self, **params):
+    def update(self, params, commit=False):
         for key, value in params.items():
             setattr(self, key, value)
 
-        return self.save()
+        return self.save(commit=commit)
 
     def delete(self):
         self.Session().delete(self)

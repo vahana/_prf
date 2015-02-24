@@ -2,7 +2,6 @@ import time
 from pyramid.settings import asbool
 import logging
 import json
-import traceback
 
 log = logging.getLogger(__name__)
 
