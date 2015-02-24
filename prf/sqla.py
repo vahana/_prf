@@ -35,15 +35,17 @@ def db(request):
 
 def includeme(config):
     import pyramid
-    config.add_tween('prf.sqla.sqla_exc_tween',
+    config.add_tween('prf.sqla.sqla_tween',
                       under='pyramid.tweens.excview_tween_factory')
 
 
-def sqla_exc_tween(handler, registry):
-    log.info('sqla_exc_tween enabled')
+def sqla_tween(handler, registry):
+    log.info('sqla_tween enabled')
 
     def tween(request):
         try:
+            #call request.db to setup the finished callback cleanup
+            request.db
             return handler(request)
         except sqla_exc.SQLAlchemyError, e:
             raise sqla2http(e)
@@ -94,7 +96,6 @@ def sqla2http(exc, request=None):
                                exception=exc_dict(exc))
 
     elif isinstance(exc, sqla_exc.SQLAlchemyError):
-        log.exception()
         return prf.exc.HTTPBadRequest('SQLA error', request=request,
                                                     exception=exc_dict(exc))
 
@@ -248,5 +249,3 @@ class Base(object):
         else:
             return cls(**params).save(), True
 
-
-from sqlalchemy import event
