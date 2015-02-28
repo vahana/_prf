@@ -4,7 +4,6 @@ import logging
 
 from argparse import ArgumentParser
 from pyramid.paster import get_appsettings
-from pyramid.config import Configurator
 import sqlalchemy as sa
 from sqlalchemy import engine_from_config
 from sqlalchemy_utils.functions import database_exists, create_database, \
@@ -16,11 +15,6 @@ from alembic import command
 from prf.scripts.common import package_name
 
 log = logging.getLogger(__name__)
-
-
-def main():
-    command = InitDB(sys.argv)
-    command.run()
 
 
 class InitDB(object):
@@ -56,9 +50,7 @@ class InitDB(object):
 
         create_database(self.db.url)
 
-        module = __import__(self.package_name)
-        base = module.model.init_db(Configurator(settings=self.settings))
-        base.metadata.create_all()
+        self.create_tables()
 
         # load the Alembic configuration and generate the
         # version table, "stamping" it with the most recent rev:
@@ -66,7 +58,3 @@ class InitDB(object):
         command.stamp(alembic_cfg, 'head')
 
         print 'DB initialized' + ((' (new)' if self.options.drop else ''))
-
-
-if __name__ == '__main__':
-    main()

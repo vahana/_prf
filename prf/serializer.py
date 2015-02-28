@@ -4,10 +4,10 @@ from prf.utils import dictset
 import prf.exc
 
 
-class UUID(fields.UUID):
+class UUIDType(fields.UUID):
     "This class makes sure UUID passed as objects are str'd"
     def _deserialize(self, value):
-        return super(UUID, self)._deserialize(value = str(value))
+        return super(UUIDType, self)._deserialize(value = str(value))
 
 
 class BaseSchema(Schema):

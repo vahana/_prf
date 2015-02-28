@@ -176,19 +176,22 @@ class Base(object):
 
         return '<%s: %s>' % (self.__class__.__name__, ', '.join(parts))
 
-    def save(self, commit=False):
+    def save(self, commit=False, flush=False):
         session = self.Session()
         session.add(self)
+
+        if flush:
+            session.flush()
         if commit:
             session.commit()
 
         return self
 
-    def update(self, params, commit=False):
+    def update(self, params, commit=False, flush=False):
         for key, value in params.items():
             setattr(self, key, value)
 
-        return self.save(commit=commit)
+        return self.save(commit=commit, flush=flush)
 
     def delete(self):
         self.Session().delete(self)
