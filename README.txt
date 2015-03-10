@@ -2,7 +2,7 @@ Pyramid RESTful Framework is designed to help coding REST CRUD endpoints with co
 
 In the "main" declare your resources:
 
-`def main():
+def main():
   ...
   config.include('prf')
   root = config.get_root_resource()
@@ -10,7 +10,7 @@ In the "main" declare your resources:
   user_story = user.add('story', 'stories') 
   user_story.add('medium', 'media') 
   user_story.add('likes')
-  config.commit()`
+  config.commit()
   
 Here we have 4 resources, some of which are nested and some are singular. Corresponding views would look something like:
 
