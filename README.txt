@@ -1,7 +1,8 @@
 Pyramid RESTful Framework is designed to help coding REST CRUD endpoints with couple of lines of code.
 
 In the "main" declare your resources:
-def main():
+
+`def main():
   ...
   config.include('prf')
   root = config.get_root_resource()
@@ -9,7 +10,7 @@ def main():
   user_story = user.add('story', 'stories') 
   user_story.add('medium', 'media') 
   user_story.add('likes')
-  config.commit()
+  config.commit()`
   
 Here we have 4 resources, some of which are nested and some are singular. Corresponding views would look something like:
 
@@ -33,4 +34,4 @@ def delete(self, id):
 Defined actions are: index (GET), show (GET), create(POST), update(PUT/PATCH), delete(DELETE).
 If its not defined in your view, prf will return HTTPMethodNotAllowed by default. 
 View can return either objects, list of objects, http exception or request object. 
-Framework will convert all the returned results into Respone objects with ContentType='application/json' by default.
+Framework will convert all the returned results into Respone objects with ContentType='application/json' by default and serialize the body into json.
