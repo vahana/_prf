@@ -6,13 +6,15 @@ def main():
   ...
   config.include('prf')
   root = config.get_root_resource()
-  user = root.add('user') 
-  user_story = user.add('story', 'stories') 
-  user_story.add('medium', 'media') 
-  user_story.add('likes')
-  config.commit()
+  user = root.add('user', view=views.UsersView) 
+  user_story = user.add('story', 'stories', view='views.UserStoriesView') 
+  ...
   
-Here we have 4 resources, some of which are nested and some are singular. Corresponding views would look something like:
+The following endpoints are declared with the code above:
+/users/{id}
+/users/{user_id}/stories/{id}
+
+Corresponding views would look something like:
 
 from prf.view import BaseView
 from model import User
