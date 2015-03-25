@@ -170,7 +170,6 @@ class BaseView(object):
 
     def _create(self, **kw):
         obj = self.create(**kw)
-        self.request.db.commit()
 
         if not obj:
             return prf.exc.HTTPCreated()

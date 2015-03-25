@@ -156,6 +156,10 @@ class Base(object):
 
     _type = property(lambda self: self.__class__.__name__)
 
+    # created_at = sa.Column(sa.DateTime, default=sa.func.now())
+    # updated_at = mongo.DateTimeField()
+
+
     @declared_attr
     def __tablename__(cls):
         return cls.__name__.lower()

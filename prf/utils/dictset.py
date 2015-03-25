@@ -160,7 +160,7 @@ class dictset(dict):
         return aslist(self, *arg, **kw)
 
     def asint(self, *arg, **kw):
-        return asing(self, *arg, **kw)
+        return asint(self, *arg, **kw)
 
     def asfloat(self, *arg, **kw):
         return asfloat(self, *arg, **kw)

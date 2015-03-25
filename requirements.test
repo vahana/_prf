@@ -8,5 +8,6 @@ alembic
 nose
 coverage
 marshmallow
-
+mongoengine
+pymongo
 -e .
