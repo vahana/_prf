@@ -135,7 +135,7 @@ class Base(BaseMixin, mongo.Document):
 
     def update(self, *arg, **kw):
         for key in kw.copy():
-            if not key.startswith('set__'):
+            if '__' not in key:
                 kw['set__%s' % key] = kw.pop(key)
 
         return super(Base, self).update(*arg, **kw)
