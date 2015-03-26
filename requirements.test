@@ -5,7 +5,8 @@ SQLAlchemy-Utils
 zope.sqlalchemy
 transaction
 alembic
-nose
+pytest
+pytest-cov
 coverage
 marshmallow
 mongoengine

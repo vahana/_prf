@@ -56,3 +56,4 @@ target/
 local.ini
 .DS_Store
 .noseids
+.coverage

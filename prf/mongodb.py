@@ -111,7 +111,7 @@ class Base(BaseMixin, mongo.Document):
     def raise_conflict(self, e):
         if e.__class__ is mongo.OperationError and 'E11000' \
                 not in e.message:
-            raise   # other error, not duplicate
+            raise prf.exc.HTTPBadRequest(e)
 
         raise prf.exc.HTTPConflict(detail='Resource `%s` already exists.'
                  % self.__class__.__name__, extra={'data': e})
@@ -128,6 +128,9 @@ class Base(BaseMixin, mongo.Document):
 
     def update(self, *arg, **kw):
         try:
+            for key in kw.copy():
+                kw['set__%s' % key] = kw.pop(key)
+
             return super(Base, self).update(*arg, **kw)
         except (mongo.NotUniqueError, mongo.OperationError), e:
             self.raise_conflict(e)
