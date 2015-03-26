@@ -39,6 +39,13 @@ def create_response(resp, params):
     if is_error(resp.status_code):
         body['error_id'] = uuid.uuid4()
         params['timestamp'] = datetime.utcnow()
+        if request:
+            params['request'] = dict(
+                    url = request.url,
+                    remote_user = request.remote_user,
+                    client_addr = request.client_addr,
+                    remote_addr = request.remote_addr,
+                )
 
     params.update(body)
     log_exception(resp, params)

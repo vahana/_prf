@@ -35,12 +35,12 @@ def db(request):
 
 def includeme(config):
     import pyramid
-    config.add_tween('prf.sqla.sqla_tween',
+    config.add_tween('prf.sqla.sqla_exc_tween',
                       under='pyramid.tweens.excview_tween_factory')
 
 
-def sqla_tween(handler, registry):
-    log.info('sqla_tween enabled')
+def sqla_exc_tween(handler, registry):
+    log.info('sqla_exc_tween enabled')
 
     def tween(request):
         try:

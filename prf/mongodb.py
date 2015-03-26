@@ -21,6 +21,43 @@ def includeme(config):
 
     mongo.connect(db=db, host=host, port=port)
 
+    import pyramid
+    config.add_tween('prf.mongodb.mongodb_exc_tween',
+                      under='pyramid.tweens.excview_tween_factory')
+
+
+def mongodb_exc_tween(handler, registry):
+    log.info('mongodb_tween enabled')
+
+    def tween(request):
+        try:
+            return handler(request)
+
+        except mongo.NotUniqueError as e:
+            if 'E11000' in e.message:
+                raise prf.exc.HTTPConflict(detail='Resource already exists.', 
+                            request=request, exception=e)
+            else:
+                raise prf.exc.HTTPBadRequest('Not Unique', request=request)
+
+        except mongo.OperationError as e:
+            raise prf.exc.HTTPBadRequest(e, request=request, exception=e)
+
+        except mongo.ValidationError as e:
+            raise prf.exc.HTTPBadRequest(e, request=request, exception=e)
+
+        except mongo.InvalidQueryError as e:
+            raise prf.exc.HTTPBadRequest(request=request, exception=e)
+
+        except mongo.MultipleObjectsReturned:
+            raise prf.exc.HTTPBadRequest('Bad or Insufficient Params', 
+                            request=request)
+
+        except mongo.DoesNotExist as e:
+            raise prf.exc.HTTPNotFound(request=request, exception=e)            
+
+    return tween
+
 
 class MongoJSONEncoder(_JSONEncoder):
 
@@ -33,8 +70,6 @@ class MongoJSONEncoder(_JSONEncoder):
 
 class BaseMixin(object):
 
-    '''Represents mixin class for models'''
-
     Q = mongo.Q
 
     @classmethod
@@ -42,25 +77,21 @@ class BaseMixin(object):
         params, specials = prep_params(params)
         query_set = cls.objects
 
-        try:
-            query_set = query_set(**params)
-            _total = query_set.count()
-            if specials._count:
-                return _total
+        query_set = query_set(**params)
+        _total = query_set.count()
+        if specials._count:
+            return _total
 
-            if specials._sort:
-                query_set.order_by(*specials._sort)
+        if specials._sort:
+            query_set.order_by(*specials._sort)
 
-            query_set = query_set[specials._offset:specials._offset + specials._limit]
+        query_set = query_set[specials._offset:specials._offset + specials._limit]
 
-            log.debug('get_collection.query_set: %s(%s)', cls.__name__,
-                  query_set._query)
-            query_set._total = _total
-            
-            return query_set
-
-        except (mongo.ValidationError, mongo.InvalidQueryError) as e:
-            raise prf.exc.HTTPBadRequest(str(e), extra={'data': e})
+        log.debug('get_collection.query_set: %s(%s)', cls.__name__,
+              query_set._query)
+        query_set._total = _total
+        
+        return query_set
 
     @classmethod
     def get_resource(cls, **params):
@@ -85,8 +116,6 @@ class BaseMixin(object):
         except mongo.queryset.DoesNotExist:
             defaults.update(params)
             return (cls(**defaults).save(), True)
-        except mongo.queryset.MultipleObjectsReturned:
-            raise prf.exc.HTTPBadRequest('Bad or Insufficient Params')
 
     def __repr__(self):
         parts = ['%s:' % self.__class__.__name__]
@@ -102,42 +131,11 @@ class BaseMixin(object):
 
 
 class Base(BaseMixin, mongo.Document):
-
-    # created_at = mongo.DateTimeField(default=datetime.utcnow)
-    # updated_at = mongo.DateTimeField()
-
     meta = {'abstract': True}
 
-    def raise_conflict(self, e):
-        if e.__class__ is mongo.OperationError and 'E11000' \
-                not in e.message:
-            raise prf.exc.HTTPBadRequest(e)
-
-        raise prf.exc.HTTPConflict(detail='Resource `%s` already exists.'
-                 % self.__class__.__name__, extra={'data': e})
-
-    def save(self, *arg, **kw):
-        try:
-            super(Base, self).save(*arg, **kw)
-            return self
-        except (mongo.NotUniqueError, mongo.OperationError), e:
-            self.raise_conflict(e)
-        except mongo.ValidationError, e:
-            raise prf.exc.HTTPBadRequest("Resource '%s': %s"
-                    % (self.__class__.__name__, e), extra={'data': e})
-
     def update(self, *arg, **kw):
-        try:
-            for key in kw.copy():
+        for key in kw.copy():
+            if not key.startswith('set__'):
                 kw['set__%s' % key] = kw.pop(key)
 
-            return super(Base, self).update(*arg, **kw)
-        except (mongo.NotUniqueError, mongo.OperationError), e:
-            self.raise_conflict(e)
-
-    def validate(self, *arg, **kw):
-        try:
-            return super(Base, self).validate(*arg, **kw)
-        except mongo.ValidationError, e:
-            raise prf.exc.HTTPBadRequest("Resource '%s': %s"
-                    % (self.__class__.__name__, e), extra={'data': e})
+        return super(Base, self).update(*arg, **kw)
