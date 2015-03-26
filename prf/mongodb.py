@@ -27,7 +27,7 @@ def includeme(config):
 
 
 def mongodb_exc_tween(handler, registry):
-    log.info('mongodb_tween enabled')
+    log.info('mongodb_exc_tween enabled')
 
     def tween(request):
         try:

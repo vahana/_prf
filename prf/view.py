@@ -8,7 +8,6 @@ from pyramid.response import Response
 import prf.exc
 from prf.utils import dictset, issequence, prep_params, process_fields,\
                       json_dumps
-from prf.resource import Action
 
 log = logging.getLogger(__name__)
 

@@ -152,9 +152,9 @@ class AccountView(object):
         password = self._params['password']
         next = self._params.get('next', '')
 
-        success, user = self._user_model.authenticate(login, password)
+        success, user_id = self._user_model.authenticate(login, password)
         if success:
-            headers = remember(self.request, user)
+            headers = remember(self.request, str(user_id))
             if next:
                 return prf.exc.HTTPFound(headers=headers, location=next)
             return prf.exc.HTTPOk(headers=headers)
