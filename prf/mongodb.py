@@ -11,19 +11,22 @@ log = logging.getLogger(__name__)
 
 
 def includeme(config):
-    Settings = dictset(config.registry.settings)
-
-    db = Settings['mongodb.db']
-    host = Settings.get('mongodb.host', 'localhost')
-    port = Settings.asint('mongodb.port', 27017)
-
-    log.info('MongoDB enabled with db:%s, host:%s, port:%s', db, host, port)
-
-    mongo.connect(db=db, host=host, port=port)
+    mongo_connect(config.registry.settings)
 
     import pyramid
     config.add_tween('prf.mongodb.mongodb_exc_tween',
                       under='pyramid.tweens.excview_tween_factory')
+
+
+def mongo_connect(settings):
+    settings = dictset(settings)
+    db = settings['mongodb.db']
+    host = settings.get('mongodb.host', 'localhost')
+    port = settings.asint('mongodb.port', 27017)
+
+    log.info('MongoDB enabled with db:%s, host:%s, port:%s', db, host, port)
+
+    mongo.connect(db=db, host=host, port=port)
 
 
 def mongodb_exc_tween(handler, registry):
