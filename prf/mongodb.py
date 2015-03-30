@@ -86,7 +86,7 @@ class BaseMixin(object):
             return _total
 
         if specials._sort:
-            query_set.order_by(*specials._sort)
+            query_set = query_set.order_by(*specials._sort)
 
         query_set = query_set[specials._offset:specials._offset + specials._limit]
 
