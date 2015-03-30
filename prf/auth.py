@@ -11,19 +11,14 @@ from prf.utils.utils import DKeyError, DValueError
 
 log = logging.getLogger(__name__)
 
-
-class RootACL(object):
-
-    __acl__ = [(Allow, 'g:admin', ALL_PERMISSIONS)]
-
+class BaseACL(object):
+    __acl__ = []    
     def __init__(self, request):
-        pass
+        self.request = request
+        self.init()
 
-    def __getitem__(self, key):
-        return type('DummyContext', (object, ), {'__acl__': RootACL.__acl__,
-                    '__repr__': lambda self: \
-                    '%s: ACL for this resource is not provided.' \
-                    % self.__class__})()
+    def init(self):
+        pass
 
 
 def includeme(config):

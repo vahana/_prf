@@ -17,7 +17,7 @@ class Action(object):
     UPDATE_MANY = '_update_many'
 
 
-def get_view_class(view_param, resource):
+def get_view_class(view, resource):
     '''Returns the dotted path to the default view class.'''
 
     parts = [a.member_name for a in resource.ancestors] \
@@ -28,7 +28,7 @@ def get_view_class(view_param, resource):
     view_file = '%s' % '_'.join(parts)
     view_class = '%sView' % snake2camel(view_file)
 
-    view = maybe_dotted(view_param)
+    view = maybe_dotted(view)
     if isinstance(view, types.TypeType):
         return view
 
@@ -141,6 +141,9 @@ class Resource(object):
                  parent=None, uid='', children=None, id_name='', prefix='',
                  http_cache=0):
 
+        if parent and not member_name:
+            raise ValueError('member_name can not be empty')
+
         self.config = config
         self.member_name = member_name
         self.collection_name = collection_name
@@ -176,7 +179,7 @@ class Resource(object):
     ancestors = property(get_ancestors)
     resource_map = property(lambda self: self.config.registry['prf.resources_map'])
     is_singular = property(lambda self: self.member_name \
-                           and self.collection_name is None)
+                           and not self.collection_name)
 
     def add(self, member_name, collection_name='', **kwargs):
         """
@@ -237,11 +240,3 @@ class Resource(object):
                  (r_.config.package_name, path, self.config.package_name, path))
 
         self.resource_map[key] = child_resource
-
-    def add_from(self, resource, **kwargs):
-        '''add a resource with its all children resources to the current resource'''
-
-        new_resource = self.add(resource.member_name,
-                                resource.collection_name, **kwargs)
-        for child in resource.children:
-            new_resource.add_from(child, **kwargs)

@@ -1,5 +1,5 @@
 from datetime import datetime
-from prf.utils.utils import DKeyError, DValueError
+from prf.utils.utils import DKeyError, DValueError, split_strip
 
 def parametrize(func):
 
@@ -63,6 +63,11 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
 
     """
 
+    try:
+        value = dset[name]
+    except KeyError:
+        raise DKeyError("Missing '%s'" % name)
+
     if _type is None:
         _type = lambda t: t
 
@@ -96,5 +101,7 @@ def as_datetime(dset, name):
         except ValueError:
             raise DValueError("Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ"
                               % name)
-
+    else:
+        raise DKeyError("Missing '%s'" % name)        
+    
     return dset.get(name, None)

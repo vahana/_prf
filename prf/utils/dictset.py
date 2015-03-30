@@ -2,7 +2,7 @@ from prf.utils.utils import process_fields, DKeyError, DValueError
 from prf.utils.convert import *
 
 
-def get_rec(d, path):
+def get_seg(d, path):
     for seg in path:
         d = d[seg]
     if not isinstance(d, dict):
@@ -21,8 +21,8 @@ def extend(d1, d2, prefix_keys=None):
     if prefix_keys is None:
         prefix_keys = []
 
-    d1_ = get_rec(d1, prefix_keys)
-    d2_ = get_rec(d2, prefix_keys)
+    d1_ = get_seg(d1, prefix_keys)
+    d2_ = get_seg(d2, prefix_keys)
 
     for key, val in d2_.items():
         if key not in d1_:
@@ -50,7 +50,7 @@ class dictset(dict):
 
     def __getattr__(self, key):
         if key.startswith('__'): # dont touch the special attributes
-            return super(dictset, self).__getattr__(key)
+            return super(dictset, self).__getattr__(key) #pragma nocoverage
 
         try:
             return self[key]

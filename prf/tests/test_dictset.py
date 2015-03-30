@@ -1,72 +1,149 @@
-import unittest
-from prf.utils.dictset import dictset
+import pytest
+from datetime import datetime
+from prf.utils.dictset import dictset, extend
+from prf.utils.utils import DKeyError, DValueError
 
 
-class TestDictSet(unittest.TestCase):
+class TestDictSet():
 
     def test(self):
         dset = dictset(a=1)
-        self.assertTrue(isinstance(dset, dict))
 
-        self.assertEqual(dset.a, dset['a'])
+        assert isinstance(dset, dict) is True
+        assert dset.a == dset['a']
 
         dset.a = 10
-        self.assertEqual(dset['a'], 10)
+        assert dset['a'] == 10
 
         dset.b = 2
-        self.assertEqual(dset['b'], dset.b)
+        assert dset['b'] == dset.b
 
         dset.d = dict(a=1)
-        self.assertEqual(dset.d.a, dset['d']['a'])
+        assert dset.d.a == dset['d']['a']
 
         del dset.b
-        self.assertTrue('b' not in dset)
+        assert 'b' not in dset
 
     def test_subset(self):
         dset = dictset(a=1, b=2, c=3)
-        self.assertEqual(set(dset.subset(['a', 'c']).keys()), set(['a', 'c']))
 
-        self.assertEqual(set(dset.subset(['-a']).keys()), set(['b', 'c']))
+        assert set(dset.subset(['a', 'c']).keys()) == set(['a', 'c'])
+        assert set(dset.subset(['-a']).keys()) == set(['b', 'c'])
 
         # can not have both negative and positive.
-        self.assertRaises(Exception, dset.subset, ['-a', 'b'])
+        with pytest.raises(Exception):
+            dset.subset(['-a', 'b'])
 
-        self.assertEqual(dset.subset(['NOTTHERE']), {})
-        self.assertEqual(dset.subset(['-NOTTHERE']), dset)
-        self.assertEqual(dset.subset([]), {})
+        assert dset.subset(['NOTTHERE']) ==  {}
+        assert dset.subset(['-NOTTHERE']) == dset
+        assert dset.subset([]) == {}
 
-        self.assertEqual(set(dset.subset(['a', 'NOTTHERE']).keys()), set(['a'
-                         ]))
-        self.assertEqual(set(dset.subset(['-a', '-NOTTHERE']).keys()), set(['b'
-                         , 'c']))
+        assert set(dset.subset(['a', 'NOTTHERE']).keys()) == set(['a'
+                         ])
+        assert set(dset.subset(['-a', '-NOTTHERE']).keys()) == set(['b'
+                         , 'c'])
 
     def test_remove(self):
         dset = dictset(a=1, b=2, c=3)
 
-        self.assertEqual(dset.remove([]), dset)
-        self.assertEqual(dset.remove(['NOTTHERE']), dset)
-        self.assertEqual(dset.remove(['b', 'c']), dict(a=1))
+        assert dset.remove([]) == dset
+        assert dset.remove(['NOTTHERE']) == dset
+        assert dset.remove(['b', 'c']) ==  dict(a=1)
 
     def test_update(self):
         dset = dictset(a=1, b=2, c=3)
-        self.assertEqual(dset.update(dict(d=4)).d, 4)
-        self.assertEqual(dset.d, 4)
+        assert dset.update(dict(d=4)).d ==  4
+        assert dset.d == 4
 
     def test_copy(self):
         dset = dictset(a=1, b=2, c=3)
         dset_copy = dset.copy()
         dset_alias = dset
 
-        self.assertEqual(dset, dset_copy)
-        self.assertEqual(id(dset), id(dset_alias))
-        self.assertNotEqual(id(dset), id(dset_copy))
+        assert dset == dset_copy
+        assert id(dset) == id(dset_alias)
+        assert id(dset) != id(dset_copy)
 
     def test_pop_by_values(self):
         dset = dictset(a=1, b=2, c=2)
         dset_copy = dset.copy()
         dset.pop_by_values(666)
-        self.assertEqual(dset, dset_copy)
+        assert dset == dset_copy
 
         dset.pop_by_values(2)
-        self.assertEqual(dset.keys(), ['a'])
-        self.assertNotEqual(dset, dset_copy)
+        assert dset.keys() == ['a']
+        assert dset != dset_copy
+
+    def test_extend(self):
+        d1 = {}
+        extend(d1, {})
+        assert d1 == {}
+
+        extend(d1, dict(a=1))
+        assert d1 == dict(a=1)
+
+        d1 = dict(a={})
+        with pytest.raises(DValueError):
+            extend(d1, dict(a=1))
+
+        extend(d1, dict(a={}))
+        assert d1 == dict(a={})
+
+        extend(d1, dict(a=dict(b=1)))
+        assert d1 == dict(a=dict(b=1))
+
+        d1 = dict(a=dict(c=1))
+        extend(d1, dict(a=dict(b=1)))
+        assert d1 == {'a': {'c': 1, 'b': 1}}
+
+        d1 = dictset(a={})
+        d1.extend({})
+
+    def test__getattr__(self):
+        d1 = dictset()
+        with pytest.raises(DKeyError):
+            d1.NOTTHERE
+        d1['a'] = 1
+
+    def test__contains__(self):
+        d1 = dictset(a=dict(b=1))
+        assert ['a', 'b'] in d1
+
+    def test_to_dictset(self):
+        d1 = dictset(a=[dict(c=1), 1])
+        assert isinstance(d1.a[0], dictset)
+
+    def test_mget(self):
+        d1 = dictset({'a.b':1, 'a.c':2})
+        assert d1.mget('a') == {'c': 2, 'b': 1}
+
+    def test_from_dotted(self):
+        assert dictset.from_dotted('a.b.c', 1) == {'a': {'b': {'c': 1}}}
+
+    def test_has(self):
+        d1 = dictset(a=1)
+        with pytest.raises(DValueError):
+            d1.has('a', check_type=basestring)
+
+        assert d1.has('a', check_type=int) == True
+        assert d1.has('b', check_type=int) == False
+
+    def test_asbool(self):
+        assert dictset(a=True).asbool('a') == True
+
+    def test_aslist(self):
+        assert dictset(a=[]).aslist('a') == []
+
+    def test_asint(self):
+        assert dictset(a=1).asint('a') == 1
+
+    def test_asfloat(self):
+        assert dictset(a='1.1').asfloat('a') == 1.1
+
+    def test_asdict(self):
+        assert dictset(a='a:1').asdict('a') == {'a':'1'}
+
+    def test_as_datetime(self):
+        assert dictset(a='2000-01-01T01:01:01Z').as_datetime('a') == datetime(2000,01,01,01,01,01)
+
+

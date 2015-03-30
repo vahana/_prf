@@ -17,7 +17,8 @@ class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, (datetime, date)):
             return obj.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
-        try:
+
+        try: 
             return super(JSONEncoder, self).default(obj)
         except TypeError:
             return unicode(obj)  # fallback to unicode
@@ -48,21 +49,23 @@ def process_limit(start, page, limit):
             start = 0
 
         if limit < 0 or start < 0:
-            raise ValueError('_limit/_page or _limit/_start can not be < 0')
+            raise DValueError('_limit/_page or _limit/_start can not be < 0')
     except (ValueError, TypeError), e:
-        raise ValueError(e)
-    except Exception, e:
-        raise ValueError('Bad _limit param: %s ' % e)
+        raise DValueError(e)
+    except Exception, e: #pragma nocover
+        raise DValueError('Bad _limit param: %s ' % e)
 
     return start, limit
 
 
-def extend_list(param):
+def expand_list(param):
     _new = []
     if isinstance(param, (list, set)):
         for each in param:
             if isinstance(each, basestring) and each.find(',') != -1:
                 _new.extend(split_strip(each))
+            elif isinstance(each, (list, set)):
+                _new.extend(each)
             else:
                 _new.append(each)
     elif isinstance(param, basestring) and param.find(',') != -1:
@@ -79,7 +82,7 @@ def process_fields(fields):
     if isinstance(fields, basestring):
         fields = split_strip(fields)
 
-    for field in extend_list(fields):
+    for field in expand_list(fields):
         field = field.strip()
         if not field:
             continue
@@ -152,9 +155,6 @@ def prep_params(params):
     # import here to avoid circular import
     from prf.utils import dictset
 
-    __confirmation = '__confirmation' in params
-    params.pop('__confirmation', False)
-
     specials = dictset()
 
     specials._sort = split_strip(params.pop('_sort', []))
@@ -167,6 +167,5 @@ def prep_params(params):
     _start = params.pop('_start', None)
 
     specials._offset, specials._limit = process_limit(_start, _page, _limit)
-
 
     return dictset(params), specials
