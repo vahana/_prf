@@ -73,6 +73,11 @@ def add_login_views(config, user_model, route_prefix=''):
                     permission=NO_PERMISSION_REQUIRED)
 
 
+def set_default_acl(config, acl_model):
+    acl_model = maybe_dotted(acl_model)
+    config.set_root_factory(acl_model)
+
+
 def process_tweens(config):
     import pyramid
     for tween in aslist(config.registry.settings, 'tweens', sep='\n', default=''):
@@ -85,6 +90,7 @@ def includeme(config):
 
     config.add_directive('get_root_resource', get_root_resource)
     config.add_directive('add_error_view', add_error_view)
+    config.add_directive('set_default_acl', set_default_acl)
 
     config.add_renderer('json', maybe_dotted('prf.renderers.JsonRenderer'))
 

@@ -117,6 +117,7 @@ class SettingsView(BaseView):
 
 
 class APIView(BaseView):
+
     def _get_routes(self):
         root = self.request.registry['prf.root_resources'].values()[0]
         mapper = root.config.get_routes_mapper()
