@@ -80,7 +80,7 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path_prefix = kwargs.pop('path_prefix', '')
     name_prefix = kwargs.pop('name_prefix', '')
 
-    id_name = ('/{%s}' % (kwargs.pop('id_name', None)
+    id_name = ('/{%s}' % (kwargs.pop('id_name', view._id_name)
                or DEFAULT_ID_NAME) if collection_name else '')
 
     path = os.path.join(path_prefix, (collection_name or member_name))

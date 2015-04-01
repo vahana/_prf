@@ -76,6 +76,7 @@ class BaseView(object):
     _default_renderer = 'json'
     _serializer = None
     _acl = None
+    _id_name = 'id'
 
     def __init__(self, context, request):
         self.context = context
@@ -117,7 +118,7 @@ class BaseView(object):
             try:
                 self._params.extend(dictset.from_dotted(key, val))
             except:
-                raise prf.exc.HTTPBadRequest('Can not mix dotted and regular params names')
+                raise prf.exc.HTTPBadRequest('Can not mix dotted and regular param names')
 
         if self.request.method == 'GET':
             self._params.setdefault('_limit', 20)
@@ -249,7 +250,7 @@ class BaseView(object):
                 try:
                     url = urlparse(self.request.current_route_url())._replace(query='')
                     each.setdefault('self', '%s/%s' % (url.geturl(),
-                                    urllib.quote(str(each['id']))))
+                                    urllib.quote(str(each[self._id_name]))))
                 except TypeError:
                     pass
         except (TypeError, KeyError):

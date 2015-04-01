@@ -72,12 +72,13 @@ class MongoJSONEncoder(_JSONEncoder):
 
 
 def prep_mongo_params(params):
-    ops = ('in', 'nin', 'all')
+    list_ops = ('in', 'nin', 'all')
     for key in params:
-        if key.partition('__')[2] in ops:
+        if key.partition('__')[2] in list_ops:
             params[key] = split_strip(params[key])
 
     return params
+
 
 class BaseMixin(object):
 
