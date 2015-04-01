@@ -8,22 +8,38 @@ from prf.utils import dictset, json_dumps
 
 logger = logging.getLogger(__name__)
 
+
 def add_stack():
     return ''.join(traceback.format_stack())
 
+
 def is_error(status_code):
-    return 400 <= status_code < 600
+    #exclude 404 not found
+    return (400 <= status_code < 600) and status_code != 404
+
 
 def log_exception(resp, params):
-    if is_error(resp.status_code) and resp.status_code != 404:
-        msg = '%s: %s' % (resp.status.upper(), json_dumps(params))
-        if resp.status_int in [400, 500]:
-            msg += '\nSTACK BEGIN>>\n%s\nSTACK END<<' % add_stack()
-        logger.error(msg)
+    params['timestamp'] = datetime.utcnow()
+    
+    request = params.pop('request', None)
+    if request:
+        params['request'] = dict(
+                url = request.url,
+                remote_user = request.remote_user,
+                client_addr = request.client_addr,
+                remote_addr = request.remote_addr,
+            )
+
+    msg = '%s: %s' % (resp.status.upper(), json_dumps(params))
+
+    if resp.status_code in [400, 500]:
+        msg += '\nSTACK BEGIN>>\n%s\nSTACK END<<' % add_stack()
+
+    logger.error(msg)
+
 
 def create_response(resp, params):
     resp.content_type = 'application/json'
-    request = params.pop('request', None)
 
     extra = params.get('extra', {})
     resp.headers.extend(params.pop('headers', []))
@@ -38,20 +54,12 @@ def create_response(resp, params):
 
     if is_error(resp.status_code):
         body['error_id'] = uuid.uuid4()
-        params['timestamp'] = datetime.utcnow()
-        if request:
-            params['request'] = dict(
-                    url = request.url,
-                    remote_user = request.remote_user,
-                    client_addr = request.client_addr,
-                    remote_addr = request.remote_addr,
-                )
-
-    params.update(body)
-    log_exception(resp, params)
+        params.update(body)
+        log_exception(resp, params)
 
     resp.body = json_dumps(body)
     return resp
+
 
 def exception_response(status_code, **kw):
     # for some reason 400 is mapped to HTTPClientError in pyramid instead of HTTPBadRequest
