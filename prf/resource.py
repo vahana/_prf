@@ -208,10 +208,11 @@ class Resource(object):
         child_resource = Resource(self.config, member_name=member_name,
                                   collection_name=collection_name,
                                   parent=parent, uid=uid,
-                                  id_name=kwargs.get('id_name', ''),
                                   prefix=prefix)
 
         child_view = get_view_class(kwargs.pop('view', None), child_resource)
+        child_resource.id_name = kwargs.get('id_name', child_view._id_name)
+
         child_view._serializer = maybe_dotted(
                             kwargs.pop('serializer', child_view._serializer))
 
