@@ -128,9 +128,25 @@ class BaseView(object):
 
         raise AttributeError(attr)
 
-    def serialize(self, objs, many=False):
+    def is_serializable(self, objs, many):
         if not self._serializer:
-            return objs
+            return False
+
+        if many:
+            if not issequence(objs):
+                return False
+            elif len(objs) > 0:
+                obj = objs[0]
+            else:
+                return True
+        else:
+            obj = objs
+
+        return isinstance(obj, self._serializer._model)
+
+    def serialize(self, objs, many=False):
+        if not self.is_serializable(objs, many):
+            return objs, None
 
         kw = {}
         fields = self._params.get('_fields')
@@ -140,13 +156,13 @@ class BaseView(object):
 
         obj = self._serializer(context={'request':self.request},
                                 many=many, strict=True, **kw)
-        return obj.dump(objs).data
+        data = obj.dump(objs).data
+        return data, len(data)
 
     def _index(self, **kw):
         objs = self.index(**kw)
-        serielized = self.serialize(objs, many=True)
+        serielized, count = self.serialize(objs, many=True)
 
-        count = len(serielized)
         total = getattr(objs, '_total', count)
 
         serielized = self.add_meta(serielized)

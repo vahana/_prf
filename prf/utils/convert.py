@@ -5,7 +5,6 @@ def parametrize(func):
 
     def wrapper(dset, name, default=None, raise_on_empty=False, pop=False,
                 **kw):
-
         if default is None:
             try:
                 value = dset[name]

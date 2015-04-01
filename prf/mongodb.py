@@ -4,7 +4,7 @@ from bson import ObjectId, DBRef
 import mongoengine as mongo
 
 import prf.exc
-from prf.utils import dictset, prep_params
+from prf.utils import dictset, prep_params, split_strip
 from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def mongodb_exc_tween(handler, registry):
             raise prf.exc.HTTPBadRequest(e, request=request, exception=e)
 
         except mongo.InvalidQueryError as e:
-            raise prf.exc.HTTPBadRequest(request=request, exception=e)
+            raise prf.exc.HTTPBadRequest(e, request=request, exception=e)
 
         except mongo.MultipleObjectsReturned:
             raise prf.exc.HTTPBadRequest('Bad or Insufficient Params', 
@@ -71,6 +71,14 @@ class MongoJSONEncoder(_JSONEncoder):
         return super(MongoJSONEncoder, self).default(obj)
 
 
+def prep_mongo_params(params):
+    ops = ('in', 'nin', 'all')
+    for key in params:
+        if key.partition('__')[2] in ops:
+            params[key] = split_strip(params[key])
+
+    return params
+
 class BaseMixin(object):
 
     Q = mongo.Q
@@ -78,11 +86,13 @@ class BaseMixin(object):
     @classmethod
     def get_collection(cls, **params):
         params, specials = prep_params(params)
+        params = prep_mongo_params(params)
+
         query_set = cls.objects
 
         query_set = query_set(**params)
         _total = query_set.count()
-        if specials._count:
+        if specials.asbool('_count', False):
             return _total
 
         if specials._sort:
