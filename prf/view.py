@@ -76,7 +76,7 @@ class BaseView(object):
     _default_renderer = 'json'
     _serializer = None
     _acl = None
-    _id_name = 'id'
+    _id_name = None
 
     def __init__(self, context, request):
         self.context = context
@@ -250,7 +250,7 @@ class BaseView(object):
                 try:
                     url = urlparse(self.request.current_route_url())._replace(query='')
                     each.setdefault('self', '%s/%s' % (url.geturl(),
-                                    urllib.quote(str(each[self._id_name]))))
+                                    urllib.quote(str(each[self._id_name or 'id']))))
                 except TypeError:
                     pass
         except (TypeError, KeyError):

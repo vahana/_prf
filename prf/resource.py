@@ -45,14 +45,18 @@ def get_uri_elements(resource):
     name_prefix = ''
     path_segs = []
 
-    for res in resource.ancestors:
-        if not res.is_singular:
-            if res.id_name:
-                id_full = res.id_name
+    for anc in resource.ancestors:
+        if not anc.is_singular:
+            if anc.id_name:
+                id_full = anc.id_name
             else:
-                id_full = '%s_%s' % (res.member_name, DEFAULT_ID_NAME)
+                id_full = '%s_%s' % (anc.member_name, DEFAULT_ID_NAME)
 
-            path_segs.append('%s/{%s}' % (res.collection_name, id_full))
+            if id_full == resource.id_name:
+                raise ValueError(
+                    "id name `%s` for `%s` matches with ancestor `%s`" % (id_full, resource, anc))
+
+            path_segs.append('%s/{%s}' % (anc.collection_name, id_full))
         else:
             path_segs.append(res.member_name)
 
