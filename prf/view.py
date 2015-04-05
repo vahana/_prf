@@ -158,7 +158,11 @@ class BaseView(object):
         obj = self._serializer(context={'request':self.request},
                                 many=many, strict=True, **kw)
         data = obj.dump(objs).data
-        return data, len(data)
+
+        if many:
+            return data, len(data)
+        else:
+            return data
 
     def _index(self, **kw):
         objs = self.index(**kw)

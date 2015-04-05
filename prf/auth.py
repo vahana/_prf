@@ -1,7 +1,7 @@
 import os
 import logging
 import copy
-from pyramid.security import ALL_PERMISSIONS, Allow, Everyone
+import pyramid.security as pysec
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 
@@ -11,71 +11,51 @@ from prf.utils import dictset, maybe_dotted, with_metaclass
 from prf.utils.utils import DKeyError, DValueError
 from prf.resource import Action
 
+
 log = logging.getLogger(__name__)
 
 
-class MetaACL(type):
-    def __new__(mcs, name, bases, attrs):
-        klass = super(MetaACL, mcs).__new__(mcs, name, bases, attrs)
-        klass.__acl__ = klass._collection_acl()
-        return klass        
-
-
-class BaseACL(with_metaclass(MetaACL, object)):
+class BaseACL(object):
     _model = None
     _id_name = 'id'
+    _admin_group_name = 'g:admin'
 
     def __init__(self, request):
         self.request = request
+
+        self.__acl__ = self._acl()
         self.init()
 
     def init(self):
         pass
 
-    @classmethod
-    def _collection_acl(cls):
-        return [(Allow, 'g:admin', ALL_PERMISSIONS)] + cls.collection_acl()
+    def _acl(self):
+        return [(pysec.Allow, self._admin_group_name, pysec.ALL_PERMISSIONS)] +\
+                self.acl()
 
-    @classmethod
-    def collection_acl(cls):
+    def acl(self):
         return []
 
-    def _resource_acl(self, resource):
-        return [(Allow, 'g:admin', ALL_PERMISSIONS)] + self.resource_acl(resource)
+    def _item_acl(self, item):
+        return [(pysec.Allow, self._admin_group_name, pysec.ALL_PERMISSIONS)] +\
+                self.item_acl(item)
 
-    def resource_acl(self, resource):
+    def item_acl(self, item):
         return []
 
-    def get_resource(self, key):
+    def get_item(self, key):
         if not self._model:
             raise DValueError('`%s._model` can not be None'\
-                              % self.__class__.__name__)            
+                              % self.__class__.__name__)
         return self._model.get_resource(**{self._id_name:key})
 
     def __getitem__(self, key):
-        obj = self.get_resource(key)
-        obj.__acl__ = self._resource_acl(obj)
+        item = self.get_item(key)
+        item.__acl__ = self._item_acl(item)
 
-        obj.__parent__ = self
-        obj.__name__ = key
-        return obj        
-
-
-class OpenACL(BaseACL):
-    @classmethod
-    def collection_acl(cls):
-        return [
-            (Allow, Everyone, [Action.SHOW, Action.INDEX])
-        ]
-
-    def resource_acl(self):
-        return [
-            (Allow, Everyone, [Action.SHOW, Action.INDEX])
-        ]
-
-
-class SecureACL(BaseACL):
-    pass
+        item.__parent__ = self
+        item.__name__ = key
+        return item
 
 
 def includeme(config):

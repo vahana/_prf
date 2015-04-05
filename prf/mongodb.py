@@ -153,3 +153,7 @@ class Base(BaseMixin, mongo.Document):
                 kw['set__%s' % key] = kw.pop(key)
 
         return super(Base, self).update(*arg, **kw)
+
+class DynamicBase(BaseMixin, mongo.DynamicDocument):
+    meta = {'abstract': True}
+
