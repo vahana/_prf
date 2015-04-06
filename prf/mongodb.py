@@ -143,6 +143,10 @@ class BaseMixin(object):
     def get_by_ids(cls, ids, **params):
         return cls.get_collection(id__in=ids, _limit=len(ids), **params)
 
+    @property
+    def ids(self):
+        return str(self.id)
+
 
 class Base(BaseMixin, mongo.Document):
     meta = {'abstract': True}
