@@ -38,7 +38,7 @@ def mongodb_exc_tween(handler, registry):
 
         except mongo.NotUniqueError as e:
             if 'E11000' in e.message:
-                raise prf.exc.HTTPConflict(detail='Resource already exists.', 
+                raise prf.exc.HTTPConflict(detail='Resource already exists.',
                             request=request, exception=e)
             else:
                 raise prf.exc.HTTPBadRequest('Not Unique', request=request)
@@ -53,11 +53,11 @@ def mongodb_exc_tween(handler, registry):
             raise prf.exc.HTTPBadRequest(e, request=request, exception=e)
 
         except mongo.MultipleObjectsReturned:
-            raise prf.exc.HTTPBadRequest('Bad or Insufficient Params', 
+            raise prf.exc.HTTPBadRequest('Bad or Insufficient Params',
                             request=request)
 
         except mongo.DoesNotExist as e:
-            raise prf.exc.HTTPNotFound(request=request, exception=e)            
+            raise prf.exc.HTTPNotFound(request=request, exception=e)
 
     return tween
 
@@ -104,7 +104,7 @@ class BaseMixin(object):
         log.debug('get_collection.query_set: %s(%s)', cls.__name__,
               query_set._query)
         query_set._total = _total
-        
+
         return query_set
 
     @classmethod
@@ -148,9 +148,19 @@ class Base(BaseMixin, mongo.Document):
     meta = {'abstract': True}
 
     def update(self, *arg, **kw):
+        is_setatt = False
+
         for key in kw.copy():
             if '__' not in key:
-                kw['set__%s' % key] = kw.pop(key)
+                is_setatt = True
+                setattr(self, key, kw.pop(key))
+
+        if is_setatt:
+            if kw:
+                raise prf.exc.HTTPBadRequest(
+                    'can not mix plain and double-underscore attributes')
+
+            return self.save()
 
         return super(Base, self).update(*arg, **kw)
 
