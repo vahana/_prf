@@ -22,7 +22,6 @@ class BaseACL(object):
 
     def __init__(self, request):
         self.request = request
-
         self.__acl__ = self._acl()
         self.init()
 

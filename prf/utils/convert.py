@@ -41,9 +41,16 @@ def asbool(dset, value):
 
 
 @parametrize
-def aslist(dset, value, sep=',', remove_empty=True):
+def aslist(dset, value, sep=',', remove_empty=True, unique=False):
     _lst = (value if isinstance(value, list) else value.split(sep))
-    return (filter(bool, _lst) if remove_empty else _lst)
+
+    if remove_empty:
+        _lst = (filter(bool, _lst))
+
+    if unique:
+        _lst = list(set(_lst))
+
+    return _lst
 
 
 @parametrize
@@ -101,6 +108,6 @@ def as_datetime(dset, name):
             raise DValueError("Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ"
                               % name)
     else:
-        raise DKeyError("Missing '%s'" % name)        
-    
+        raise DKeyError("Missing '%s'" % name)
+
     return dset.get(name, None)

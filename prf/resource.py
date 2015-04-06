@@ -12,6 +12,7 @@ class Action(object):
     SHOW = '_show'
     CREATE = '_create'
     UPDATE = '_update'
+    PATCH = '_patch'
     DELETE = '_delete'
     DELETE_MANY = '_delete_many'
     UPDATE_MANY = '_update_many'
@@ -119,7 +120,7 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     add_route_and_view(config, Action.UPDATE, name_prefix + member_name, path
                        + id_name, 'PUT', traverse=_traverse)
 
-    add_route_and_view(config, Action.UPDATE, name_prefix + member_name, path
+    add_route_and_view(config, Action.PATCH, name_prefix + member_name, path
                        + id_name, 'PATCH', traverse=_traverse)
 
     add_route_and_view(config, Action.CREATE, name_prefix + (collection_name

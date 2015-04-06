@@ -9,7 +9,7 @@ class TestConvert():
             return value
 
         wrapped = parametrize(func)
-    
+
         with pytest.raises(DKeyError):
             wrapped(dictset(), None)
 
@@ -44,13 +44,15 @@ class TestConvert():
         assert aslist(dict(a='a1,a2'), 'a') == ['a1', 'a2']
         assert aslist(dict(a='a,'), 'a') == ['a']
         assert aslist(dict(a='a,'), 'a', remove_empty=False) == ['a', '']
-    
+
         with pytest.raises(DValueError):
             aslist(dict(a=''), 'a', raise_on_empty=True)
 
         d_ = dict(a='a', b='')
         aslist(d_, 'a', pop=True)
         assert d_ == dict(b='')
+
+        assert aslist(dict(a='a,b,a'), 'a', unique=True) == ['a','b']
 
     def test_int(self):
         with pytest.raises(DKeyError):
@@ -73,21 +75,21 @@ class TestConvert():
 
         assert asdict(dict(a='a:1'), 'a') == dict(a='1')
         assert asdict(dict(a='a:1'), 'a', _type=int) == dict(a=1)
-        
+
         assert asdict(dict(a='a:1, b:2'), 'a') == dict(a='1', b='2')
         assert asdict(dict(a='a:1,b:2,a:2,a:3'), 'a') == dict(a=['1', '2', '3'], b='2')
 
         _d = dict(a='b:1')
         asdict(_d, 'a', _type=int, _set=True)
         assert _d == dict(a=dict(b=1))
-        
+
         _d = dict(a='b:1')
         asdict(_d, 'a', _type=int, pop=True)
         assert _d == dict()
 
     def test_datetime(self):
         from datetime import datetime
-        
+
         with pytest.raises(DKeyError):
             as_datetime(dict(), 'a')
 

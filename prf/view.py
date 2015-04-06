@@ -202,6 +202,10 @@ class BaseView(object):
         self.update(**kw)
         return prf.exc.HTTPOk()
 
+    def _patch(self, **kw):
+        self.patch(**kw)
+        return prf.exc.HTTPOk()
+
     def _delete(self, **kw):
         self.delete(**kw)
         return prf.exc.HTTPOk()
