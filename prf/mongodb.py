@@ -9,6 +9,11 @@ from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
 
+def get_document_cls(name):
+    try:
+        return mongo.document.get_document(name)
+    except Exception as e:
+        raise ValueError('`%s` does not exist in mongo db' % name)
 
 def includeme(config):
     mongo_connect(config.registry.settings)
@@ -168,6 +173,24 @@ class Base(BaseMixin, mongo.Document):
 
         return super(Base, self).update(*arg, **kw)
 
+
 class DynamicBase(BaseMixin, mongo.DynamicDocument):
     meta = {'abstract': True}
 
+    #TODO: this is exact copy-paste of Base.update method.Refactor it !
+    def update(self, *arg, **kw):
+        is_setatt = False
+
+        for key in kw.copy():
+            if '__' not in key:
+                is_setatt = True
+                setattr(self, key, kw.pop(key))
+
+        if is_setatt:
+            if kw:
+                raise prf.exc.HTTPBadRequest(
+                    'can not mix plain and double-underscore attributes')
+
+            return self.save()
+
+        return super(DynamicBase, self).update(*arg, **kw)

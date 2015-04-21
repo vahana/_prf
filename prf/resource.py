@@ -239,6 +239,10 @@ class Resource(object):
 
         return child_resource
 
+    def add_singular(self, *arg, **kw):
+        kw['collection_name'] = None
+        return self.add(*arg, **kw)
+
     def add_to_resource_map(self, key, path, child_resource):
         if key in self.resource_map:
             r_ = self.resource_map[key]

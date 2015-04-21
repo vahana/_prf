@@ -1,5 +1,6 @@
 pyramid
 requests
+requests_cache
 SQLAlchemy
 SQLAlchemy-Utils
 zope.sqlalchemy

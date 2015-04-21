@@ -60,7 +60,7 @@ def add_login_views(config, user_model, route_prefix=''):
                      '%s' % os.path.join(route_prefix, 'login'))
 
     config.add_view(view=AccountView, attr='login', route_name=route_name,
-                    # request_method='POST',
+                    request_method='POST',
                     renderer='json',
                     permission=NO_PERMISSION_REQUIRED)
 

@@ -143,11 +143,11 @@ class BaseView(object):
         else:
             obj = objs
 
-        return isinstance(obj, self._serializer._model)
+        return self._serializer._model and isinstance(obj, self._serializer._model)
 
     def serialize(self, objs, many=False):
         if not self.is_serializable(objs, many):
-            return objs, None
+            return objs, len(objs)
 
         kw = {}
         fields = self._params.get('_fields')
@@ -155,9 +155,9 @@ class BaseView(object):
         if fields is not None:
             kw['only'], kw['exclude'] = process_fields(fields)
 
-        obj = self._serializer(context={'request':self.request},
-                                many=many, strict=True, **kw)
-        data = obj.dump(objs).data
+        serializer = self._serializer(context={'request':self.request},
+                                        many=many, strict=True, **kw)
+        data = serializer.dump(objs).data
 
         if many:
             return data, len(data)
@@ -172,16 +172,14 @@ class BaseView(object):
 
         serielized = self.add_meta(serielized)
 
-        dict_ = dict(
+        return dict(
             total = total,
             count = count,
             data = serielized
         )
-        return dict_
 
     def _show(self, **kw):
         obj = self.show(**kw)
-
         if isinstance(obj, dict):
             fields = self._params.get('_fields')
             return dictset(obj).subset(fields) if fields else obj

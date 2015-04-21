@@ -27,7 +27,6 @@ class OptionsView(object):
 
     def __call__(self):
         request = self.request
-
         request.response.headers['Allow'] = ', '.join(self.all_methods)
 
         if 'Access-Control-Request-Method' in request.headers:

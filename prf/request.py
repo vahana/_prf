@@ -1,5 +1,6 @@
 import logging
 import requests
+import requests_cache
 import urllib
 
 from prf.utils.utils import json_dumps
@@ -15,10 +16,11 @@ def pyramid_resp(resp, **kw):
                     body=resp.text, **kw)
 
 
-class Requests(object):
+class Request(object):
 
-    def __init__(self, base_url=''):
+    def __init__(self, base_url='', cache_options=None):
         self.base_url = base_url
+        self.cache_options = cache_options
 
     def json_body(self, resp):
         try:
@@ -47,7 +49,14 @@ class Requests(object):
         log.debug('%s', url)
 
         try:
-            resp = requests.get(url, **kw)
+            if self.cache_options is not None:
+                with requests_cache.enabled(**self.cache_options):
+                    resp = requests.get(url, **kw)
+                    if resp.from_cache:
+                        log.warning('`%s` served from cache' % url)
+            else:
+                resp = requests.get(url, **kw)
+
             if not resp.ok:
                 raise prf.exc.exception_response(status_code=resp.status_code,
                                             **self.json_body(resp))
