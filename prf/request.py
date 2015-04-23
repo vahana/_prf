@@ -18,9 +18,10 @@ def pyramid_resp(resp, **kw):
 
 class Request(object):
 
-    def __init__(self, base_url='', cache_options=None):
+    def __init__(self, base_url='', cache_options=None, _raise=True):
         self.base_url = base_url
         self.cache_options = cache_options
+        self._raise = _raise
 
     def json_body(self, resp):
         try:
@@ -28,6 +29,15 @@ class Request(object):
         except:
             log.error('Response does not contain json body')
             return {}
+
+    def raise_or_log(self, resp):
+        if self._raise:
+            raise prf.exc.exception_response(status_code=resp.status_code,
+                                    **self.json_body(resp))
+        else:
+            log.error(str(self.json_body(resp)))
+
+        return None
 
     def prepare_url(self, path='', params={}):
         url = self.base_url
@@ -58,8 +68,8 @@ class Request(object):
                 resp = requests.get(url, **kw)
 
             if not resp.ok:
-                raise prf.exc.exception_response(status_code=resp.status_code,
-                                            **self.json_body(resp))
+                return self.raise_or_log(resp)
+
             return self.json_body(resp)
 
         except requests.ConnectionError, e:
@@ -89,8 +99,7 @@ class Request(object):
                                  headers={'content-type': 'application/json'},
                                  **kw)
             if not resp.ok:
-                raise prf.exc.exception_response(status_code=resp.status_code,
-                                                 **self.json_body(resp))
+                return self.raise_or_log(resp)
 
             return pyramid_resp(resp)
 
@@ -121,8 +130,7 @@ class Request(object):
                                 headers={'content-type': 'application/json'},
                                 **kw)
             if not resp.ok:
-                raise prf.exc.exception_response(status_code=resp.status_code,
-                                                 **self.json_body(resp))
+                return self.raise_or_log(resp)
 
             return dictset(resp.json())
 
@@ -133,8 +141,7 @@ class Request(object):
         try:
             resp = requests.head(self.prepare_url(path, params))
             if not resp.ok:
-                raise prf.exc.exception_response(status_code=resp.status_code,
-                                                 **self.json_body(resp))
+                return self.raise_or_log(resp)
 
         except requests.ConnectionError, e:
             raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
@@ -147,8 +154,7 @@ class Request(object):
                                    headers={'content-type': 'application/json'
                                    }, **kw)
             if not resp.ok:
-                raise prf.exc.exception_response(status_code=resp.status_code,
-                                                 **self.json_body(resp))
+                return self.raise_or_log(resp)
 
             return dictset(resp.json())
 
