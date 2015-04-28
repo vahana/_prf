@@ -147,7 +147,7 @@ class BaseView(object):
 
     def serialize(self, objs, many=False):
         if not self.is_serializable(objs, many):
-            return objs, len(objs)
+            return objs, None
 
         kw = {}
         fields = self._params.get('_fields')
