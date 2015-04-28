@@ -1,5 +1,7 @@
 import json
 import logging
+from urlparse import urlparse, parse_qs
+from urllib import urlencode
 from datetime import date, datetime
 
 log = logging.getLogger(__name__)
@@ -18,7 +20,7 @@ class JSONEncoder(json.JSONEncoder):
         if isinstance(obj, (datetime, date)):
             return obj.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
 
-        try: 
+        try:
             return super(JSONEncoder, self).default(obj)
         except TypeError:
             return unicode(obj)  # fallback to unicode
@@ -189,3 +191,36 @@ def with_metaclass(meta, *bases):
                 return type.__new__(cls, name, (), d)
             return meta(name, bases, d)
     return metaclass('temporary_class', None, {})
+
+
+def normalize_domain(url):
+    if not url:
+        return url
+
+    elements = urlparse(url)
+    domain = elements.netloc if elements.scheme else elements.path
+    return domain.split('www.')[-1]
+
+
+def resolve_host_to(url, newhost):
+    elements = urlparse(url)
+    _, _, port = elements.netloc.partition(':')
+    if port:
+        newhost = '%s:%s' % (newhost, port)
+    return elements._replace(netloc=newhost).geturl()
+
+
+def sanitize_url(url, to_remove=None):
+    if not to_remove:
+        return urlparse(url)._replace(query='').geturl()
+
+    if isinstance(to_remove, basestring):
+        to_remove = [to_remove]
+
+    elements = urlparse(url)
+    qs_dict = parse_qs(elements.query)
+    for rm in to_remove:
+        qs_dict.pop(rm, None)
+
+    return elements._replace(
+        query=urlencode(qs_dict, True)).geturl()

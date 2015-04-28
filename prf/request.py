@@ -1,7 +1,7 @@
 import logging
 import requests
-import requests_cache
 import urllib
+from urlparse import urlparse
 
 from prf.utils.utils import json_dumps
 from prf.utils import dictset
@@ -16,14 +16,45 @@ def pyramid_resp(resp, **kw):
                     body=resp.text, **kw)
 
 
+class PRFHTTPAdapter(requests.adapters.HTTPAdapter):
+    def send(self, *args, **kw):
+        try:
+            return super(PRFHTTPAdapter, self).send(*args, **kw)
+        except (requests.ConnectionError, requests.ConnectTimeout) as e:
+            raise prf.exc.HTTPGatewayTimeout(str(e))
+
+
 class Request(object):
 
-    def __init__(self, base_url='', cache_options=None, _raise=True):
-        self.base_url = base_url
-        self.cache_options = cache_options
-        self._raise = _raise
+    def __init__(self, base_url='', cache_options=None,
+                      _raise=True,
+                      delay=0, reqs_over_time = None,
+                      cookies=None, headers=None):
 
-    def json_body(self, resp):
+        self.base_url = base_url
+        self.cache_options = cache_options or {}
+        self._raise = _raise
+        self.delay = delay
+        self.reqs_over_time = reqs_over_time or [] # [3,60] - 3 requests in 60 seconds
+
+        if self.cache_options:
+            import requests_cache
+            self.session = requests_cache.CachedSession(**self.cache_options)
+        else:
+            self.session = requests.Session()
+
+        self.session.mount('http://', PRFHTTPAdapter())
+        self.session.mount('https://', PRFHTTPAdapter())
+
+        self.session.headers['content-type'] =  'application/json'
+
+        if cookies:
+            self.session.cookies = cookies
+
+        if headers:
+            self.session.headers.update(headers)
+
+    def json(self, resp):
         try:
             return dictset(resp.json())
         except:
@@ -33,11 +64,14 @@ class Request(object):
     def raise_or_log(self, resp):
         if self._raise:
             raise prf.exc.exception_response(status_code=resp.status_code,
-                                    **self.json_body(resp))
+                                    **self.json(resp))
         else:
-            log.error(str(self.json_body(resp)))
+            log.error(str(self.json(resp)))
 
         return None
+
+    def from_cache(self, resp):
+        return hasattr(resp, 'from_cache') and resp.from_cache
 
     def prepare_url(self, path='', params={}):
         url = self.base_url
@@ -58,24 +92,34 @@ class Request(object):
         url = self.prepare_url(path, params)
         log.debug('%s', url)
 
-        try:
-            if self.cache_options is not None:
-                with requests_cache.enabled(**self.cache_options):
-                    resp = requests.get(url, **kw)
-                    if resp.from_cache:
-                        log.warning('`%s` served from cache' % url)
-            else:
-                resp = requests.get(url, **kw)
+        resp = self.session.get(url, **kw)
+        if not resp.ok:
+            return self.raise_or_log(resp)
 
-            if not resp.ok:
-                return self.raise_or_log(resp)
+        return resp
 
-            return self.json_body(resp)
+    def mget(self, urls, **kw):
+        from requests_throttler import BaseThrottler
 
-        except requests.ConnectionError, e:
-            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
+        log.debug('%s', urls)
 
-    def mget(self, path, params={}, page_size=None):
+        if isinstance(urls, basestring):
+            urls = [urls]
+
+        reqs = [requests.Request(method='GET', url=url, **kw) for url in urls]
+
+        kwargs={}
+        if self.delay:
+            kwargs['delay'] = self.delay
+        elif self.reqs_over_time:
+            kwargs['reqs_over_time'] = self.reqs_over_time
+
+        with BaseThrottler(name='throttler', session=self.session, **kwargs) as bt:
+            throttled_requests = bt.multi_submit(reqs)
+
+        return [r.response for r in throttled_requests]
+
+    def get_paginated(self, path, params={}, page_size=None):
         total = params['_limit']
         start = params.get('_start', 0)
         params['_limit'] = page_size
@@ -94,19 +138,13 @@ class Request(object):
     def post(self, path='', data={}, **kw):
         url = self.prepare_url(path)
         log.debug('%s, kwargs:%.512s', url, data)
-        try:
-            resp = requests.post(url, data=json_dumps(data),
-                                 headers={'content-type': 'application/json'},
-                                 **kw)
-            if not resp.ok:
-                return self.raise_or_log(resp)
+        resp = self.session.post(url, data=json_dumps(data), **kw)
+        if not resp.ok:
+            return self.raise_or_log(resp)
 
-            return pyramid_resp(resp)
+        return resp
 
-        except requests.ConnectionError, e:
-            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
-
-    def mpost(self, path='', data={}, bulk_size=None, bulk_key=None):
+    def post_paginated(self, path='', data={}, bulk_size=None, bulk_key=None):
         bulk_data = data[bulk_key]
         total = len(bulk_data)
         page_count = total / bulk_size
@@ -122,41 +160,28 @@ class Request(object):
             yield self.post(path, data)
 
     def put(self, path='', data={}, **kw):
-        try:
-            url = self.prepare_url(path)
-            log.debug('%s, kwargs:%.512s', url, data)
+        url = self.prepare_url(path)
+        log.debug('%s, kwargs:%.512s', url, data)
 
-            resp = requests.put(url, data=json_dumps(data),
-                                headers={'content-type': 'application/json'},
-                                **kw)
-            if not resp.ok:
-                return self.raise_or_log(resp)
+        resp = self.session.put(url, data=json_dumps(data), **kw)
+        if not resp.ok:
+            return self.raise_or_log(resp)
 
-            return dictset(resp.json())
-
-        except requests.ConnectionError, e:
-            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
+        return resp
 
     def head(self, path='', params={}):
-        try:
-            resp = requests.head(self.prepare_url(path, params))
-            if not resp.ok:
-                return self.raise_or_log(resp)
+        resp = self.session.head(self.prepare_url(path, params))
+        if not resp.ok:
+            return self.raise_or_log(resp)
 
-        except requests.ConnectionError, e:
-            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
+        return resp
 
     def delete(self, path='', **kw):
         url = self.prepare_url(path)
         log.debug(url)
-        try:
-            resp = requests.delete(url,
-                                   headers={'content-type': 'application/json'
-                                   }, **kw)
-            if not resp.ok:
-                return self.raise_or_log(resp)
 
-            return dictset(resp.json())
+        resp = self.session.delete(url, **kw)
+        if not resp.ok:
+            return self.raise_or_log(resp)
 
-        except requests.ConnectionError, e:
-            raise prf.exc.HTTPGatewayTimeout('Could not reach %s' % e.request.url)
+        return resp
