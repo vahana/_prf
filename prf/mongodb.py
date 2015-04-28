@@ -120,7 +120,7 @@ class BaseMixin(object):
         return obj
 
     @classmethod
-    def get(cls, **kw):
+    def get(cls, **params):
         return cls.get_collection(**params).first()
 
     def unique_fields(self):
