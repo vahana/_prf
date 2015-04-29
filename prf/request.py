@@ -49,7 +49,7 @@ class Request(object):
         self.session.headers['content-type'] =  'application/json'
 
         if cookies:
-            self.session.cookies = cookies
+            self.session.cookies.update(cookies)
 
         if headers:
             self.session.headers.update(headers)
@@ -59,12 +59,13 @@ class Request(object):
             return dictset(resp.json())
         except:
             log.error('Response does not contain json body')
-            return {}
+            return None
 
     def raise_or_log(self, resp):
         if self._raise:
+            params = self.json(resp) or {'description':resp.text}
             raise prf.exc.exception_response(status_code=resp.status_code,
-                                    **self.json(resp))
+                                    **params)
         else:
             log.error(str(self.json(resp)))
 
