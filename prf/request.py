@@ -68,6 +68,7 @@ class Request(object):
                                     **params)
         else:
             log.error(str(self.json(resp)))
+            return resp
 
         return None
 
