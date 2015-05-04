@@ -61,6 +61,10 @@ class Request(object):
             log.error('Response does not contain json body')
             return None
 
+    def is_json(self, data):
+        return isinstance(data, (tuple, list, dict)) \
+                and self.session.headers['content-type'] == 'application/json'
+
     def raise_or_log(self, resp):
         if self._raise:
             params = self.json(resp) or {'description':resp.text}
@@ -140,7 +144,11 @@ class Request(object):
     def post(self, path='', data={}, **kw):
         url = self.prepare_url(path)
         log.debug('%s, kwargs:%.512s', url, data)
-        resp = self.session.post(url, data=json_dumps(data), **kw)
+
+        if self.is_json(data):
+            data = json_dumps(data)
+
+        resp = self.session.post(url, data=data, **kw)
         if not resp.ok:
             return self.raise_or_log(resp)
 
@@ -165,7 +173,10 @@ class Request(object):
         url = self.prepare_url(path)
         log.debug('%s, kwargs:%.512s', url, data)
 
-        resp = self.session.put(url, data=json_dumps(data), **kw)
+        if self.is_json(data):
+            data = json_dumps(data)
+
+        resp = self.session.put(url, data=data, **kw)
         if not resp.ok:
             return self.raise_or_log(resp)
 

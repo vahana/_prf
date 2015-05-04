@@ -136,12 +136,16 @@ class BaseMixin(object):
             defaults.update(params)
             return (cls(**defaults).save(), True)
 
+    def repr_parts(self):
+        return []
+
     def __repr__(self):
         parts = ['%s:' % self.__class__.__name__]
 
         if hasattr(self, 'id'):
             parts.append('id=%s' % self.id)
 
+        parts.extend(self.repr_parts())
         return '<%s>' % ', '.join(parts)
 
     @classmethod
@@ -149,7 +153,7 @@ class BaseMixin(object):
         return cls.get_collection(id__in=ids, _limit=len(ids), **params)
 
     @property
-    def ids(self):
+    def id_str(self):
         return str(self.id)
 
 
