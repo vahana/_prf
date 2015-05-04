@@ -20,7 +20,7 @@ class PRFHTTPAdapter(requests.adapters.HTTPAdapter):
     def send(self, *args, **kw):
         try:
             return super(PRFHTTPAdapter, self).send(*args, **kw)
-        except (requests.ConnectionError, requests.ConnectTimeout) as e:
+        except (requests.ConnectionError, requests.Timeout) as e:
             raise prf.exc.HTTPGatewayTimeout(str(e))
 
 
