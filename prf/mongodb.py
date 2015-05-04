@@ -4,7 +4,7 @@ from bson import ObjectId, DBRef
 import mongoengine as mongo
 
 import prf.exc
-from prf.utils import dictset, prep_params, split_strip
+from prf.utils import dictset, prep_params, split_strip, to_dunders
 from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
@@ -161,40 +161,17 @@ class Base(BaseMixin, mongo.Document):
     meta = {'abstract': True}
 
     def update(self, *arg, **kw):
-        is_setatt = False
+        return super(Base, self).update(*arg, **to_dunders(kw))
 
-        for key in kw.copy():
-            if '__' not in key:
-                is_setatt = True
-                setattr(self, key, kw.pop(key))
-
-        if is_setatt:
-            if kw:
-                raise prf.exc.HTTPBadRequest(
-                    'can not mix plain and double-underscore attributes')
-
-            return self.save()
-
-        return super(Base, self).update(*arg, **kw)
+    def update_one(self, *arg, **kw):
+        return super(Base, self).update_one(*arg, **to_dunders(kw))
 
 
 class DynamicBase(BaseMixin, mongo.DynamicDocument):
     meta = {'abstract': True}
 
-    #TODO: this is exact copy-paste of Base.update method.Refactor it !
     def update(self, *arg, **kw):
-        is_setatt = False
+        return super(DynamicBase, self).update(*arg, **to_dunders(kw))
 
-        for key in kw.copy():
-            if '__' not in key:
-                is_setatt = True
-                setattr(self, key, kw.pop(key))
-
-        if is_setatt:
-            if kw:
-                raise prf.exc.HTTPBadRequest(
-                    'can not mix plain and double-underscore attributes')
-
-            return self.save()
-
-        return super(DynamicBase, self).update(*arg, **kw)
+    def update_one(self, *arg, **kw):
+        return super(DynamicBase, self).update_one(*arg, **to_dunders(kw))

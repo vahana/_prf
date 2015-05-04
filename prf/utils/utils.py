@@ -224,3 +224,14 @@ def sanitize_url(url, to_remove=None):
 
     return elements._replace(
         query=urlencode(qs_dict, True)).geturl()
+
+def to_dunders(d):
+    new_d = {}
+
+    for key in d:
+        if '__' not in key:
+            new_d['set__%s'%key] = d[key]
+        else:
+            new_d[key] = d[key]
+
+    return new_d
