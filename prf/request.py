@@ -104,15 +104,8 @@ class Request(object):
 
         return resp
 
-    def mget(self, urls, **kw):
+    def multi_submit(self, reqs):
         from requests_throttler import BaseThrottler
-
-        log.debug('%s', urls)
-
-        if isinstance(urls, basestring):
-            urls = [urls]
-
-        reqs = [requests.Request(method='GET', url=url, **kw) for url in urls]
 
         kwargs={}
         if self.delay:
@@ -124,6 +117,17 @@ class Request(object):
             throttled_requests = bt.multi_submit(reqs)
 
         return [r.response for r in throttled_requests]
+
+    def mget(self, urls, **kw):
+        log.debug('%s', urls)
+
+        if isinstance(urls, basestring):
+            urls = [urls]
+
+        reqs = [requests.Request(method='GET', url=self.prepare_url(url), **kw)
+                    for url in urls]
+
+        return self.multi_submit(reqs)
 
     def get_paginated(self, path, params={}, page_size=None):
         total = params['_limit']
@@ -153,6 +157,15 @@ class Request(object):
             return self.raise_or_log(resp)
 
         return resp
+
+    def mpost(self, path, dataset, **kw):
+        url = self.prepare_url(path)
+        log.debug('%s', url)
+        reqs = [requests.Request(method='POST',
+                                url=url,
+                                data=json_dumps(data) if self.is_json(data) else data,
+                                **kw) for data in dataset]
+        return self.multi_submit(reqs)
 
     def post_paginated(self, path='', data={}, bulk_size=None, bulk_key=None):
         bulk_data = data[bulk_key]
