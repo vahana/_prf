@@ -12,4 +12,5 @@ coverage
 marshmallow
 mongoengine
 pymongo
+python-dateutil
 -e .

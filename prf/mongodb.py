@@ -94,6 +94,8 @@ class BaseMixin(object):
         params, specials = prep_params(params)
         params = prep_mongo_params(params)
 
+        log.debug(params)
+
         query_set = cls.objects
 
         query_set = query_set(**params)
@@ -156,22 +158,23 @@ class BaseMixin(object):
     def id_str(self):
         return str(self.id)
 
+    def update_with(self, _dict):
+        for key, val in _dict.items():
+            setattr(self, key, val)
+
 
 class Base(BaseMixin, mongo.Document):
     meta = {'abstract': True}
 
     def update(self, *arg, **kw):
-        return super(Base, self).update(*arg, **to_dunders(kw))
-
-    def update_one(self, *arg, **kw):
-        return super(Base, self).update_one(*arg, **to_dunders(kw))
+        result = super(Base, self).update(*arg, **to_dunders(kw))
+        return result
 
 
 class DynamicBase(BaseMixin, mongo.DynamicDocument):
     meta = {'abstract': True}
 
     def update(self, *arg, **kw):
-        return super(DynamicBase, self).update(*arg, **to_dunders(kw))
+        result = super(DynamicBase, self).update(*arg, **to_dunders(kw))
+        return result
 
-    def update_one(self, *arg, **kw):
-        return super(DynamicBase, self).update_one(*arg, **to_dunders(kw))

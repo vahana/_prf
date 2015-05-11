@@ -1,15 +1,20 @@
 from datetime import datetime
+from dateutil import parser as dt_parser
+
 from prf.utils.utils import DKeyError, DValueError, split_strip
 
 def parametrize(func):
 
-    def wrapper(dset, name, default=None, raise_on_empty=False, pop=False,
+    def wrapper(dset, name, default=None, raise_on_empty=False, pop=False, allowed_empty=False,
                 **kw):
         if default is None:
             try:
                 value = dset[name]
             except KeyError:
-                raise DKeyError("Missing '%s'" % name)
+                if not allowed_empty:
+                    raise DKeyError("Missing '%s'" % name)
+                else:
+                    return
         else:
             value = dset.get(name, default)
 
@@ -100,14 +105,13 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
     return _dict
 
 
-def as_datetime(dset, name):
+def as_datetime(dset, name, allowed_empty=False):
     if name in dset:
         try:
-            dset[name] = datetime.strptime(dset[name], '%Y-%m-%dT%H:%M:%SZ')
-        except ValueError:
-            raise DValueError("Bad format for '%s' param. Must be ISO 8601, YYYY-MM-DDThh:mm:ssZ"
-                              % name)
-    else:
+            dset[name] = dt_parser.parse(dset[name])
+        except ValueError as e:
+            raise DValueError(e)
+    elif not allowed_empty:
         raise DKeyError("Missing '%s'" % name)
 
     return dset.get(name, None)

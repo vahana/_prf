@@ -170,3 +170,4 @@ class AccountView(object):
             return prf.exc.HTTPFound(headers=headers, location=next)
 
         return prf.exc.HTTPOk(headers=headers)
+

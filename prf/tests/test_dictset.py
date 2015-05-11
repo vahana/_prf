@@ -144,6 +144,6 @@ class TestDictSet():
         assert dictset(a='a:1').asdict('a') == {'a':'1'}
 
     def test_as_datetime(self):
-        assert dictset(a='2000-01-01T01:01:01Z').as_datetime('a') == datetime(2000,01,01,01,01,01)
+        assert dictset(a='2000-01-01T01:01:01').as_datetime('a') == datetime(2000,01,01,01,01,01)
 
 
