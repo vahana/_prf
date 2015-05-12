@@ -5,13 +5,13 @@ from prf.utils.utils import DKeyError, DValueError, split_strip
 
 def parametrize(func):
 
-    def wrapper(dset, name, default=None, raise_on_empty=False, pop=False, allowed_empty=False,
-                **kw):
+    def wrapper(dset, name, default=None, raise_on_empty=False, pop=False,
+                            allow_empty=False, set_as=None, **kw):
         if default is None:
             try:
                 value = dset[name]
             except KeyError:
-                if not allowed_empty:
+                if not allow_empty:
                     raise DKeyError("Missing '%s'" % name)
                 else:
                     return
@@ -26,7 +26,7 @@ def parametrize(func):
         if pop:
             dset.pop(name, None)
         else:
-            dset[name] = result
+            dset[set_as or name] = result
 
         return result
 
@@ -105,13 +105,13 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
     return _dict
 
 
-def as_datetime(dset, name, allowed_empty=False):
+def as_datetime(dset, name, allow_empty=False):
     if name in dset:
         try:
             dset[name] = dt_parser.parse(dset[name])
         except ValueError as e:
             raise DValueError(e)
-    elif not allowed_empty:
+    elif not allow_empty:
         raise DKeyError("Missing '%s'" % name)
 
     return dset.get(name, None)
