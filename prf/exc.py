@@ -20,7 +20,7 @@ def is_error(status_code):
 
 def log_exception(resp, params):
     params['timestamp'] = datetime.utcnow()
-    
+
     request = params.pop('request', None)
     if request:
         params['request'] = dict(
@@ -78,7 +78,11 @@ def HTTPCreated(*arg, **kw):
     if resource and 'location' in kw:
         resource['self'] = kw['location']
 
-    kw['extra'] = {'resource':resource}
+    if 'extra' in kw:
+        kw['extra']['resource'] = resource
+    else:
+        kw['extra'] = {'resource': resource}
+
     resp = create_response(http_exc.HTTPCreated(*arg), kw)
     return resp
 
