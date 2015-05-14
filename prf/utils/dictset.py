@@ -6,21 +6,21 @@ def get_seg(d, path):
     for seg in path:
         d = d[seg]
     if not isinstance(d, dict):
-        raise DValueError('`%s` must be (derived from) dict' % d)
+        raise ValueError(
+            '`%s` must be (derived from) dict. Got `%s` instead' % (d, type(d)))
 
     return d
 
-def extend(d1, d2, prefix_keys=None):
+
+def merge(d1, d2, prefix_keys=None):
     """
-    from prf.utils import dictset, extend
+    from prf.utils import dictset, merge
     d1 = dictset({'a':{'b':{'c':1}}})
     d2 = dictset({'a':{'b':{'d':1}}})
-    extend(d1, d2)
+    merge(d1, d2)
 
     """
-    if prefix_keys is None:
-        prefix_keys = []
-
+    prefix_keys = prefix_keys or []
     d1_ = get_seg(d1, prefix_keys)
     d2_ = get_seg(d2, prefix_keys)
 
@@ -30,7 +30,7 @@ def extend(d1, d2, prefix_keys=None):
             return
 
         prefix_keys.append(key)
-        extend(d1, d2, prefix_keys)
+        merge(d1, d2, prefix_keys)
 
 
 class dictset(dict):
@@ -66,7 +66,7 @@ class dictset(dict):
         self[key] = val
 
     def __delattr__(self, key):
-        self.pop(key)
+        self.pop(key, None)
 
     def __contains__(self, item):
         if isinstance(item, (tuple, list, set)):
@@ -115,8 +115,8 @@ class dictset(dict):
         super(dictset, self).update(dictset(d_))
         return self
 
-    def extend(self, d_):
-        extend(self, d_)
+    def merge(self, d_):
+        merge(self, d_)
         return self
 
     def pop_by_values(self, val):

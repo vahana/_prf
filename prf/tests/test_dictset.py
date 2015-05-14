@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from prf.utils.dictset import dictset, extend
+from prf.utils.dictset import dictset, merge
 from prf.utils.utils import DKeyError, DValueError
 
 
@@ -74,30 +74,30 @@ class TestDictSet():
         assert dset.keys() == ['a']
         assert dset != dset_copy
 
-    def test_extend(self):
+    def test_merge(self):
         d1 = {}
-        extend(d1, {})
+        merge(d1, {})
         assert d1 == {}
 
-        extend(d1, dict(a=1))
+        merge(d1, dict(a=1))
         assert d1 == dict(a=1)
 
         d1 = dict(a={})
-        with pytest.raises(DValueError):
-            extend(d1, dict(a=1))
+        with pytest.raises(ValueError):
+            merge(d1, dict(a=1))
 
-        extend(d1, dict(a={}))
+        merge(d1, dict(a={}))
         assert d1 == dict(a={})
 
-        extend(d1, dict(a=dict(b=1)))
+        merge(d1, dict(a=dict(b=1)))
         assert d1 == dict(a=dict(b=1))
 
         d1 = dict(a=dict(c=1))
-        extend(d1, dict(a=dict(b=1)))
+        merge(d1, dict(a=dict(b=1)))
         assert d1 == {'a': {'c': 1, 'b': 1}}
 
         d1 = dictset(a={})
-        d1.extend({})
+        d1.merge({})
 
     def test__getattr__(self):
         d1 = dictset()

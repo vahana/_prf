@@ -116,7 +116,7 @@ class BaseView(object):
 
         for key, val in params.items():
             try:
-                self._params.extend(dictset.from_dotted(key, val))
+                self._params.merge(dictset.from_dotted(key, val))
             except:
                 raise prf.exc.HTTPBadRequest('Can not mix dotted and regular param names')
 
