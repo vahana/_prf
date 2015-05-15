@@ -79,7 +79,11 @@ class MongoJSONEncoder(_JSONEncoder):
 def prep_mongo_params(params):
     list_ops = ('in', 'nin', 'all')
     for key in params:
-        if key.partition('__')[2] in list_ops:
+        pos = key.rfind('__')
+        if pos == -1:
+            continue
+
+        if key[pos+2:] in list_ops:
             params[key] = split_strip(params[key])
 
     return params
