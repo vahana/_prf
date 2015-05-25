@@ -174,6 +174,13 @@ class Base(BaseMixin, mongo.Document):
         result = super(Base, self).update(*arg, **to_dunders(kw))
         return result
 
+    def to_dict(self, fields=None):
+        fields = fields or []
+        _d = self.to_mongo().to_dict()
+        if fields:
+            _d = dictset(_d).subset(fields)
+
+        return _d
 
 class DynamicBase(BaseMixin, mongo.DynamicDocument):
     meta = {'abstract': True}
@@ -182,3 +189,10 @@ class DynamicBase(BaseMixin, mongo.DynamicDocument):
         result = super(DynamicBase, self).update(*arg, **to_dunders(kw))
         return result
 
+    def to_dict(self, fields=None):
+        fields = fields or []
+        _d = self.to_mongo().to_dict()
+        if fields:
+            _d = dictset(_d).subset(fields)
+
+        return _d
