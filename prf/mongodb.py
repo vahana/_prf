@@ -91,7 +91,6 @@ class BaseMixin(object):
     @classmethod
     def process_empty_op(cls, name, value):
         try:
-            import ipdb;ipdb.set_trace()
             _default = Field2Default[type(getattr(cls, name))]
         except KeyError:
             raise prf.exc.HTTPBadRequest(
