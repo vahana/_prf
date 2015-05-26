@@ -23,6 +23,14 @@ def includeme(config):
                       under='pyramid.tweens.excview_tween_factory')
 
 
+Field2Default = {
+    mongo.StringField : '',
+    mongo.ListField : [],
+    mongo.SortedListField : [],
+    mongo.DictField : {},
+    mongo.MapField : {},
+}
+
 def mongo_connect(settings):
     settings = dictset(settings)
     db = settings['mongodb.db']
@@ -76,27 +84,46 @@ class MongoJSONEncoder(_JSONEncoder):
         return super(MongoJSONEncoder, self).default(obj)
 
 
-def prep_mongo_params(params):
-    list_ops = ('in', 'nin', 'all')
-    for key in params:
-        pos = key.rfind('__')
-        if pos == -1:
-            continue
-
-        if key[pos+2:] in list_ops:
-            params[key] = split_strip(params[key])
-
-    return params
-
-
 class BaseMixin(object):
 
     Q = mongo.Q
 
     @classmethod
+    def process_empty_op(cls, name, value):
+        try:
+            import ipdb;ipdb.set_trace()
+            _default = Field2Default[type(getattr(cls, name))]
+        except KeyError:
+            raise prf.exc.HTTPBadRequest(
+                'Can not use `empty` for field `%s` of type %s'\
+                    % (name, type(getattr(cls, name))))
+
+        if int(value) == 0:
+            return {'%s__ne' % name: _default}
+        else:
+            return {name: _default}
+
+    @classmethod
+    def prep_mongo_params(cls, params):
+        list_ops = ('in', 'nin', 'all')
+        for key in params:
+            pos = key.rfind('__')
+            if pos == -1:
+                continue
+
+            op = key[pos+2:]
+            if op in list_ops:
+                params[key] = split_strip(params[key])
+
+            elif op == 'empty':
+                params.update(cls.process_empty_op(key[:pos], params.pop(key)))
+
+        return params
+
+    @classmethod
     def get_collection(cls, **params):
         params, specials = prep_params(params)
-        params = prep_mongo_params(params)
+        params = cls.prep_mongo_params(params)
 
         log.debug(params)
 
