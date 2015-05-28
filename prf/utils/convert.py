@@ -105,13 +105,19 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
     return _dict
 
 
-def as_datetime(dset, name, allow_empty=False):
+def as_datetime(dset, name, allow_empty=False, default=None, pop=False):
+    default = default or datetime(
+            year=datetime.now().year, month=1, day=1)
+
     if name in dset:
         try:
-            dset[name] = dt_parser.parse(dset[name])
+            dset[name] = dt_parser.parse(dset[name], default=default)
         except ValueError as e:
             raise DValueError(e)
     elif not allow_empty:
         raise DKeyError("Missing '%s'" % name)
 
-    return dset.get(name, None)
+    if pop:
+        return dset.pop(name, None)
+    else:
+        return dset.get(name, None)

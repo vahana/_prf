@@ -208,6 +208,7 @@ class Base(BaseMixin, mongo.Document):
 
         return _d
 
+
 class DynamicBase(BaseMixin, mongo.DynamicDocument):
     meta = {'abstract': True}
 
