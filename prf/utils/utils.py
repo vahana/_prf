@@ -198,8 +198,7 @@ def normalize_domain(url):
         return url
 
     elements = urlparse(url)
-    domain = elements.netloc if elements.scheme else elements.path
-    return domain.split('www.')[-1]
+    return (elements.netloc+elements.path).split('www.')[-1]
 
 
 def resolve_host_to(url, newhost):

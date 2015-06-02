@@ -171,3 +171,30 @@ class AccountView(object):
 
         return prf.exc.HTTPOk(headers=headers)
 
+
+from prf.mongodb import get_document_cls
+from prf.auth import BaseACL
+
+class MongoACL(BaseACL):
+    def get_item(self, key):
+        try:
+            return get_document_cls(key)
+        except ValueError:
+            raise prf.exc.HTTPNotFound('model %s not found' % key)
+
+
+class MongoView(BaseView):
+    _acl = MongoACL
+
+    def show(self, id):
+        objs = get_document_cls(id).get_collection(**self._params)
+
+        if '_count' in self._params:
+            return objs
+
+        return dict(
+            total = objs._total,
+            count = len(objs),
+            data = [each.to_dict() for each in objs]
+        )
+
