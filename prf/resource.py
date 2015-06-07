@@ -59,7 +59,7 @@ def get_uri_elements(resource):
 
             path_segs.append('%s/{%s}' % (anc.collection_name, id_full))
         else:
-            path_segs.append(res.member_name)
+            path_segs.append(anc.member_name)
 
     if path_segs:
         path_prefix = '/'.join(path_segs)

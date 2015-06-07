@@ -180,7 +180,7 @@ class MongoACL(BaseACL):
         try:
             return get_document_cls(key)
         except ValueError:
-            raise prf.exc.HTTPNotFound('model %s not found' % key)
+            raise prf.exc.HTTPNotFound('model `%s` not found' % key)
 
 
 class MongoView(BaseView):

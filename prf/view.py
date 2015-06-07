@@ -8,6 +8,7 @@ from pyramid.response import Response
 import prf.exc
 from prf.utils import dictset, issequence, prep_params, process_fields,\
                       json_dumps
+from prf.serializer import DynamicSchema
 
 log = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class BaseView(object):
 
     __view_mapper__ = ViewMapper
     _default_renderer = 'json'
-    _serializer = None
+    _serializer = DynamicSchema
     _acl = None
     _id_name = None
 
@@ -82,6 +83,7 @@ class BaseView(object):
         self.context = context
         self.request = request
         self._model_class = None
+        self.return_many = None
 
         self.process_params()
 
@@ -129,26 +131,7 @@ class BaseView(object):
 
         raise AttributeError(attr)
 
-    def is_serializable(self, objs, many):
-        if not self._serializer:
-            return False
-
-        if many:
-            if not issequence(objs):
-                return False
-            elif len(objs) > 0:
-                obj = objs[0]
-            else:
-                return True
-        else:
-            obj = objs
-
-        return self._serializer._model and isinstance(obj, self._serializer._model)
-
-    def serialize(self, objs, many=False):
-        if not self.is_serializable(objs, many):
-            return objs, None
-
+    def serialize(self, obj, many):
         kw = {}
         fields = self._params.get('_fields')
 
@@ -157,34 +140,61 @@ class BaseView(object):
 
         serializer = self._serializer(context={'request':self.request},
                                         many=many, strict=True, **kw)
-        data = serializer.dump(objs).data
 
-        if many:
-            return data, len(data)
+        return serializer.dump(obj).data
+
+    def process_builtins(self, obj):
+        if not isinstance(obj, (list, dict)):
+            return obj
+
+        fields = self._params.get('_fields')
+
+        def process_dict(d_):
+            if not fields:
+                return d_
+            else:
+                return dictset(d_).subset(fields)
+
+        if isinstance(obj, dict):
+            return process_dict(obj)
+
+        elif isinstance(obj, list):
+            if not fields:
+                return {'data': obj, 'count': len(obj)}
+            else:
+                data = []
+                for each in obj:
+                    if isinstance(each, dict):
+                        each = process_dict(each)
+
+                    data.append(each)
+                return data
+
+    def _process(self, data):
+        if isinstance(data, (list, dict)):
+            return self.process_builtins(data)
+
+        serielized = self.serialize(data, many=self.return_many)
+        count = len(serielized)
+        total = getattr(data, '_total', count)
+
+        if self.return_many:
+            serielized = self.add_meta(serielized)
+            return dict(
+                total = total,
+                count = count,
+                data = serielized
+            )
         else:
-            return data
+            return serielized
 
     def _index(self, **kw):
-        objs = self.index(**kw)
-        serielized, count = self.serialize(objs, many=True)
-
-        total = getattr(objs, '_total', count)
-
-        serielized = self.add_meta(serielized)
-
-        return dict(
-            total = total,
-            count = count,
-            data = serielized
-        )
+        self.return_many = True
+        return self._process(self.index(**kw))
 
     def _show(self, **kw):
-        obj = self.show(**kw)
-        if isinstance(obj, dict):
-            fields = self._params.get('_fields')
-            return dictset(obj).subset(fields) if fields else obj
-
-        return self.serialize(obj, many=False)
+        self.return_many = False
+        return self._process(self.show(**kw))
 
     def _create(self, **kw):
         obj = self.create(**kw)

@@ -1,6 +1,6 @@
 import uuid
 from marshmallow import Schema, fields
-from prf.utils import dictset
+from prf.utils import dictset, issequence
 import prf.exc
 
 
@@ -18,6 +18,23 @@ class BaseSchema(Schema):
 
     def make_object(self, data):
         return self._model(**data)
+
+
+class DynamicSchema(object):
+    def __init__(self, **kw):
+        self.only = []
+        self.exclude = []
+        self.__dict__.update(kw)
+
+    def dump(self, objs):
+        fields = self.only + ['-%s'%each for each in self.exclude]
+
+        if self.many:
+            objs = [each.to_dict(fields) for each in objs]
+        else:
+            objs = objs.to_dict(fields)
+
+        return dictset(data=objs)
 
 
 @BaseSchema.error_handler

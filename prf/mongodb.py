@@ -192,6 +192,18 @@ class BaseMixin(object):
         for key, val in _dict.items():
             setattr(self, key, val)
 
+    def to_dict(self, fields=None):
+        fields = fields or []
+        _d = self.to_mongo().to_dict()
+
+        if '_id' in _d:
+            _d['id']=_d.pop('_id')
+
+        if fields:
+            _d = dictset(_d).subset(fields)
+
+        return _d
+
 
 class Base(BaseMixin, mongo.Document):
     meta = {'abstract': True}
@@ -200,14 +212,6 @@ class Base(BaseMixin, mongo.Document):
         result = super(Base, self).update(*arg, **to_dunders(kw))
         return result
 
-    def to_dict(self, fields=None):
-        fields = fields or []
-        _d = self.to_mongo().to_dict()
-        if fields:
-            _d = dictset(_d).subset(fields)
-
-        return _d
-
 
 class DynamicBase(BaseMixin, mongo.DynamicDocument):
     meta = {'abstract': True}
@@ -215,11 +219,3 @@ class DynamicBase(BaseMixin, mongo.DynamicDocument):
     def update(self, *arg, **kw):
         result = super(DynamicBase, self).update(*arg, **to_dunders(kw))
         return result
-
-    def to_dict(self, fields=None):
-        fields = fields or []
-        _d = self.to_mongo().to_dict()
-        if fields:
-            _d = dictset(_d).subset(fields)
-
-        return _d

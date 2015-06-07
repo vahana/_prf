@@ -1,3 +1,4 @@
+import re
 import json
 import logging
 from urlparse import urlparse, parse_qs
@@ -100,6 +101,11 @@ def snake2camel(text):
     return ''.join([a.title() for a in text.split('_')])
 
 
+def camel2snake(name):
+    s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
+    return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
 def resolve(name, module=None):
     """Resole dotted name to python module
     """
@@ -149,7 +155,7 @@ def maybe_dotted(module, throw=True):
 
 def issequence(arg):
     """Return True if `arg` acts as a list and does not look like a string."""
-    return not hasattr(arg, 'strip') and hasattr(arg, '__getitem__') \
+    return not hasattr(arg, 'strip') and hasattr(arg, '__getitem__')\
         or hasattr(arg, '__iter__')
 
 
