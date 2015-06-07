@@ -187,14 +187,6 @@ class MongoView(BaseView):
     _acl = MongoACL
 
     def show(self, id):
+        self.return_many = True
         objs = get_document_cls(id).get_collection(**self._params)
-
-        if '_count' in self._params:
-            return objs
-
-        return dict(
-            total = objs._total,
-            count = len(objs),
-            data = [each.to_dict() for each in objs]
-        )
-
+        return objs

@@ -174,6 +174,9 @@ class BaseView(object):
         if isinstance(data, (list, dict)):
             return self.process_builtins(data)
 
+        if '_count' in self._params:
+            return data
+
         serielized = self.serialize(data, many=self.return_many)
         count = len(serielized)
         total = getattr(data, '_total', count)
