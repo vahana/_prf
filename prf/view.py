@@ -90,11 +90,11 @@ class BaseView(object):
         # no accept headers, use default
         if '' in request.accept:
             request.override_renderer = self._default_renderer
+
         elif 'application/json' in request.accept:
-
             request.override_renderer = 'prf_json'
-        elif 'text/plain' in request.accept:
 
+        elif 'text/plain' in request.accept:
             request.override_renderer = 'string'
 
         self.init()
@@ -104,8 +104,9 @@ class BaseView(object):
         #to override in children
 
     def process_params(self):
-        params = self.request.params.mixed()
         ctype = self.request.content_type
+        params = self.request.params.mixed()
+
         if self.request.method in ['POST', 'PUT', 'PATCH']:
             if ctype == 'application/json':
                 try:
@@ -114,13 +115,23 @@ class BaseView(object):
                     log.error("Excpeting JSON. Received: '%s'. Request: %s %s"
                               ,self.request.body, self.request.method, self.request.url)
 
-        self._params = dictset()
+            else:
+                for key, val in params.items():
+                    try:
+                        params[key] = json.loads(val)
+                    except (ValueError, TypeError):
+                        pass
 
+            self._params = dictset(params)
+
+        self._params = dictset()
         for key, val in params.items():
             try:
                 self._params.merge(dictset.from_dotted(key, val))
             except:
-                raise prf.exc.HTTPBadRequest('Can not mix dotted and regular param names')
+                raise prf.exc.HTTPBadRequest(
+                    'Can not mix dotted and regular param names: %s'
+                     % key)
 
         if self.request.method == 'GET':
             self._params.setdefault('_limit', 20)

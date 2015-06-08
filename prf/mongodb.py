@@ -4,7 +4,7 @@ from bson import ObjectId, DBRef
 import mongoengine as mongo
 
 import prf.exc
-from prf.utils import dictset, prep_params, split_strip, to_dunders
+from prf.utils import dictset, prep_params, split_strip, to_dunders, DValueError
 from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
@@ -13,7 +13,7 @@ def get_document_cls(name):
     try:
         return mongo.document.get_document(name)
     except Exception as e:
-        raise ValueError('`%s` does not exist in mongo db' % name)
+        raise DValueError('`%s` document does not exist' % name)
 
 def includeme(config):
     mongo_connect(config.registry.settings)

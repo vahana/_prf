@@ -177,11 +177,7 @@ from prf.auth import BaseACL
 
 class MongoACL(BaseACL):
     def get_item(self, key):
-        try:
-            return get_document_cls(key)
-        except ValueError:
-            raise prf.exc.HTTPNotFound('model `%s` not found' % key)
-
+        return get_document_cls(key)
 
 class MongoView(BaseView):
     _acl = MongoACL
