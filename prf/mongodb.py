@@ -124,22 +124,28 @@ class BaseMixin(object):
         params, specials = prep_params(params)
         params = cls.prep_mongo_params(params)
 
+        start = specials._offset
+        end = specials._offset+specials._limit
+
         log.debug(params)
 
         query_set = cls.objects
 
         query_set = query_set(**params)
         _total = query_set.count()
+
+        if specials._distinct:
+            return query_set.distinct(specials._distinct)[start:end]
+
         if specials.asbool('_count', False):
             return _total
 
         if specials._sort:
             query_set = query_set.order_by(*specials._sort)
 
-        query_set = query_set[specials._offset:specials._offset + specials._limit]
 
-        log.debug('get_collection.query_set: %s(%s)', cls.__name__,
-              query_set._query)
+        query_set = query_set[start:end]
+        log.debug('get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
         query_set._total = _total
 
         return query_set

@@ -103,6 +103,11 @@ class BaseView(object):
         pass
         #to override in children
 
+    @property
+    def resource(self):
+        rname = self.request.matched_route.name
+        return self.request.registry['prf.resources_map'][rname]
+
     def process_params(self):
         ctype = self.request.content_type
         params = self.request.params.mixed()
@@ -281,8 +286,16 @@ class BaseView(object):
             for each in collection:
                 try:
                     url = urlparse(self.request.current_route_url())._replace(query='')
-                    each.setdefault('self', '%s/%s' % (url.geturl(),
-                                    urllib.quote(str(each[self._id_name or 'id']))))
+                    id_name = self._id_name or 'id'
+                    val = urllib.quote(str(each[id_name]))
+
+                    if self.resource.is_singular: # show action returned a collection
+                        _id = '?%s=%s' % (id_name, val)
+                    else:
+                        _id = '/%s' % val
+
+                    each.setdefault('self', '%s%s' % (url.geturl(), _id))
+
                 except TypeError:
                     pass
         except (TypeError, KeyError):

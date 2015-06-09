@@ -4,6 +4,7 @@ import logging
 from urlparse import urlparse, parse_qs
 from urllib import urlencode
 from datetime import date, datetime
+import requests
 
 log = logging.getLogger(__name__)
 
@@ -175,6 +176,7 @@ def prep_params(params):
     _start = params.pop('_start', None)
 
     specials._offset, specials._limit = process_limit(_start, _page, _limit)
+    specials._distinct = params.pop('_distinct', None)
 
     return dictset(params), specials
 
@@ -242,3 +244,20 @@ def to_dunders(d, only=None):
             new_d[key] = d[key]
 
     return new_d
+
+
+def validate_url(url, method='GET'):
+    from requests import Session, Request
+    try:
+        return Session().send(Request(method, url).prepare()).status_code
+    except Exception:
+        raise DValueError('URL not reachable `%s`' % url)
+
+
+def is_url(text, validate=False):
+    if text.startswith('http'):
+        if validate:
+            return validate_url(text)
+        else:
+            return True
+    return False
