@@ -88,11 +88,12 @@ class TestUtils(object):
         assert issequence(tuple) is True
 
     def test_prep_params(self):
-        assert ({}, {'_count': False, 
-                     '_fields': [], 
-                     '_limit': 1, 
-                     '_offset': 0, 
-                     '_sort': []}) == prep_params({})
+        assert ({}, {'_count': False,
+                     '_fields': [],
+                     '_limit': 1,
+                     '_offset': 0,
+                     '_sort': [],
+                     '_distinct': None}) == prep_params({})
 
         assert prep_params(
             dict(
@@ -100,11 +101,13 @@ class TestUtils(object):
                 _count=1,
                 _fields='a,b',
                 _limit=10,
-                _sort = '-a,b'
+                _sort = '-a,b',
+                _distinct = 'abc'
             )) == (
                 dict(a = 1, b = 3),
-                dict(_count = True, 
-                     _fields =  ['a', 'b'], 
-                    _limit = 10, 
-                    _offset = 0, 
-                    _sort = ['-a', 'b']))
+                dict(_count = True,
+                     _fields =  ['a', 'b'],
+                    _limit = 10,
+                    _offset = 0,
+                    _sort = ['-a', 'b'],
+                    _distinct = 'abc'))
