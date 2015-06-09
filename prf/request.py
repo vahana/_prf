@@ -70,11 +70,9 @@ class Request(object):
             params = self.json(resp) or {'description':resp.text}
             raise prf.exc.exception_response(status_code=resp.status_code,
                                     **params)
-        else:
-            log.error(str(self.json(resp)))
-            return resp
 
-        return None
+        log.error(str(self.json(resp)))
+        return resp
 
     def from_cache(self, resp):
         return hasattr(resp, 'from_cache') and resp.from_cache

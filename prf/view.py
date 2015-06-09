@@ -194,12 +194,10 @@ class BaseView(object):
             return data
 
         serielized = self.serialize(data, many=many)
-        count = len(serielized)
-        total = getattr(data, '_total', count)
 
         return dict(
-            total = total,
-            count = count,
+            total = getattr(data, '_total', len(serielized)),
+            count = len(serielized),
             data = self.add_meta(serielized)
         )
 

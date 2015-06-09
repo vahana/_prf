@@ -135,6 +135,9 @@ class BaseMixin(object):
         _total = query_set.count()
 
         if specials._distinct:
+            if specials.asbool('_count', False):
+                return len(query_set.distinct(specials._distinct))
+
             return query_set.distinct(specials._distinct)[start:end]
 
         if specials.asbool('_count', False):
@@ -146,8 +149,8 @@ class BaseMixin(object):
 
         query_set = query_set[start:end]
         log.debug('get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
-        query_set._total = _total
 
+        query_set._total = _total
         return query_set
 
     @classmethod

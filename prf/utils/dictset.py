@@ -146,7 +146,7 @@ class dictset(dict):
             return cls({key:val})
         return cls({key: cls.from_dotted(sufix, val)})
 
-    def has(self, key, check_type):
+    def has(self, key, check_type=basestring):
         if key in self:
             if not isinstance(self[key], check_type):
                 raise DValueError('`%s` must be `%s`' % (key, check_type))
