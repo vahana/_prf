@@ -206,7 +206,7 @@ class BaseView(object):
 
     def _show(self, **kw):
         data = self._process(self.show(**kw), many=self.show_returns_many)
-        return data if self.show_returns_many else data['data']
+        return data['data'] if self.show_returns_many else data
 
     def _create(self, **kw):
         obj = self.create(**kw)
