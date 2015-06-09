@@ -187,13 +187,13 @@ class BaseView(object):
                 return data
 
     def _process(self, data, many):
-        if isinstance(data, (list, dict)):
-            return self.process_builtins(data)
-
         if '_count' in self._params:
             return data
 
-        serielized = self.serialize(data, many=many)
+        if isinstance(data, (list, dict)):
+            serielized = self.process_builtins(data)
+        else:
+            serielized = self.serialize(data, many=many)
 
         return dict(
             total = getattr(data, '_total', len(serielized)),
@@ -206,7 +206,7 @@ class BaseView(object):
 
     def _show(self, **kw):
         data = self._process(self.show(**kw), many=self.show_returns_many)
-        return data['data'] if self.show_returns_many else data
+        return data['data'] if self.show_returns_many == False else data
 
     def _create(self, **kw):
         obj = self.create(**kw)
