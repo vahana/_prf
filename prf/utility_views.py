@@ -183,6 +183,6 @@ class MongoView(BaseView):
     _acl = MongoACL
 
     def show(self, id):
-        self.return_many = True
+        self.show_returns_many = True
         objs = get_document_cls(id).get_collection(**self._params)
         return objs

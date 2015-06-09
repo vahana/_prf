@@ -83,7 +83,7 @@ class BaseView(object):
         self.context = context
         self.request = request
         self._model_class = None
-        self.return_many = None
+        self.show_returns_many = False
 
         self.process_params()
 
@@ -186,34 +186,29 @@ class BaseView(object):
                     data.append(each)
                 return data
 
-    def _process(self, data):
+    def _process(self, data, many):
         if isinstance(data, (list, dict)):
             return self.process_builtins(data)
 
         if '_count' in self._params:
             return data
 
-        serielized = self.serialize(data, many=self.return_many)
+        serielized = self.serialize(data, many=many)
         count = len(serielized)
         total = getattr(data, '_total', count)
 
-        if self.return_many:
-            serielized = self.add_meta(serielized)
-            return dict(
-                total = total,
-                count = count,
-                data = serielized
-            )
-        else:
-            return serielized
+        return dict(
+            total = total,
+            count = count,
+            data = self.add_meta(serielized)
+        )
 
     def _index(self, **kw):
-        self.return_many = True
-        return self._process(self.index(**kw))
+        return self._process(self.index(**kw), many=True)
 
     def _show(self, **kw):
-        self.return_many = False
-        return self._process(self.show(**kw))
+        data = self._process(self.show(**kw), many=self.show_returns_many)
+        return data if self.show_returns_many else data['data']
 
     def _create(self, **kw):
         obj = self.create(**kw)
@@ -284,7 +279,7 @@ class BaseView(object):
                     id_name = self._id_name or 'id'
                     val = urllib.quote(str(each[id_name]))
 
-                    if self.resource.is_singular: # show action returned a collection
+                    if self.show_returns_many == True: # show action returned a collection
                         _id = '?%s=%s' % (id_name, val)
                     else:
                         _id = '/%s' % val
