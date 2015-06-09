@@ -228,24 +228,19 @@ class BaseView(object):
                         resource=self.serialize(obj, many=False))
 
     def _update(self, **kw):
-        self.update(**kw)
-        return prf.exc.HTTPOk()
+        return self.update(**kw) or prf.exc.HTTPOk()
 
     def _patch(self, **kw):
-        self.patch(**kw)
-        return prf.exc.HTTPOk()
+        return self.patch(**kw) or prf.exc.HTTPOk()
 
     def _delete(self, **kw):
-        self.delete(**kw)
-        return prf.exc.HTTPOk()
+        return self.delete(**kw) or prf.exc.HTTPOk()
 
     def _update_many(self, **kw):
-        self.update_many(**kw)
-        return prf.exc.HTTPOk()
+        return self.update_many(**kw) or prf.exc.HTTPOk()
 
     def _delete_many(self, **kw):
-        self.delete_many(**kw)
-        return prf.exc.HTTPOk()
+        return self.delete_many(**kw) or prf.exc.HTTPOk()
 
     def not_allowed_action(self, *a, **k):
         raise prf.exc.HTTPMethodNotAllowed()
