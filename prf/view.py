@@ -176,7 +176,7 @@ class BaseView(object):
 
         elif isinstance(obj, list):
             if not fields:
-                return {'data': obj, 'count': len(obj)}
+                return obj
             else:
                 data = []
                 for each in obj:
