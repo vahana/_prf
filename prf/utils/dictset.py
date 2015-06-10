@@ -146,12 +146,15 @@ class dictset(dict):
             return cls({key:val})
         return cls({key: cls.from_dotted(sufix, val)})
 
-    def has(self, key, check_type=basestring):
+    def has(self, key, check_type=basestring, allowed_empty=False, err=''):
         if key in self:
             if not isinstance(self[key], check_type):
-                raise DValueError('`%s` must be `%s`' % (key, check_type))
-            return True
-        return False
+                raise DValueError(err or ('`%s` must be `%s`' % (key, check_type)))
+        else:
+            raise DValueError(err or 'Missing key: `%s`' % key)
+
+        if not allowed_empty and not self[key]:
+            raise DValueError(err or 'Empty key: `%s`' % key)
 
     def asbool(self, *arg, **kw):
         return asbool(self, *arg, **kw)

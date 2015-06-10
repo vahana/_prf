@@ -129,6 +129,7 @@ class BaseView(object):
 
             self._params = dictset(params)
 
+        self._raw_params = params
         self._params = dictset()
         for key, val in params.items():
             try:
@@ -291,6 +292,16 @@ class BaseView(object):
         finally:
             return collection
 
+    def validate_dict_param(self, name, keys=[]):
+        self._params.has(name, dict)
+        for key in keys:
+            self._params[name].has(key, err='`%s.%s` missing or empty'\
+                            % (name, key))
+
+    def get_settings(self, key=None):
+        if key:
+            return self.request.registry.settings[key]
+        return self.request.registry.settings
 
 class NoOp(BaseView):
 
