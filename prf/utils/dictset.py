@@ -173,3 +173,6 @@ class dictset(dict):
 
     def as_datetime(self, *arg, **kw):
         return as_datetime(self, *arg, **kw)
+
+    def asstr(self, *arg, **kw):
+        return asstr(self, *arg, **kw)

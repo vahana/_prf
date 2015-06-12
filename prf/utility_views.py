@@ -127,13 +127,13 @@ class APIView(BaseView):
                     for r in self._get_routes().values()])}
 
 
-class AccountView(object):
+class AccountView(BaseView):
 
     _user_model = None
 
-    def __init__(self, request):
-        self.request = request
-        self._params = dictset(self.request.params)
+    # def __init__(self, request):
+        # self.request = request
+        # self._params = dictset(self.request.params)
 
     @classmethod
     def set_user_model(cls, model):
@@ -148,8 +148,8 @@ class AccountView(object):
         cls._user_model = model
 
     def login(self):
-        login = self._params['login']
-        password = self._params['password']
+        login = self._params.asstr('login')
+        password = self._params.asstr('password')
         next = self._params.get('next', '')
 
         success, user_id = self._user_model.authenticate(login, password)

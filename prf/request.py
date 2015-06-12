@@ -54,6 +54,12 @@ class Request(object):
         if headers:
             self.session.headers.update(headers)
 
+    def login(self, url, login, password):
+        resp = Request(url).post(data={'login':login,
+                            'password':password})
+
+        self.session.cookies.update(resp.cookies)
+
     def json(self, resp):
         try:
             return dictset(resp.json())

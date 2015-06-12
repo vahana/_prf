@@ -68,6 +68,11 @@ def asfloat(dset, value):
     return float(value)
 
 
+@parametrize
+def asstr(dset, value):
+    return str(value)
+
+
 def asdict(dset, name, _type=None, _set=False, pop=False):
     """
     Turn this 'a:2,b:blabla,c:True,a:'d' to {a:[2, 'd'], b:'blabla', c:True}
