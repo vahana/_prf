@@ -69,7 +69,7 @@ class Request(object):
 
     def is_json(self, data):
         return isinstance(data, (tuple, list, dict)) \
-                and self.session.headers['content-type'] == 'application/json'
+            and self.session.headers['content-type'] == 'application/json'
 
     def raise_or_log(self, resp):
         if self._raise:

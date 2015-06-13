@@ -1,3 +1,4 @@
+import urllib, re
 from prf.utils.utils import process_fields, DKeyError, DValueError
 from prf.utils.convert import *
 
@@ -5,9 +6,9 @@ from prf.utils.convert import *
 def get_seg(d, path):
     for seg in path:
         d = d[seg]
-    if not isinstance(d, dict):
-        raise ValueError(
-            '`%s` must be (derived from) dict. Got `%s` instead' % (d, type(d)))
+    # if not isinstance(d, dict):
+    #     raise ValueError(
+    #         '`%s` must be (derived from) dict. Got `%s` instead' % (d, type(d)))
 
     return d
 
@@ -107,6 +108,27 @@ class dictset(dict):
 
         return dictset()
 
+    def asbool(self, *arg, **kw):
+        return asbool(self, *arg, **kw)
+
+    def aslist(self, *arg, **kw):
+        return aslist(self, *arg, **kw)
+
+    def asint(self, *arg, **kw):
+        return asint(self, *arg, **kw)
+
+    def asfloat(self, *arg, **kw):
+        return asfloat(self, *arg, **kw)
+
+    def asdict(self, *arg, **kw):
+        return asdict(self, *arg, **kw)
+
+    def as_datetime(self, *arg, **kw):
+        return as_datetime(self, *arg, **kw)
+
+    def asstr(self, *arg, **kw):
+        return asstr(self, *arg, **kw)
+
     def remove(self, keys):
         only, _ = process_fields(keys)
         return dictset([[k, v] for (k, v) in self.items() if k not in only])
@@ -140,11 +162,22 @@ class dictset(dict):
     @classmethod
     def from_dotted(cls, dotkey, val):
         # 'a.b.c', 100 -> {a:{b:{c:100}}}
+        # 'a.b.1', 100 -> {a:{b:[None,100]}}
 
         key, _, sufix = dotkey.partition('.')
+
         if not sufix:
-            return cls({key:val})
-        return cls({key: cls.from_dotted(sufix, val)})
+            if key.isdigit():
+                _lst = [None]*int(key) + [val]
+                return _lst
+            else:
+                return cls({key:val})
+
+        if key.isdigit():
+            _lst = [None]*int(key) + [cls.from_dotted(sufix, val)]
+            return _lst
+        else:
+            return cls({key: cls.from_dotted(sufix, val)})
 
     def has(self, key, check_type=basestring, allowed_empty=False, err=''):
         if key in self:
@@ -156,23 +189,141 @@ class dictset(dict):
         if not allowed_empty and not self[key]:
             raise DValueError(err or 'Empty key: `%s`' % key)
 
-    def asbool(self, *arg, **kw):
-        return asbool(self, *arg, **kw)
+    def transform(self, rules):
+        _d = dictset()
 
-    def aslist(self, *arg, **kw):
-        return aslist(self, *arg, **kw)
+        flat_dict = self.flat()
+        flat_rules = rules.flat()
+        # flat_dict.update(self)
 
-    def asint(self, *arg, **kw):
-        return asint(self, *arg, **kw)
+        for path, val in flat_dict.items():
+            if path in rules:
+                _d.merge(dictset.from_dotted(rules[path], val))
 
-    def asfloat(self, *arg, **kw):
-        return asfloat(self, *arg, **kw)
+        return _d
 
-    def asdict(self, *arg, **kw):
-        return asdict(self, *arg, **kw)
+    @classmethod
+    def build_from(cls, source, target_rules):
+        _d = dictset()
 
-    def as_datetime(self, *arg, **kw):
-        return as_datetime(self, *arg, **kw)
+        flat_rules = dictset(target_rules).flat()
+        flat_source = dictset(source).flat()
 
-    def asstr(self, *arg, **kw):
-        return asstr(self, *arg, **kw)
+        for path, val in flat_rules.items():
+            _d[path] = flat_source.get(val, None)
+
+        return _d.unflat()
+
+    def flat(self):
+        return dictset(dict_to_args(self))
+
+    def unflat(self):
+        return dictset(args_to_dict(self))
+
+
+#based on jsonurl
+
+def query_string(d):
+    args = dict_to_args(d)
+    keys = args.keys()
+    keys.sort()
+    return "&".join([key + "=" + args[key] for key in keys])
+
+def parse_query(q):
+    q = q.strip()
+    if q == "":
+        return {}
+    if q.startswith("?"):
+        q = q[1:]
+    arr = [pair.split("=") for pair in q.split("&")]
+    args = {}
+    for k, v in arr:
+        args[k] = v
+    return args_to_dict(args)
+
+def type_cast(value):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return value
+
+
+def list_to_args(l):
+    args = {}
+    pos = 0
+    for i in l:
+        if isinstance(i, dict):
+            sub = dict_to_args(i)
+            for s, nv in sub.items():
+                args[str(pos) + "." + s] = nv
+        elif isinstance(i, list):
+            sub = list_to_args(i)
+            for s, nv in sub.items():
+                args[str(pos) + "." + s] = nv
+        else:
+            args[str(pos)] = str(i)
+        pos += 1
+    return args
+
+
+def dict_to_args(d):
+    args = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            sub = dict_to_args(v)
+            for s, nv in sub.items():
+                args["%s.%s" % (k,s)] = nv
+        elif isinstance(v, list):
+            sub = list_to_args(v)
+            for s, nv in sub.items():
+                args["%s.%s" % (k,s)] = nv
+        else:
+            args[k] = unicode(v)
+    return args
+
+def dot_split(s):
+    return [part for part in re.split("(?<!\.)\.(?!\.)", s)]
+
+def args_to_dict(args):
+    d = {}
+    keys = args.keys()
+    keys.sort()
+
+    for arg in keys:
+        value = args[arg]
+
+        #bits = arg.split(".")
+        bits = dot_split(arg)
+        ctx = d
+
+        for i in range(len(bits)):
+            bit = bits[i]
+            last = not (i < len(bits) - 1)
+
+            next_is_dict = False
+            if not last:
+                try:
+                    int(bits[i + 1])
+                except ValueError:
+                    next_is_dict = True
+
+            if isinstance(ctx, dict):
+                if not ctx.has_key(bit):
+                    if not last:
+                        ctx[bit] = {} if next_is_dict else []
+                        ctx = ctx[bit]
+                    else:
+                        ctx[bit] = type_cast(value)
+                        ctx = None
+                else:
+                    ctx = ctx[bit]
+            elif isinstance(ctx, list):
+                if not last:
+                    if int(bit) > len(ctx) - 1:
+                        ctx.append({} if next_is_dict else [])
+                    #ctx.append({} if next_is_dict else [])
+                    ctx = ctx[int(bit)]
+                else:
+                    ctx.append(type_cast(value))
+                    ctx = None
+    return d

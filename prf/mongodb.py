@@ -200,6 +200,7 @@ class BaseMixin(object):
     def update_with(self, _dict):
         for key, val in _dict.items():
             setattr(self, key, val)
+        return self
 
     def to_dict(self, fields=None):
         fields = fields or []
