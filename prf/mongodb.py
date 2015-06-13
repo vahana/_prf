@@ -119,6 +119,31 @@ class BaseMixin(object):
 
         return params
 
+
+    @classmethod
+    def get_distinct(cls, queryset, specials):
+        start = specials._offset
+        end = specials._offset+specials._limit
+        reverse = False
+
+        if specials.asbool('_count', False):
+            return len(queryset.distinct(specials._distinct))
+
+        if specials._sort:
+            if len(specials._sort) > 1:
+                raise prf.exc.HTTPBadRequest('Must sort only on distinct')
+
+            _sort = specials._sort[0]
+            if _sort.startswith('-'):
+                reverse = True
+                _sort = _sort[1:]
+
+            if _sort != specials._distinct:
+                raise prf.exc.HTTPBadRequest('Must sort only on distinct')
+
+        return sorted(queryset.distinct(specials._distinct), reverse=reverse)[start:end]
+
+
     @classmethod
     def get_collection(cls, **params):
         params, specials = prep_params(params)
@@ -135,10 +160,7 @@ class BaseMixin(object):
         _total = query_set.count()
 
         if specials._distinct:
-            if specials.asbool('_count', False):
-                return len(query_set.distinct(specials._distinct))
-
-            return query_set.distinct(specials._distinct)[start:end]
+            return cls.get_distinct(query_set, specials)
 
         if specials.asbool('_count', False):
             return _total
