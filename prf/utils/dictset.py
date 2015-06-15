@@ -261,7 +261,7 @@ def list_to_args(l):
             for s, nv in sub.items():
                 args[str(pos) + "." + s] = nv
         else:
-            args[str(pos)] = str(i)
+            args[str(pos)] = unicode(i)
         pos += 1
     return args
 
