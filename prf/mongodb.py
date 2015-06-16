@@ -90,8 +90,9 @@ class BaseMixin(object):
 
     @classmethod
     def process_empty_op(cls, name, value):
+        _field = getattr(cls, name, None)
         try:
-            _default = Field2Default[type(getattr(cls, name))]
+            _default = Field2Default[type(getattr(cls, name)) if _field else mongo.StringField]
         except KeyError:
             raise prf.exc.HTTPBadRequest(
                 'Can not use `empty` for field `%s` of type %s'\
@@ -116,6 +117,9 @@ class BaseMixin(object):
 
             elif op == 'empty':
                 params.update(cls.process_empty_op(key[:pos], params.pop(key)))
+
+            elif op == 'exists':
+                params[key] = int(params[key])
 
         return params
 

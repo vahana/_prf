@@ -189,6 +189,8 @@ class dictset(dict):
         if not allowed_empty and not self[key]:
             raise DValueError(err or 'Empty key: `%s`' % key)
 
+        return True
+
     def transform(self, rules):
         _d = dictset()
 
@@ -208,9 +210,11 @@ class dictset(dict):
 
         flat_rules = dictset(target_rules).flat()
         flat_source = dictset(source).flat()
+        flat_source.update(source)
 
         for path, val in flat_rules.items():
-            _d[path] = flat_source.get(val, None)
+            if val in flat_source:
+                _d[path] = flat_source[val]
 
         return _d.unflat()
 
