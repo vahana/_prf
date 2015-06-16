@@ -84,6 +84,15 @@ def process_tweens(config):
         config.add_tween(tween, over=pyramid.tweens.MAIN)
 
 
+def disable_tweens(config, names=None):
+    from pyramid.interfaces import ITweens
+    tweens = config.registry.queryUtility(ITweens)
+    names = names or tweens.sorter.names[:]
+    for name in names:
+        log.warning('`%s` tween disabled' % name)
+        tweens.sorter.remove(name)
+
+
 def includeme(config):
     log.info('%s %s' % (APP_NAME, __version__))
     settings = dictset(config.get_settings())
@@ -91,6 +100,7 @@ def includeme(config):
     config.add_directive('get_root_resource', get_root_resource)
     config.add_directive('add_error_view', add_error_view)
     config.add_directive('set_default_acl', set_default_acl)
+    config.add_directive('disable_tweens', disable_tweens)
 
     config.add_renderer('json', maybe_dotted('prf.renderers.JsonRenderer'))
 

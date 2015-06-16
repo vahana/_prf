@@ -240,6 +240,12 @@ class BaseMixin(object):
 
         return _d
 
+    @classmethod
+    def delete_if_exists(cls, **params):
+        obj = cls.get(**params)
+        if obj:
+            obj.delete()
+
 
 class Base(BaseMixin, mongo.Document):
     meta = {'abstract': True}
