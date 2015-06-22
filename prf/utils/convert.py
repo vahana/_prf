@@ -6,7 +6,11 @@ from prf.utils.utils import DKeyError, DValueError, split_strip
 def parametrize(func):
 
     def wrapper(dset, name, default=None, raise_on_empty=False, pop=False,
-                            allow_empty=False, set_as=None, **kw):
+                            allow_empty=False, set_as=None, pop_empty=False, **kw):
+
+        if pop_empty:
+            allow_empty=True
+
         if default is None:
             try:
                 value = dset[name]
@@ -17,6 +21,10 @@ def parametrize(func):
                     return
         else:
             value = dset.get(name, default)
+
+        if pop_empty and not value:
+            dset.pop(name, None)
+            return
 
         if raise_on_empty and not value:
             raise DValueError("'%s' can not be empty" % name)
