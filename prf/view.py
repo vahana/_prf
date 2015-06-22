@@ -192,14 +192,16 @@ class BaseView(object):
             return data
 
         if isinstance(data, (list, dict)):
-            serielized = self.process_builtins(data)
+            serialized = self.process_builtins(data)
+            _total = len(serialized)
         else:
-            serielized = self.serialize(data, many=many)
+            serialized = self.serialize(data, many=many)
+            _total = getattr(data, '_total', len(serialized))
 
         return dict(
-            total = getattr(data, '_total', len(serielized)),
-            count = len(serielized),
-            data = self.add_meta(serielized)
+            total = _total,
+            count = len(serialized),
+            data = self.add_meta(serialized)
         )
 
     def _index(self, **kw):

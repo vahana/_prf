@@ -58,9 +58,6 @@ class dictset(dict):
         except KeyError as e:
             raise DKeyError(e.message)
 
-    def __missing__(self, key):
-        raise DKeyError(key)
-
     def __setattr__(self, key, val):
         if isinstance(val, dict):
             val = dictset(val)
@@ -113,6 +110,9 @@ class dictset(dict):
 
     def aslist(self, *arg, **kw):
         return aslist(self, *arg, **kw)
+
+    def asset(self, *arg, **kw):
+        return self.aslist(*arg, unique=True, **kw)
 
     def asint(self, *arg, **kw):
         return asint(self, *arg, **kw)

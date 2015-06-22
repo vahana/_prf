@@ -9,11 +9,13 @@ from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
 
+
 def get_document_cls(name):
     try:
         return mongo.document.get_document(name)
     except Exception as e:
         raise DValueError('`%s` document does not exist' % name)
+
 
 def includeme(config):
     mongo_connect(config.registry.settings)
@@ -150,13 +152,12 @@ class BaseMixin(object):
 
     @classmethod
     def get_collection(cls, **params):
+        log.debug(params)
         params, specials = prep_params(params)
         params = cls.prep_mongo_params(params)
 
         start = specials._offset
         end = specials._offset+specials._limit
-
-        log.debug(params)
 
         query_set = cls.objects
 
@@ -171,7 +172,6 @@ class BaseMixin(object):
 
         if specials._sort:
             query_set = query_set.order_by(*specials._sort)
-
 
         query_set = query_set[start:end]
         log.debug('get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
