@@ -112,7 +112,7 @@ class BaseView(object):
         ctype = self.request.content_type
         params = self.request.params.mixed()
 
-        if self.request.method in ['POST', 'PUT', 'PATCH']:
+        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
             if ctype == 'application/json':
                 try:
                     params.update(self.request.json)

@@ -47,7 +47,12 @@ def asbool(dset, value):
 
 @parametrize
 def aslist(dset, value, sep=',', remove_empty=True, unique=False):
-    _lst = (value if isinstance(value, list) else split_strip(value, sep))
+    if isinstance(value, list):
+        _lst = value
+    elif isinstance(value, basestring):
+        _lst = split_strip(value, sep)
+    else:
+        raise DValueError('`%s` can not convert to list' % value)
 
     if remove_empty:
         _lst = (filter(bool, _lst))
