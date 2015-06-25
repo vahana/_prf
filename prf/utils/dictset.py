@@ -227,24 +227,6 @@ class dictset(dict):
 
 #based on jsonurl
 
-def query_string(d):
-    args = dict_to_args(d)
-    keys = args.keys()
-    keys.sort()
-    return "&".join([key + "=" + args[key] for key in keys])
-
-def parse_query(q):
-    q = q.strip()
-    if q == "":
-        return {}
-    if q.startswith("?"):
-        q = q[1:]
-    arr = [pair.split("=") for pair in q.split("&")]
-    args = {}
-    for k, v in arr:
-        args[k] = v
-    return args_to_dict(args)
-
 def type_cast(value):
     try:
         return int(value)
@@ -253,7 +235,7 @@ def type_cast(value):
 
 
 def list_to_args(l):
-    args = {}
+    args = dictset()
     pos = 0
     for i in l:
         if isinstance(i, dict):
@@ -271,7 +253,7 @@ def list_to_args(l):
 
 
 def dict_to_args(d):
-    args = {}
+    args = dictset()
     for k, v in d.items():
         if isinstance(v, dict):
             sub = dict_to_args(v)
@@ -289,7 +271,7 @@ def dot_split(s):
     return [part for part in re.split("(?<!\.)\.(?!\.)", s)]
 
 def args_to_dict(args):
-    d = {}
+    d = dictset()
     keys = args.keys()
     keys.sort()
 
@@ -314,7 +296,7 @@ def args_to_dict(args):
             if isinstance(ctx, dict):
                 if not ctx.has_key(bit):
                     if not last:
-                        ctx[bit] = {} if next_is_dict else []
+                        ctx[bit] = dictset() if next_is_dict else []
                         ctx = ctx[bit]
                     else:
                         ctx[bit] = type_cast(value)
@@ -324,7 +306,7 @@ def args_to_dict(args):
             elif isinstance(ctx, list):
                 if not last:
                     if int(bit) > len(ctx) - 1:
-                        ctx.append({} if next_is_dict else [])
+                        ctx.append(dictset() if next_is_dict else [])
                     #ctx.append({} if next_is_dict else [])
                     ctx = ctx[int(bit)]
                 else:
