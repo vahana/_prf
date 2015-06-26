@@ -3,7 +3,7 @@ import pytest
 from pyramid.config import Configurator
 
 from prf.resource import Resource, get_view_class, get_uri_elements
-from prf.view import BaseView    
+from prf.view import BaseView
 
 
 class TestResource(object):
@@ -27,7 +27,7 @@ class TestResource(object):
         assert 'uid' in res.__repr__()
 
     def test_get_ancestors(self):
-        root = Resource(self.conf) 
+        root = Resource(self.conf)
         one = root.add('one', view=BaseView)
         assert one.get_ancestors() == []
 
@@ -42,14 +42,14 @@ class TestResource(object):
         assert two.parent == root
         assert two.member_name == 'two'
         assert two.collection_name == 'twos'
-        assert two.uid == 'two'
+        assert two.uid == 'twos'
         assert two.is_singular is False
 
         three = two.add('tree', 'trix', view=BaseView)
         assert three.parent == two
         assert three.member_name == 'tree'
         assert three.collection_name == 'trix'
-        assert three.uid == 'two:tree'
+        assert three.uid == 'twos:trix'
         assert three.is_singular is False
         assert three in two.children
 
@@ -57,7 +57,7 @@ class TestResource(object):
         assert sing.is_singular is True
 
         pref = root.add('five', prefix='pref', view=BaseView)
-        assert pref.uid == 'pref:five'
+        assert pref.uid == 'pref:fives'
 
     def test_add_id_name(self):
         class UserView(BaseView):

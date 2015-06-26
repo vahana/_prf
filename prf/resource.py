@@ -208,7 +208,7 @@ class Resource(object):
         elif collection_name is None:
             collection_name = ''
 
-        uid = ':'.join(filter(bool, [parent.uid, prefix, member_name]))
+        uid = ':'.join(filter(bool, [parent.uid, prefix, collection_name or member_name]))
 
         child_resource = Resource(self.config, member_name=member_name,
                                   collection_name=collection_name,

@@ -37,7 +37,7 @@ class DynamicSchema(object):
 
             return dictset(data=objs)
         except AttributeError as e:
-            raise prf.exc.HTTPBadRequest('%s can not be serialized: %s. Make sure to set `return_many=True`' %\
+            raise prf.exc.HTTPBadRequest('%s can not be serialized: %s. Make sure to set `show_returns_many=True`' %\
                          ('Collection' if self.many else 'Resource', e))
 
 

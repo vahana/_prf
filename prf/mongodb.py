@@ -230,7 +230,7 @@ class BaseMixin(object):
 
     def to_dict(self, fields=None):
         fields = fields or []
-        _d = self.to_mongo().to_dict()
+        _d = dictset(self.to_mongo().to_dict())
 
         if '_id' in _d:
             _d['id']=_d.pop('_id')

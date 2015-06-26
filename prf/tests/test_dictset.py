@@ -126,7 +126,9 @@ class TestDictSet():
             d1.has('a', check_type=basestring)
 
         assert d1.has('a', check_type=int) == True
-        assert d1.has('b', check_type=int) == False
+
+        with pytest.raises(DValueError):
+            d1.has('b', check_type=int)
 
     def test_asbool(self):
         assert dictset(a=True).asbool('a') == True
