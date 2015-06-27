@@ -179,15 +179,23 @@ class dictset(dict):
         else:
             return cls({key: cls.from_dotted(sufix, val)})
 
-    def has(self, key, check_type=basestring, allow_empty=False, err=''):
-        if key in self:
-            if not isinstance(self[key], check_type):
-                raise DValueError(err or ('`%s` must be `%s`' % (key, check_type)))
-        else:
-            raise DValueError(err or 'Missing key: `%s`' % key)
+    def has(self, keys, check_type=basestring, allow_empty=False, err=''):
+        errors = []
+        if isinstance(keys, basestring):
+            keys = [keys]
 
-        if not allow_empty and not self[key]:
-            raise DValueError(err or 'Empty key: `%s`' % key)
+        for key in keys:
+            if key in self:
+                if not isinstance(self[key], check_type):
+                    errors.append(err or ('`%s` must be `%s`' % (key, check_type)))
+
+                if not allow_empty and not self[key]:
+                    errors.append(err or 'Empty key: `%s`' % key)
+            else:
+                errors.append(err or 'Missing key: `%s`' % key)
+
+        if errors:
+            raise DValueError(str(errors))
 
         return True
 
