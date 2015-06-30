@@ -255,7 +255,7 @@ def list_to_args(l):
             for s, nv in sub.items():
                 args[str(pos) + "." + s] = nv
         else:
-            args[str(pos)] = unicode(i)
+            args[str(pos)] = i
         pos += 1
     return args
 
@@ -272,7 +272,7 @@ def dict_to_args(d):
             for s, nv in sub.items():
                 args["%s.%s" % (k,s)] = nv
         else:
-            args[k] = unicode(v)
+            args[k] = v
     return args
 
 def dot_split(s):
