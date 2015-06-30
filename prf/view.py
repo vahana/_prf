@@ -297,8 +297,8 @@ class BaseView(object):
     def validate_dict_param(self, name, keys=[]):
         self._params.has(name, dict)
         for key in keys:
-            self._params[name].has(key, err='`%s.%s` missing or empty'\
-                            % (name, key))
+            self._params[name].has(key, check_type=None,
+                        err='`%s.%s` missing or empty' % (name, key))
 
     def get_settings(self, key=None):
         if key:

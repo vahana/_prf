@@ -17,6 +17,14 @@ def get_document_cls(name):
         raise DValueError('`%s` document does not exist' % name)
 
 
+def drop_collections(name_prefix):
+    db = mongo.connection.get_db()
+    for name in db.collection_names():
+        if name.startswith(name_prefix):
+            log.warning('dropping `%s` collection' % name)
+            db.drop_collection(name)
+
+
 def includeme(config):
     mongo_connect(config.registry.settings)
 

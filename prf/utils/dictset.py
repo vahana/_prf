@@ -186,7 +186,7 @@ class dictset(dict):
 
         for key in keys:
             if key in self:
-                if not isinstance(self[key], check_type):
+                if check_type and not isinstance(self[key], check_type):
                     errors.append(err or ('`%s` must be `%s`' % (key, check_type)))
 
                 if not allow_empty and not self[key]:

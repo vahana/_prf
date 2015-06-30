@@ -98,7 +98,7 @@ class Request(object):
 
         return url
 
-    def get(self, path, params={}, **kw):
+    def get(self, path='', params={}, **kw):
         url = self.prepare_url(path, params)
         log.debug('%s', url)
 
@@ -133,7 +133,7 @@ class Request(object):
 
         return self.multi_submit(reqs)
 
-    def get_paginated(self, path, params={}, page_size=None):
+    def get_paginated(self, path='', params={}, page_size=None):
         total = params['_limit']
         start = params.get('_start', 0)
         params['_limit'] = page_size
@@ -162,7 +162,7 @@ class Request(object):
 
         return resp
 
-    def mpost(self, path, dataset, **kw):
+    def mpost(self, path='', dataset=[], **kw):
         url = self.prepare_url(path)
         log.debug('%s', url)
         reqs = [requests.Request(method='POST',
