@@ -153,12 +153,12 @@ class Resource(object):
         self.member_name = member_name
         self.collection_name = collection_name
         self.parent = parent
-        self.uid = uid
         self.id_name = id_name
         self.prefix = prefix
         self.http_cache = http_cache
         self.children = children or []
         self._ancestors = []
+        self.uid = self.get_uid()
 
     def __repr__(self):
         return "%s(uid='%s')" % (self.__class__.__name__, self.uid)
@@ -186,6 +186,12 @@ class Resource(object):
     is_singular = property(lambda self: self.member_name \
                            and not self.collection_name)
 
+    def get_uid(self, name=''):
+        return ':'.join(filter(bool, [
+                                self.parent.uid if self.parent else '',
+                                self.prefix,
+                                name or self.member_name]))
+
     def add(self, member_name, collection_name='', **kwargs):
         """
         :param member_name: singular name of the resource.
@@ -208,11 +214,9 @@ class Resource(object):
         elif collection_name is None:
             collection_name = ''
 
-        uid = ':'.join(filter(bool, [parent.uid, prefix, collection_name or member_name]))
-
         child_resource = Resource(self.config, member_name=member_name,
                                   collection_name=collection_name,
-                                  parent=parent, uid=uid,
+                                  parent=parent,
                                   prefix=prefix)
 
         child_view = get_view_class(kwargs.pop('view', None), child_resource)
@@ -234,7 +238,7 @@ class Resource(object):
         path = add_action_routes(self.config, child_view, member_name,
                           collection_name, **kwargs)
 
-        self.add_to_resource_map(uid, path, child_resource)
+        child_resource.add_to_resource_map(path)
         parent.children.append(child_resource)
 
         return child_resource
@@ -243,10 +247,16 @@ class Resource(object):
         kw['collection_name'] = None
         return self.add(*arg, **kw)
 
-    def add_to_resource_map(self, key, path, child_resource):
-        if key in self.resource_map:
-            r_ = self.resource_map[key]
-            log.warning('Resource override: %s%s becomes %s%s' %\
-                 (r_.config.package_name, path, self.config.package_name, path))
+    def add_to_resource_map(self, path):
+        def _add(key):
+            if key in self.resource_map:
+                r_ = self.resource_map[key]
+                log.warning('Resource override: %s%s becomes %s%s' %\
+                     (r_.config.package_name, path, self.config.package_name, path))
 
-        self.resource_map[key] = child_resource
+            self.resource_map[key] = self
+
+        _add(self.get_uid())
+        if self.collection_name:
+            _add(self.get_uid(self.collection_name))
+
