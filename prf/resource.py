@@ -158,7 +158,7 @@ class Resource(object):
         self.http_cache = http_cache
         self.children = children or []
         self._ancestors = []
-        self.uid = self.get_uid()
+        self.uid = self.get_uid(collection_name or member_name)
 
     def __repr__(self):
         return "%s(uid='%s')" % (self.__class__.__name__, self.uid)
