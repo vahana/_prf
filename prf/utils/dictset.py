@@ -213,16 +213,18 @@ class dictset(dict):
         return _d
 
     @classmethod
-    def build_from(cls, source, target_rules):
+    def build_from(cls, source, target_rules, allow_empty=True):
         _d = dictset()
 
         flat_rules = dictset(target_rules).flat()
         flat_source = dictset(source).flat()
         flat_source.update(source)
 
-        for path, val in flat_rules.items():
-            if val in flat_source:
-                _d[path] = flat_source[val]
+        for key, val in flat_rules.items():
+            if key in flat_source:
+                _val = flat_source[key]
+                if _val != "" or allow_empty:
+                    _d[val] = flat_source[key]
 
         return _d.unflat()
 
