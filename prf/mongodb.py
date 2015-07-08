@@ -160,6 +160,7 @@ class BaseMixin(object):
 
     @classmethod
     def get_collection(cls, **params):
+        params = dictset(params)
         log.debug(params)
         params, specials = prep_params(params)
         params = cls.prep_mongo_params(params)
@@ -187,7 +188,7 @@ class BaseMixin(object):
         query_set._total = _total
 
         if specials._scalar:
-            return query_set.scalar(specials._scalar)
+            return query_set.scalar(*specials._scalar)
 
         return query_set
 

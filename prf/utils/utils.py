@@ -177,7 +177,7 @@ def prep_params(params):
 
     specials._offset, specials._limit = process_limit(_start, _page, _limit)
     specials._distinct = params.pop('_distinct', None)
-    specials._scalar = params.pop('_scalar', None)
+    specials._scalar = params.aslist('_scalar', pop=True, allow_empty=True)
 
     return dictset(params), specials
 
