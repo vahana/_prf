@@ -185,6 +185,10 @@ class BaseMixin(object):
         log.debug('get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
 
         query_set._total = _total
+
+        if specials._scalar:
+            return query_set.scalar(specials._scalar)
+
         return query_set
 
     @classmethod

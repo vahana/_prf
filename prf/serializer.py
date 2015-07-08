@@ -29,15 +29,21 @@ class DynamicSchema(object):
     def dump(self, objs):
         fields = self.only + ['-%s'%each for each in self.exclude]
 
+        def to_dict(obj, fields):
+            if hasattr(obj, 'to_dict'):
+                return obj.to_dict(fields)
+            else:
+                return obj
+
         try:
             if self.many:
-                objs = [each.to_dict(fields) for each in objs]
+                objs = [to_dict(each, fields) for each in objs]
             else:
-                objs = objs.to_dict(fields)
+                objs = to_dict(objs, fields)
 
             return dictset(data=objs)
         except AttributeError as e:
-            raise prf.exc.HTTPBadRequest('%s can not be serialized: %s. Make sure to set `show_returns_many=True`' %\
+            raise prf.exc.HTTPBadRequest('%s can not be serialized: %s.' %\
                          ('Collection' if self.many else 'Resource', e))
 
 

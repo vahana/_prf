@@ -179,7 +179,7 @@ class dictset(dict):
         else:
             return cls({key: cls.from_dotted(sufix, val)})
 
-    def has(self, keys, check_type=basestring, allow_empty=False, err=''):
+    def has(self, keys, check_type=basestring, allow_empty=False, err='', _all=True):
         errors = []
         if isinstance(keys, basestring):
             keys = [keys]
@@ -187,14 +187,15 @@ class dictset(dict):
         for key in keys:
             if key in self:
                 if check_type and not isinstance(self[key], check_type):
-                    errors.append(err or ('`%s` must be `%s`' % (key, check_type)))
+                    errors.append(err or ('`%s` must be type `%s`, got `%s` instead'\
+                             % (key, check_type, type(self[key]))))
 
                 if not allow_empty and not self[key]:
                     errors.append(err or 'Empty key: `%s`' % key)
             else:
                 errors.append(err or 'Missing key: `%s`' % key)
 
-        if errors:
+        if (errors and _all) or (not _all and len(errors) >= len(keys)):
             raise DValueError(str(errors))
 
         return True
@@ -213,7 +214,7 @@ class dictset(dict):
         return _d
 
     @classmethod
-    def build_from(cls, source, target_rules, allow_empty=True):
+    def build_from(cls, source, target_rules, allow_empty=True, source_as_key=True):
         _d = dictset()
 
         flat_rules = dictset(target_rules).flat()
@@ -221,6 +222,9 @@ class dictset(dict):
         flat_source.update(source)
 
         for key, val in flat_rules.items():
+            if not source_as_key:
+                key,val = val,key # swap
+
             if key in flat_source:
                 _val = flat_source[key]
                 if _val != "" or allow_empty:
