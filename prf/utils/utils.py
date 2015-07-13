@@ -178,6 +178,7 @@ def prep_params(params):
     specials._offset, specials._limit = process_limit(_start, _page, _limit)
     specials._distinct = params.pop('_distinct', None)
     specials._scalar = params.aslist('_scalar', pop=True, allow_empty=True)
+    specials._group = params.aslist('_group', pop=True, allow_empty=True)
 
     return dictset(params), specials
 
@@ -262,3 +263,9 @@ def is_url(text, validate=False):
         else:
             return True
     return False
+
+
+def chunks(_list, page):
+    """Yield successive n-sized chunks from l."""
+    for ix in xrange(0, len(_list), page):
+        yield _list[ix:ix+page]

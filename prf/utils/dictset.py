@@ -45,6 +45,9 @@ class dictset(dict):
 
     """
 
+    DKeyError = DKeyError
+    DValueError = DValueError
+
     def __init__(self, *arg, **kw):
         super(dictset, self).__init__(*arg, **kw)
         self.to_dictset()
@@ -222,6 +225,9 @@ class dictset(dict):
         flat_source.update(source)
 
         for key, val in flat_rules.items():
+            if not val: # if val in the rule is missing, use the key
+                val = key
+
             if not source_as_key:
                 key,val = val,key # swap
 

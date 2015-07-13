@@ -151,8 +151,7 @@ class Request(object):
 
     def post(self, path='', data={}, **kw):
         url = self.prepare_url(path)
-        log.debug('%s, kwargs:%.512s', url, data)
-
+        log.debug('%s, kwargs:%.512s <<<TRIMMED', url, data)
         if self.is_json(data):
             data = json_dumps(data)
 
@@ -188,7 +187,7 @@ class Request(object):
 
     def put(self, path='', data={}, **kw):
         url = self.prepare_url(path)
-        log.debug('%s, kwargs:%.512s', url, data)
+        log.debug('%s, kwargs:%.512s <<<TRIMMED', url, data)
 
         if self.is_json(data):
             data = json_dumps(data)

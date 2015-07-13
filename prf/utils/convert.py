@@ -44,13 +44,21 @@ def parametrize(func):
 @parametrize
 def asbool(dset, value):
     truthy = frozenset(('t', 'true', 'y', 'yes', 'on', '1'))
+    falsey = frozenset(('f', 'false', 'n', 'no', 'off', '0'))
 
     if value is None:
         return False
+
     if isinstance(value, bool):
         return value
-    value = str(value).strip()
-    return value.lower() in truthy
+
+    lvalue = str(value).strip().lower()
+    if lvalue in truthy:
+        return True
+    elif lvalue in falsey:
+        return False
+    else:
+        raise DValueError('Dont know how to convert `%s` to bool' % value)
 
 
 @parametrize

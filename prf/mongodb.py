@@ -157,6 +157,71 @@ class BaseMixin(object):
 
         return sorted(queryset.distinct(specials._distinct), reverse=reverse)[start:end]
 
+    @classmethod
+    def get_group(cls, queryset, specials):
+        aggr = []
+
+        queryset = queryset or cls.objects
+
+        def match(aggr):
+            if queryset._query:
+                aggr.append({'$match':queryset._query})
+            return aggr
+
+        def sort(aggr):
+            sort_dict = {}
+            for each in specials._sort:
+                if each[0] == '-':
+                    sort_dict[each[1:]] = -1
+                else:
+                    sort_dict[each] = 1
+            if sort_dict:
+                aggr.append({'$sort':sort_dict})
+
+            return aggr
+
+        def group(aggr):
+            group_dict = {}
+            for each in specials._group:
+                group_dict[each] = '$%s' % each
+            if group_dict:
+                aggr.append({'$group': {'_id': group_dict}})
+
+            return aggr
+
+
+        def limit(aggr):
+            start = specials._offset
+            aggr.append({'$skip':start})
+
+            if '_limit' in specials:
+                end = specials._offset+specials._limit
+                aggr.append({'$limit':end})
+            return aggr
+
+
+        def aggregate(aggr):
+            log.debug(aggr)
+            return [each['_id'] for each in cls._collection.aggregate(aggr, cursor={})]
+
+
+        if specials.asbool('_count', False):
+            return len(list(aggregate(group(match(aggr)))))
+
+        return aggregate(limit(group(sort(match(aggr)))))
+
+    @classmethod
+    def group(cls, params, _limit=1):
+        log.debug(params)
+        specials = dictset(
+            _group = params,
+            _sort = [],
+            _offset = 0,
+        )
+        if _limit:
+            specials['_limit'] = _limit
+        return cls.get_group(None, specials)
+
 
     @classmethod
     def get_collection(cls, **params):
@@ -172,6 +237,9 @@ class BaseMixin(object):
 
         query_set = query_set(**params)
         _total = query_set.count()
+
+        if specials._group:
+            return cls.get_group(query_set, specials)
 
         if specials._distinct:
             return cls.get_distinct(query_set, specials)
@@ -241,6 +309,11 @@ class BaseMixin(object):
             setattr(self, key, val)
         return self
 
+    def merge_with(self, _dict):
+        for attr, val in _dict.items():
+            if not hasattr(self, attr):
+                setattr(self, attr, val)
+
     def to_dict(self, fields=None):
         fields = fields or []
         _d = dictset(self.to_mongo().to_dict())
@@ -258,6 +331,14 @@ class BaseMixin(object):
         obj = cls.get(**params)
         if obj:
             obj.delete()
+
+    @classmethod
+    def _(cls, ix=0):
+        return cls.objects[ix].to_dict()
+
+    @classmethod
+    def _count(cls):
+        return cls.objects.count()
 
 
 class Base(BaseMixin, mongo.Document):
