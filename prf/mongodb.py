@@ -128,7 +128,7 @@ class BaseMixin(object):
             elif op == 'empty':
                 params.update(cls.process_empty_op(key[:pos], params.pop(key)))
 
-            elif op == 'exists':
+            elif op in ['exists', 'size', 'gt', 'gte', 'lt', 'lte']:
                 params[key] = int(params[key])
 
         return params
@@ -339,6 +339,11 @@ class BaseMixin(object):
     @classmethod
     def _count(cls):
         return cls.objects.count()
+
+    @classmethod
+    def _to_dict(cls, keyname, **params):
+        return dictset([[e[keyname], ee]
+                for e in cls.get_collection(**params)])
 
 
 class Base(BaseMixin, mongo.Document):
