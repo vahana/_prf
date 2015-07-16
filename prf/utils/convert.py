@@ -91,7 +91,7 @@ def asfloat(dset, value):
 
 @parametrize
 def asstr(dset, value):
-    return str(value)
+    return unicode(value)
 
 
 def asdict(dset, name, _type=None, _set=False, pop=False):
