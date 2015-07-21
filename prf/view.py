@@ -92,7 +92,7 @@ class BaseView(object):
             request.override_renderer = self._default_renderer
 
         elif 'application/json' in request.accept:
-            request.override_renderer = 'prf_json'
+            request.override_renderer = 'json'
 
         elif 'text/plain' in request.accept:
             request.override_renderer = 'string'
