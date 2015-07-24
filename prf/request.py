@@ -1,7 +1,7 @@
 import logging
 import requests
 import urllib
-from urlparse import urlparse
+from urlparse import urljoin
 
 from prf.utils.utils import json_dumps
 from prf.utils import dictset
@@ -86,12 +86,13 @@ class Request(object):
     def prepare_url(self, path='', params={}):
         url = self.base_url
 
-        if not url:
-            url = path
-        elif path:
-            url = '%s%s' % (url, (path if path.startswith('/') else '/'
-                            + path))
+        # if not url:
+        #     url = path
 
+        # elif path:
+            # url = urljoin(url, path)
+
+        url = urljoin(self.base_url, path)
         if params:
             url = '%s%s%s' % (url, ('&' if '?' in url else '?'),
                               urllib.urlencode(params))
