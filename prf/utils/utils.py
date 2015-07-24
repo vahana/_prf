@@ -2,7 +2,6 @@ import re
 import json
 import logging
 from urlparse import urlparse, parse_qs
-from urllib import urlencode
 from datetime import date, datetime
 import requests
 
@@ -269,3 +268,20 @@ def chunks(_list, page):
     """Yield successive n-sized chunks from l."""
     for ix in xrange(0, len(_list), page):
         yield _list[ix:ix+page]
+
+
+def encoded_dict(in_dict):
+    out_dict = {}
+    for k, v in in_dict.iteritems():
+        out_dict[k] = unicode(v).encode('utf-8')
+
+    return out_dict
+
+
+def urlencode(query, doseq=False):
+    import urllib
+    try:
+        return urllib.urlencode(encoded_dict(query), doseq)
+    except UnicodeEncodeError as e:
+        log.error(e)
+

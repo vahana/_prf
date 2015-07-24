@@ -7,7 +7,7 @@ from pyramid.response import Response
 
 import prf.exc
 from prf.utils import dictset, issequence, prep_params, process_fields,\
-                      json_dumps
+                      json_dumps, urlencode
 from prf.serializer import DynamicSchema
 
 log = logging.getLogger(__name__)
@@ -246,7 +246,7 @@ class BaseView(object):
                             content_type='application/json', method=method)
 
         if req.method == 'GET' and params:
-            req.body = urllib.urlencode(params)
+            req.body = urlencode(params)
 
         if req.method == 'POST':
             req.body = json_dumps(params)

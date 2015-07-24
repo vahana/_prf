@@ -1,9 +1,8 @@
 import logging
 import requests
-import urllib
 from urlparse import urljoin
 
-from prf.utils.utils import json_dumps
+from prf.utils.utils import json_dumps, urlencode
 from prf.utils import dictset
 import prf.exc
 
@@ -94,8 +93,7 @@ class Request(object):
 
         url = urljoin(self.base_url, path)
         if params:
-            url = '%s%s%s' % (url, ('&' if '?' in url else '?'),
-                              urllib.urlencode(params))
+            url = '%s%s%s' % (url, ('&' if '?' in url else '?'), urlencode(params))
 
         return url
 
