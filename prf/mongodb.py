@@ -116,7 +116,7 @@ class BaseMixin(object):
     @classmethod
     def prep_mongo_params(cls, params):
         list_ops = ('in', 'nin', 'all')
-        for key in params:
+        for key in params.copy():
             pos = key.rfind('__')
             if pos == -1:
                 continue
@@ -131,8 +131,10 @@ class BaseMixin(object):
             elif op in ['exists', 'size', 'gt', 'gte', 'lt', 'lte']:
                 params[key] = int(params[key])
 
-        return params
+            elif op == 'bool':
+                params[key[:pos]] = params.asbool(key, pop=True)
 
+        return params
 
     @classmethod
     def get_distinct(cls, queryset, specials):
