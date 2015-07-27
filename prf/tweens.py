@@ -1,5 +1,7 @@
 import time
 from pyramid.settings import asbool
+from pyramid.httpexceptions import HTTPException
+
 import logging
 import json
 
@@ -108,7 +110,11 @@ def cors(handler, registry):
 
     def cors(request):
         origin = request.headers.get('Origin') or request.host_url
-        response = handler(request)
+
+        try:
+            response = handler(request)
+        except HTTPException as e:
+            response = e
 
         if origin in allow_origins:
             response.headerlist.append(('Access-Control-Allow-Origin', origin))

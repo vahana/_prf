@@ -81,7 +81,7 @@ def set_default_acl(config, acl_model):
 def process_tweens(config):
     import pyramid
     for tween in aslist(config.registry.settings, 'tweens', sep='\n', default=''):
-        config.add_tween(tween, over=pyramid.tweens.MAIN)
+        config.add_tween(tween)
 
 
 def disable_exc_tweens(config, names=None):
