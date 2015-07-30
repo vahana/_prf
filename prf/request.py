@@ -26,7 +26,7 @@ class PRFHTTPAdapter(requests.adapters.HTTPAdapter):
 class Request(object):
 
     def __init__(self, base_url='', cache_options=None,
-                      _raise=True,
+                      _raise=False,
                       delay=0, reqs_over_time = None,
                       cookies=None, headers=None):
 
@@ -72,7 +72,7 @@ class Request(object):
 
     def raise_or_log(self, resp):
         if self._raise:
-            params = self.json(resp) or {'description':resp.text}
+            params = self.json(resp) or {'detail':resp.text}
             raise prf.exc.exception_response(status_code=resp.status_code,
                                     **params)
 

@@ -60,6 +60,8 @@ def create_response(resp, params):
     resp.body = json_dumps(body)
     return resp
 
+def _raise(response):
+    raise exception_response(status_code=response.status_code, **response.json())
 
 def exception_response(status_code, **kw):
     # for some reason 400 is mapped to HTTPClientError in pyramid instead of HTTPBadRequest
