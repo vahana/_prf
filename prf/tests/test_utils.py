@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime
 from prf.utils.utils import *
+from prf import dictset
 
 class TestUtils(object):
 
@@ -93,16 +94,20 @@ class TestUtils(object):
                      '_limit': 1,
                      '_offset': 0,
                      '_sort': [],
-                     '_distinct': None}) == prep_params({})
+                     '_distinct': None,
+                     '_scalar': None,
+                     '_group': None}) == prep_params(dictset())
 
         assert prep_params(
-            dict(
+            dictset(
                 a=1,b=3,
                 _count=1,
                 _fields='a,b',
                 _limit=10,
                 _sort = '-a,b',
-                _distinct = 'abc'
+                _distinct = 'abc',
+                _scalar = 'a,b',
+                _group = 'x,y'
             )) == (
                 dict(a = 1, b = 3),
                 dict(_count = True,
@@ -110,4 +115,7 @@ class TestUtils(object):
                     _limit = 10,
                     _offset = 0,
                     _sort = ['-a', 'b'],
-                    _distinct = 'abc'))
+                    _distinct = 'abc',
+                    _scalar = ['a', 'b'],
+                    _group = ['x', 'y'],
+                    ))

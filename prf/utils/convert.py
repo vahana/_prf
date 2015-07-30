@@ -6,16 +6,16 @@ from prf.utils.utils import DKeyError, DValueError, split_strip
 def parametrize(func):
 
     def wrapper(dset, name, default=None, raise_on_empty=False, pop=False,
-                            allow_empty=False, set_as=None, pop_empty=False, **kw):
+                            allow_missing=False, set_as=None, pop_empty=False, **kw):
 
         if pop_empty:
-            allow_empty=True
+            allow_missing=True
 
         if default is None:
             try:
                 value = dset[name]
             except KeyError:
-                if not allow_empty:
+                if not allow_missing:
                     raise DKeyError("Missing '%s'" % name)
                 else:
                     return
@@ -68,7 +68,7 @@ def aslist(dset, value, sep=',', remove_empty=True, unique=False):
     elif isinstance(value, basestring):
         _lst = split_strip(value, sep)
     else:
-        raise DValueError('`%s` can not convert to list' % value)
+        _lst = [str(value)]
 
     if remove_empty:
         _lst = (filter(bool, _lst))
@@ -131,7 +131,7 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
     return _dict
 
 
-def as_datetime(dset, name, allow_empty=False, default=None, pop=False):
+def as_datetime(dset, name, allow_missing=False, default=None, pop=False):
     default = default or datetime(
             year=datetime.now().year, month=1, day=1)
 
@@ -140,7 +140,7 @@ def as_datetime(dset, name, allow_empty=False, default=None, pop=False):
             dset[name] = dt_parser.parse(dset[name], default=default)
         except ValueError as e:
             raise DValueError(e)
-    elif not allow_empty:
+    elif not allow_missing:
         raise DKeyError("Missing '%s'" % name)
 
     if pop:
