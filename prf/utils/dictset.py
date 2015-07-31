@@ -217,7 +217,7 @@ class dictset(dict):
         return _d
 
     @classmethod
-    def build_from(cls, source, target_rules, allow_empty=True, source_as_key=True):
+    def build_from(cls, source, target_rules, allow_empty=True, inverse=False):
         _d = dictset()
 
         flat_rules = dictset(target_rules).flat()
@@ -228,8 +228,8 @@ class dictset(dict):
             if not val: # if val in the rule is missing, use the key
                 val = key
 
-            if not source_as_key:
-                key,val = val,key # swap
+            if inverse:
+                key,val = val,key # flip em
 
             if key in flat_source:
                 _val = flat_source[key]
