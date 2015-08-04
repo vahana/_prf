@@ -231,10 +231,9 @@ class dictset(dict):
             if inverse:
                 key,val = val,key # flip em
 
-            if key in flat_source:
-                _val = flat_source[key]
-                if _val != "" or allow_empty:
-                    _d[val] = flat_source[key]
+            _val = flat_source.mget(key)
+            if _val != "" or allow_empty:
+                _d[val] = _val
 
         return _d.unflat()
 

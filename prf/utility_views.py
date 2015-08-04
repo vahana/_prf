@@ -131,10 +131,6 @@ class AccountView(BaseView):
 
     _user_model = None
 
-    # def __init__(self, request):
-        # self.request = request
-        # self._params = dictset(self.request.params)
-
     @classmethod
     def set_user_model(cls, model):
 

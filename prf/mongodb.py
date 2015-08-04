@@ -2,6 +2,7 @@ import logging
 from datetime import datetime
 from bson import ObjectId, DBRef
 import mongoengine as mongo
+from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
 
 import prf.exc
 from prf.utils import dictset, prep_params, split_strip, to_dunders, DValueError
@@ -9,6 +10,23 @@ from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
 
+
+class TopLevelDocumentMetaclass(TLDMetaclass):
+
+    def __new__(cls, name, bases, attrs):
+        super_new = super(TopLevelDocumentMetaclass, cls)
+        attrs_meta = dictset(attrs.get('meta', {}))
+
+        new_klass = super_new.__new__(cls, name, bases, attrs)
+
+        if attrs_meta.pop('enable_signals', False):
+            for signal in mongo.signals.__all__:
+                if hasattr(new_klass, signal):
+                    method = getattr(new_klass, signal)
+                    if callable(method):
+                        getattr(mongo.signals, signal).connect(method, sender=new_klass)
+
+        return new_klass
 
 def get_document_cls(name):
     try:
@@ -128,7 +146,8 @@ class BaseMixin(object):
             elif op == 'empty':
                 params.update(cls.process_empty_op(key[:pos], params.pop(key)))
 
-            elif op in ['exists', 'size', 'gt', 'gte', 'lt', 'lte']:
+            elif op in ['exists', 'size', 'gt', 'gte', 'lt', 'lte'] and\
+                                    isinstance(params[key], basestring):
                 params[key] = int(params[key])
 
             elif op == 'bool':
@@ -349,6 +368,8 @@ class BaseMixin(object):
 
 
 class Base(BaseMixin, mongo.Document):
+    __metaclass__ = TopLevelDocumentMetaclass
+
     meta = {'abstract': True}
 
     def update(self, *arg, **kw):
@@ -357,6 +378,8 @@ class Base(BaseMixin, mongo.Document):
 
 
 class DynamicBase(BaseMixin, mongo.DynamicDocument):
+    __metaclass__ = TopLevelDocumentMetaclass
+
     meta = {'abstract': True}
 
     def update(self, *arg, **kw):
