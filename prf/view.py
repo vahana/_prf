@@ -7,7 +7,7 @@ from pyramid.response import Response
 
 import prf.exc
 from prf.utils import dictset, issequence, prep_params, process_fields,\
-                      json_dumps, urlencode
+                      json_dumps, urlencode, args_to_dict
 from prf.serializer import DynamicSchema
 
 log = logging.getLogger(__name__)
@@ -117,27 +117,13 @@ class BaseView(object):
                 try:
                     params.update(self.request.json)
                 except ValueError, e:
-                    log.error("Excpeting JSON. Received: '%s'. Request: %s %s"
+                    log.error("Expecting JSON. Received: '%s'. Request: %s %s"
                               ,self.request.body, self.request.method, self.request.url)
 
-            else:
-                for key, val in params.items():
-                    try:
-                        params[key] = json.loads(val)
-                    except (ValueError, TypeError):
-                        pass
 
-            self._params = dictset(params)
+            params = args_to_dict(params)
 
-        self._raw_params = params
-        self._params = dictset()
-        for key, val in params.items():
-            try:
-                self._params.merge(dictset.from_dotted(key, val))
-            except:
-                raise prf.exc.HTTPBadRequest(
-                    'Can not mix dotted and regular param names: %s'
-                     % key)
+        self._params = dictset(params)
 
         if self.request.method == 'GET':
             self._params.setdefault('_limit', 20)

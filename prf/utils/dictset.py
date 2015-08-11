@@ -158,8 +158,7 @@ class dictset(dict):
         for key, val in self.items():
             if key.startswith(prefix):
                 _k = key.partition(prefix)[-1]
-                if val:
-                    _dict[_k] = val
+                _dict[_k] = val
         return _dict
 
     @classmethod
@@ -231,7 +230,11 @@ class dictset(dict):
             if inverse:
                 key,val = val,key # flip em
 
-            _val = flat_source.mget(key)
+            if key.endswith('.'):
+                _val = flat_source.mget(key)
+            else:
+                _val = flat_source.get(key)
+
             if _val != "" or allow_empty:
                 _d[val] = _val
 

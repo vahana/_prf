@@ -150,8 +150,12 @@ class BaseMixin(object):
                                     isinstance(params[key], basestring):
                 params[key] = int(params[key])
 
-            elif op == 'bool':
-                params[key[:pos]] = params.asbool(key, pop=True)
+            elif op.startswith('as'):
+                if op[2:] == 'bool':
+                    params[key[:pos]] = params.asbool(key, pop=True)
+
+                elif op[2:] == 'int':
+                    params[key[:pos]] = params.asint(key, pop=True)
 
         return params
 
