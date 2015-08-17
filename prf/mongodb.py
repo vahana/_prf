@@ -63,7 +63,7 @@ def mongo_connect(settings):
     settings = dictset(settings)
     db = settings['mongodb.db']
     host = settings.get('mongodb.host', 'localhost')
-    port = settings.asint('mongodb.port', 27017)
+    port = settings.asint('mongodb.port', default=27017)
 
     log.info('MongoDB enabled with db:%s, host:%s, port:%s', db, host, port)
 
