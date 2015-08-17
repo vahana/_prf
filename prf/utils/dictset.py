@@ -181,7 +181,8 @@ class dictset(dict):
         else:
             return cls({key: cls.from_dotted(sufix, val)})
 
-    def has(self, keys, check_type=basestring, allow_empty=False, err='', _all=True):
+    def has(self, keys, check_type=basestring, allow_empty=False, err='', _all=True,
+                                                                allow_missing=False):
         errors = []
         if isinstance(keys, basestring):
             keys = [keys]
@@ -194,7 +195,7 @@ class dictset(dict):
 
                 if not allow_empty and not self[key]:
                     errors.append(err or 'Empty key: `%s`' % key)
-            else:
+            elif not allow_missing:
                 errors.append(err or 'Missing key: `%s`' % key)
 
         if (errors and _all) or (not _all and len(errors) >= len(keys)):
@@ -300,7 +301,6 @@ def args_to_dict(args):
     for arg in keys:
         value = args[arg]
 
-        #bits = arg.split(".")
         bits = dot_split(arg)
         ctx = d
 
@@ -329,7 +329,6 @@ def args_to_dict(args):
                 if not last:
                     if int(bit) > len(ctx) - 1:
                         ctx.append(dictset() if next_is_dict else [])
-                    #ctx.append({} if next_is_dict else [])
                     ctx = ctx[int(bit)]
                 else:
                     ctx.append(type_cast(value))
