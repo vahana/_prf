@@ -366,8 +366,8 @@ class BaseMixin(object):
         return cls.objects.count()
 
     @classmethod
-    def _to_dict(cls, keyname, **params):
-        return dictset([[e[keyname], ee]
+    def to_dicts(cls, keyname, **params):
+        return dictset([[e[keyname], e.to_dict()]
                 for e in cls.get_collection(**params)])
 
 

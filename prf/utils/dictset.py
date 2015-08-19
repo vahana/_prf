@@ -251,6 +251,7 @@ class dictset(dict):
 #based on jsonurl
 
 def type_cast(value):
+    return value
     try:
         return int(value)
     except (TypeError, ValueError):
