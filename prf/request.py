@@ -193,12 +193,12 @@ class PRFRequest(Request):
         if _limit == -1:
             for start, count in pagr():
                 resp = self.get(url_ptrn % (start, count), **kw)
-                if int(resp.headers['x-count']) == 0:
+                if resp.json()['count'] == 0:
                     break
                 yield resp
         else:
             urls = [url_ptrn % (start, count) for (start, count) in pagr()]
             for resp in self.mget(urls, **kw):
-                if int(resp.headers['x-count']) == 0:
+                if resp.json()['count'] == 0:
                     break
                 yield resp
