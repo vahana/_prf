@@ -9,11 +9,9 @@ import prf.exc
 from prf.utils import dictset, issequence, prep_params, process_fields,\
                       json_dumps, urlencode, args_to_dict
 from prf.serializer import DynamicSchema
+from prf import resource
 
 log = logging.getLogger(__name__)
-
-ALLOWED_ACTIONS = ['index', 'show', 'create', 'update', 'delete',
-                    'update_many', 'delete_many']
 
 class ViewMapper(object):
 
@@ -30,7 +28,19 @@ class ViewMapper(object):
 
             view_obj = view(context, request)
             action = getattr(view_obj, action_name)
-            return action(**matchdict)
+            ret = action(**matchdict)
+
+            #add metadata to x-headers
+            if action_name in [resource.Actions.index, resource.Actions.show]:
+                for key, val in ret.items():
+                    if key == 'fields':
+                        request.response.headers.update(
+                            {'X-%s' % key : str(','.join(val))})
+                    elif key != 'data':
+                        request.response.headers.update(
+                            {'X-%s' % key : str(val)})
+
+            return ret
 
         return view_mapper_wrapper
 
@@ -129,7 +139,7 @@ class BaseView(object):
             self._params.setdefault('_limit', 20)
 
     def __getattr__(self, attr):
-        if attr in ALLOWED_ACTIONS:
+        if attr in resource.Actions:
             return self.not_allowed_action
 
         raise AttributeError(attr)
@@ -184,9 +194,11 @@ class BaseView(object):
             serialized = self.serialize(data, many=many)
             _total = getattr(data, '_total', len(serialized))
 
-        return dict(
+        return dictset(
             total = _total,
             count = len(serialized),
+            start = self._params.asint('_start', default=0),
+            fields = self._params.aslist('_fields', default=[]),
             data = self.add_meta(serialized)
         )
 

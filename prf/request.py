@@ -1,8 +1,9 @@
 import logging
 import requests
 from urlparse import urljoin
+from functools import partial
 
-from prf.utils.utils import json_dumps, urlencode
+from prf.utils.utils import json_dumps, urlencode, pager
 from prf.utils import dictset
 import prf.exc
 
@@ -83,14 +84,6 @@ class Request(object):
         return hasattr(resp, 'from_cache') and resp.from_cache
 
     def prepare_url(self, path='', params={}):
-        url = self.base_url
-
-        # if not url:
-        #     url = path
-
-        # elif path:
-            # url = urljoin(url, path)
-
         url = urljoin(self.base_url, path)
         if params:
             url = '%s%s%s' % (url, ('&' if '?' in url else '?'), urlencode(params))
@@ -119,7 +112,10 @@ class Request(object):
         with BaseThrottler(name='throttler', session=self.session, **kwargs) as bt:
             throttled_requests = bt.multi_submit(reqs)
 
-        return [r.response for r in throttled_requests]
+        for req in throttled_requests:
+            if not req.response.ok:
+                self.raise_or_log(req.response)
+            yield req.response
 
     def mget(self, urls, **kw):
         log.debug('%s', urls)
@@ -127,26 +123,12 @@ class Request(object):
         if isinstance(urls, basestring):
             urls = [urls]
 
-        reqs = [requests.Request(method='GET', url=self.prepare_url(url), **kw)
-                    for url in urls]
+        reqs = [requests.Request(method='GET',
+                                 url=self.prepare_url(url), **kw)\
+                for url in urls]
 
         return self.multi_submit(reqs)
 
-    def get_paginated(self, path='', params={}, page_size=None):
-        total = params['_limit']
-        start = params.get('_start', 0)
-        params['_limit'] = page_size
-        page_count = total / page_size
-
-        for ix in range(page_count):
-            params['_start'] = start + ix * page_size
-            yield self.get(path, params)
-
-        reminder = total % page_size
-        if reminder:
-            params['_start'] = start + page_count * page_size
-            params['_limit'] = reminder
-            yield self.get(path, params)
 
     def post(self, path='', data={}, **kw):
         url = self.prepare_url(path)
@@ -168,21 +150,6 @@ class Request(object):
                                 data=json_dumps(data) if self.is_json(data) else data,
                                 **kw) for data in dataset]
         return self.multi_submit(reqs)
-
-    def post_paginated(self, path='', data={}, bulk_size=None, bulk_key=None):
-        bulk_data = data[bulk_key]
-        total = len(bulk_data)
-        page_count = total / bulk_size
-
-        for ix in range(page_count):
-            data[bulk_key] = bulk_data[ix * bulk_size:(ix + 1) * bulk_size]
-            yield self.post(path, data)
-
-        reminder = total % bulk_size
-        if reminder:
-            st = page_count * bulk_size
-            data[bulk_key] = bulk_data[st:st + reminder]
-            yield self.post(path, data)
 
     def put(self, path='', data={}, **kw):
         url = self.prepare_url(path)
@@ -213,3 +180,25 @@ class Request(object):
             return self.raise_or_log(resp)
 
         return resp
+
+class PRFRequest(Request):
+    def get_paginated(self, page_size, **kw):
+        params = kw.get('params', {})
+        _start = int(params.pop('_start', 0))
+        _limit = int(params.pop('_limit', -1))
+        url_ptrn = '%s?_start=%%s&_limit=%%s' % self.base_url
+
+        pagr = partial(pager, _start, page_size, _limit)
+
+        if _limit == -1:
+            for start, count in pagr():
+                resp = self.get(url_ptrn % (start, count), **kw)
+                if int(resp.headers['x-count']) == 0:
+                    break
+                yield resp
+        else:
+            urls = [url_ptrn % (start, count) for (start, count) in pagr()]
+            for resp in self.mget(urls, **kw):
+                if int(resp.headers['x-count']) == 0:
+                    break
+                yield resp

@@ -9,7 +9,6 @@ import prf.exc
 from prf.utils.convert import asbool
 from prf.utils import dictset, maybe_dotted, with_metaclass
 from prf.utils.utils import DKeyError, DValueError
-from prf.resource import Action
 
 
 log = logging.getLogger(__name__)

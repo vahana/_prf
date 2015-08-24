@@ -120,7 +120,8 @@ class BaseMixin(object):
     def process_empty_op(cls, name, value):
         _field = getattr(cls, name, None)
         try:
-            _default = Field2Default[type(getattr(cls, name)) if _field else mongo.StringField]
+            _default = Field2Default[type(getattr(cls, name)) if _field\
+                                     else mongo.StringField]
         except KeyError:
             raise prf.exc.HTTPBadRequest(
                 'Can not use `empty` for field `%s` of type %s'\
@@ -161,8 +162,8 @@ class BaseMixin(object):
 
     @classmethod
     def get_distinct(cls, queryset, specials):
-        start = specials._offset
-        end = specials._offset+specials._limit
+        start = specials._start
+        end = specials._start+specials._limit
         reverse = False
 
         if specials.asbool('_count', False):
@@ -216,11 +217,11 @@ class BaseMixin(object):
 
 
         def limit(aggr):
-            start = specials._offset
+            start = specials._start
             aggr.append({'$skip':start})
 
             if '_limit' in specials:
-                end = specials._offset+specials._limit
+                end = specials._start+specials._limit
                 aggr.append({'$limit':end})
             return aggr
 
@@ -255,8 +256,8 @@ class BaseMixin(object):
         params, specials = prep_params(params)
         params = cls.prep_mongo_params(params)
 
-        start = specials._offset
-        end = specials._offset+specials._limit
+        start = specials._start
+        end = specials._start+specials._limit if specials._limit > -1 else None
 
         query_set = cls.objects
 
@@ -275,7 +276,11 @@ class BaseMixin(object):
         if specials._sort:
             query_set = query_set.order_by(*specials._sort)
 
-        query_set = query_set[start:end]
+        if end is not None:
+            query_set = query_set[start:end]
+        else:
+            query_set = query_set[start:]
+
         log.debug('get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
 
         query_set._total = _total

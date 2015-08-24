@@ -35,14 +35,13 @@ def get_resource_map(request):
     return request.registry['prf.resources_map']
 
 
-def add_error_view(config, exc, http_exc=None, cond='', error=''):
+def add_error_view(config, exc, http_exc=None, error=''):
     exc = maybe_dotted(exc)
     http_exc = maybe_dotted(http_exc or prf.exc.HTTPBadRequest)
 
     def view(context, request):
-        if cond in (context.message or context.detail or context.explanation or ''):
-            msg = error % context.message if error else context.message
-            return http_exc(msg, request=request)
+        msg = error % context.message if error else context.message
+        return http_exc(msg, request=request)
 
     log.info('add_error_view: %s -> %s' % (exc.__name__, http_exc.__name__))
     config.add_view(view, context=exc)

@@ -1,22 +1,21 @@
 import os
 import logging
 import types
-from prf.utils import snake2camel, maybe_dotted
+from prf.utils import snake2camel, maybe_dotted, dictset
 
 log = logging.getLogger(__name__)
 
 DEFAULT_ID_NAME = 'id'
 
-class Action(object):
-    INDEX = '_index'
-    SHOW = '_show'
-    CREATE = '_create'
-    UPDATE = '_update'
-    PATCH = '_patch'
-    DELETE = '_delete'
-    DELETE_MANY = '_delete_many'
-    UPDATE_MANY = '_update_many'
-
+class Actions(object):
+    index = '_index'
+    show = '_show'
+    create = '_create'
+    update = '_update'
+    patch = '_patch'
+    delete = '_delete'
+    delete_many = '_delete_many'
+    update_many = '_update_many'
 
 def get_view_class(view, resource):
     '''Returns the dotted path to the default view class.'''
@@ -111,30 +110,30 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
         config.commit()
 
     if collection_name:
-        add_route_and_view(config, Action.INDEX, name_prefix + collection_name,
+        add_route_and_view(config, Actions.index, name_prefix + collection_name,
                            path, 'GET')
 
-    add_route_and_view(config, Action.SHOW, name_prefix + member_name, path
+    add_route_and_view(config, Actions.show, name_prefix + member_name, path
                        + id_name, 'GET', traverse=_traverse)
 
-    add_route_and_view(config, Action.UPDATE, name_prefix + member_name, path
+    add_route_and_view(config, Actions.update, name_prefix + member_name, path
                        + id_name, 'PUT', traverse=_traverse)
 
-    add_route_and_view(config, Action.PATCH, name_prefix + member_name, path
+    add_route_and_view(config, Actions.patch, name_prefix + member_name, path
                        + id_name, 'PATCH', traverse=_traverse)
 
-    add_route_and_view(config, Action.CREATE, name_prefix + (collection_name
+    add_route_and_view(config, Actions.create, name_prefix + (collection_name
                        or member_name), path, 'POST')
 
-    add_route_and_view(config, Action.DELETE, name_prefix + member_name, path
+    add_route_and_view(config, Actions.delete, name_prefix + member_name, path
                        + id_name, 'DELETE', traverse=_traverse)
 
     if collection_name:
-        add_route_and_view(config, Action.UPDATE_MANY, name_prefix
+        add_route_and_view(config, Actions.update_many, name_prefix
                            + (collection_name or member_name), path, 'PUT',
                            traverse=_traverse)
 
-        add_route_and_view(config, Action.DELETE_MANY, name_prefix
+        add_route_and_view(config, Actions.delete_many, name_prefix
                            + (collection_name or member_name), path, 'DELETE',
                            traverse=_traverse)
 

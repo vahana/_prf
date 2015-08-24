@@ -46,12 +46,12 @@ def process_limit(start, page, limit):
 
         if start is not None:
             start = int(start)
-        elif page is not None:
+        elif page is not None and limit > 0:
             start = int(page) * limit
         else:
             start = 0
 
-        if limit < 0 or start < 0:
+        if limit < -1 or start < 0:
             raise DValueError('_limit/_page or _limit/_start can not be < 0')
     except (ValueError, TypeError), e:
         raise DValueError(e)
@@ -174,7 +174,7 @@ def prep_params(params):
     _page = params.pop('_page', None)
     _start = params.pop('_start', None)
 
-    specials._offset, specials._limit = process_limit(_start, _page, _limit)
+    specials._start, specials._limit = process_limit(_start, _page, _limit)
     specials._distinct = params.pop('_distinct', None)
     specials._scalar = params.aslist('_scalar', pop=True, allow_missing=True)
     specials._group = params.aslist('_group', pop=True, allow_missing=True)
@@ -264,10 +264,9 @@ def is_url(text, validate=False):
     return False
 
 
-def chunks(_list, page):
-    """Yield successive n-sized chunks from l."""
-    for ix in xrange(0, len(_list), page):
-        yield _list[ix:ix+page]
+def chunks(_list, chunk_size):
+    for ix in xrange(0, len(_list), chunk_size):
+        yield _list[ix:ix+chunk_size]
 
 
 def encoded_dict(in_dict):
@@ -285,3 +284,14 @@ def urlencode(query, doseq=False):
     except UnicodeEncodeError as e:
         log.error(e)
 
+
+def pager(start, page, total):
+    if total != -1:
+        for each in chunks(range(0, total), page):
+            _page = len(each)
+            yield (start, _page)
+            start += _page
+    else:
+        while 1:
+            yield (start, page)
+            start += page
