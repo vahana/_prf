@@ -31,14 +31,14 @@ class ViewMapper(object):
             ret = action(**matchdict)
 
             #add metadata to x-headers
-            if action_name in [resource.Actions.index, resource.Actions.show]:
-                for key, val in ret.items():
-                    if key == 'fields':
-                        request.response.headers.update(
-                            {'X-%s' % key : str(','.join(val))})
-                    elif key != 'data':
-                        request.response.headers.update(
-                            {'X-%s' % key : str(val)})
+            # if action_name in [resource.Actions.index, resource.Actions.show]:
+            #     for key, val in ret.items():
+            #         if key == 'fields':
+            #             request.response.headers.update(
+            #                 {'X-%s' % key : str(','.join(val))})
+            #         elif key != 'data':
+            #             request.response.headers.update(
+            #                 {'X-%s' % key : str(val)})
 
             return ret
 
