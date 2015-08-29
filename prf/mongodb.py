@@ -201,7 +201,7 @@ class BaseMixin(object):
         queryset = queryset or cls.objects
 
         accumulators = dictset([[e[6:],specials[e]] \
-                        for e in specials if e.startswith('_group_')])
+                        for e in specials if e.startswith('_group$')])
 
         def unwind(aggr):
             _prj = {"_id": "$_id"}
@@ -252,17 +252,13 @@ class BaseMixin(object):
                       'count': {'$sum':1}}
 
                 for key, val in accumulators.items():
-                    if key == '_list':
-                        _d[val] = {'$push':'$%s' % val}
-                    elif key.lower() == '_set':
-                        _d[val] = {'$addToSet': '$%s' % val}
-                    elif key == '_min':
-                        _d[val] = {'$min': '$%s' % val}
-                    elif key == '_max':
-                        _d[val] = {'$max': '$%s' % val}
-                    elif key == '_avg':
-                        _d[val] = {'$avg': '$%s' % val}
+                    _key = key.lower()
+                    if _key in ['$addtoset', '$set']:
+                        key = '$addToSet'
+                    elif _key in ['$push', '$list']:
+                        key = '$push'
 
+                    _d[val] = {key :'$%s'%val}
                 aggr.append({'$group':_d})
 
             return aggr
