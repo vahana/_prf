@@ -3,6 +3,7 @@ from datetime import datetime
 from bson import ObjectId, DBRef
 import mongoengine as mongo
 from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
+import pymongo
 
 import prf.exc
 from prf.utils import dictset, prep_params, split_strip, to_dunders, DValueError
@@ -84,19 +85,15 @@ def mongodb_exc_tween(handler, registry):
             else:
                 raise prf.exc.HTTPBadRequest('Not Unique', request=request)
 
-        except mongo.OperationError as e:
-            raise prf.exc.HTTPBadRequest(e, request=request, exception=e)
-
-        except mongo.ValidationError as e:
-            raise prf.exc.HTTPBadRequest(e, request=request, exception=e)
-
-        except mongo.InvalidQueryError as e:
+        except (mongo.OperationError,
+                mongo.ValidationError,
+                mongo.InvalidQueryError,
+                pymongo.errors.OperationFailure) as e:
             raise prf.exc.HTTPBadRequest(e, request=request, exception=e)
 
         except mongo.MultipleObjectsReturned:
             raise prf.exc.HTTPBadRequest('Bad or Insufficient Params',
                             request=request)
-
         except mongo.DoesNotExist as e:
             raise prf.exc.HTTPNotFound(request=request, exception=e)
 
