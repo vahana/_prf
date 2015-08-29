@@ -161,6 +161,17 @@ class BaseMixin(object):
         return params
 
     @classmethod
+    def get_frequencies(cls, queryset, specials):
+        reverse = not bool(specials._sort and specials._sort[0].startswith('-'))
+        for each in  sorted(
+            queryset.item_frequencies(specials._frequencies,
+            normalize=specials.asbool('_fq_normalize', default=False)
+        ).items(),
+        key=lambda x:x[1],
+        reverse=reverse)[specials._start:specials._limit]:
+            yield({each[0]:each[1]})
+
+    @classmethod
     def get_distinct(cls, queryset, specials):
         start = specials._start
         end = specials._start+specials._limit
@@ -189,6 +200,30 @@ class BaseMixin(object):
 
         queryset = queryset or cls.objects
 
+        accumulators = dictset([[e[6:],specials[e]] \
+                        for e in specials if e.startswith('_group_')])
+
+        def unwind(aggr):
+            _prj = {"_id": "$_id"}
+            unwinds = []
+            nesteds = []
+
+            for each in specials._group:
+                num_dots = each.count('.')
+                if num_dots:
+                    nesteds.append([each, num_dots])
+
+            for each, num_dots in nesteds:
+                _prj[each]='$%s'%each
+                for x in range(num_dots):
+                    unwinds.append({'$unwind': '$%s' % each.replace('.','_')})
+
+            if nesteds:
+                aggr.append({'$project':_prj})
+                aggr.extend(unwinds)
+
+            return aggr
+
         def match(aggr):
             if queryset._query:
                 aggr.append({'$match':queryset._query})
@@ -208,13 +243,29 @@ class BaseMixin(object):
 
         def group(aggr):
             group_dict = {}
+
             for each in specials._group:
                 group_dict[each] = '$%s' % each
+
             if group_dict:
-                aggr.append({'$group': {'_id': group_dict}})
+                _d = {'_id': group_dict,
+                      'count': {'$sum':1}}
+
+                for key, val in accumulators.items():
+                    if key == '_list':
+                        _d[val] = {'$push':'$%s' % val}
+                    elif key.lower() == '_set':
+                        _d[val] = {'$addToSet': '$%s' % val}
+                    elif key == '_min':
+                        _d[val] = {'$min': '$%s' % val}
+                    elif key == '_max':
+                        _d[val] = {'$max': '$%s' % val}
+                    elif key == '_avg':
+                        _d[val] = {'$avg': '$%s' % val}
+
+                aggr.append({'$group':_d})
 
             return aggr
-
 
         def limit(aggr):
             start = specials._start
@@ -225,16 +276,28 @@ class BaseMixin(object):
                 aggr.append({'$limit':end})
             return aggr
 
+        def project(aggr):
+            _prj = {'_id':0, 'count':1}
+
+            for each in specials._group:
+                _prj[each] = '$_id.%s' % each
+
+            for each in accumulators.values():
+                _prj[each] = '$%s'%each
+
+            aggr.append(
+                {'$project': _prj}
+            )
+            return aggr
 
         def aggregate(aggr):
             log.debug(aggr)
-            return [each['_id'] for each in cls._collection.aggregate(aggr, cursor={})]
-
+            return cls._collection.aggregate(aggr, cursor={})
 
         if specials.asbool('_count', False):
             return len(list(aggregate(group(match(aggr)))))
 
-        return aggregate(limit(group(sort(match(aggr)))))
+        return aggregate(limit(sort(project(group(match(aggr))))))
 
     @classmethod
     def group(cls, params, _limit=1):
@@ -263,6 +326,9 @@ class BaseMixin(object):
 
         query_set = query_set(**params)
         _total = query_set.count()
+
+        if specials._frequencies:
+            return cls.get_frequencies(query_set, specials)
 
         if specials._group:
             return cls.get_group(query_set, specials)
@@ -372,9 +438,18 @@ class BaseMixin(object):
 
     @classmethod
     def to_dicts(cls, keyname, **params):
-        return dictset([[e[keyname], e.to_dict()]
+        fields = params.pop('fields', [])
+        return dictset([[e[keyname], e.to_dict(fields=fields)]
                 for e in cls.get_collection(**params)])
 
+    @classmethod
+    def to_distincts(cls, fields, reverse=False):
+        _d = dictset()
+        fields = split_strip(fields)
+        for fld in fields:
+            _d[fld] = sorted(cls.objects.distinct(fld), reverse=reverse)
+
+        return _d
 
 class Base(BaseMixin, mongo.Document):
     __metaclass__ = TopLevelDocumentMetaclass

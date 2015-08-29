@@ -17,6 +17,10 @@ class Actions(object):
     delete_many = '_delete_many'
     update_many = '_update_many'
 
+    @classmethod
+    def all(cls):
+        return cls.__dict__.keys()
+
 def get_view_class(view, resource):
     '''Returns the dotted path to the default view class.'''
 

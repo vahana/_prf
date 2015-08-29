@@ -129,7 +129,7 @@ class BaseView(object):
             self._params.setdefault('_limit', 20)
 
     def __getattr__(self, attr):
-        if attr in resource.Actions:
+        if attr in resource.Actions.all():
             return self.not_allowed_action
 
         raise AttributeError(attr)

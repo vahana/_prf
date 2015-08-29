@@ -84,7 +84,11 @@ class Request(object):
         return hasattr(resp, 'from_cache') and resp.from_cache
 
     def prepare_url(self, path='', params={}):
-        url = urljoin(self.base_url, path)
+        if self.base_url:
+            url = '%s/%s' % (self.base_url, path) if path else self.base_url
+        else:
+            url = path
+
         if params:
             url = '%s%s%s' % (url, ('&' if '?' in url else '?'), urlencode(params))
 
@@ -117,18 +121,23 @@ class Request(object):
                 self.raise_or_log(req.response)
             yield req.response
 
-    def mget(self, urls, **kw):
+    def mget(self, urls=[], params=[], **kw):
         log.debug('%s', urls)
 
+        reqs = []
         if isinstance(urls, basestring):
             urls = [urls]
 
-        reqs = [requests.Request(method='GET',
-                                 url=self.prepare_url(url), **kw)\
-                for url in urls]
+        if urls:
+            reqs = [requests.Request(method='GET',
+                                     url=self.prepare_url(url), **kw)\
+                    for url in urls]
+        elif params:
+            reqs = [requests.Request(method='GET',
+                                     url=self.prepare_url('', param), **kw)\
+                    for param in params]
 
         return self.multi_submit(reqs)
-
 
     def post(self, path='', data={}, **kw):
         url = self.prepare_url(path)
@@ -193,6 +202,9 @@ class PRFRequest(Request):
         if _limit == -1:
             for start, count in pagr():
                 resp = self.get(url_ptrn % (start, count), **kw)
+                if not resp.ok:
+                    raise prf.exc._raise(resp)
+
                 if resp.json()['count'] == 0:
                     break
                 yield resp

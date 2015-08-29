@@ -75,6 +75,12 @@ class dictset(dict):
         else:
             return super(dictset, self).__contains__(item)
 
+    def __getitem__(self, key):
+        try:
+            return super(dictset, self).__getitem__(key)
+        except KeyError as e:
+            raise DKeyError(e.message)
+
     def to_dictset(self):
         for key, val in self.items():
             if isinstance(val, dict):
@@ -132,6 +138,9 @@ class dictset(dict):
     def asstr(self, *arg, **kw):
         return asstr(self, *arg, **kw)
 
+    def asrange(self, *arg, **kw):
+        return asrange(self, *arg, **kw)
+
     def remove(self, keys):
         only, _ = process_fields(keys)
         return dictset([[k, v] for (k, v) in self.items() if k not in only])
@@ -150,9 +159,9 @@ class dictset(dict):
                 self.pop(k)
         return self
 
-    def mget(self, prefix, defaults={}):
+    def mget(self, prefix, defaults={}, sep='.'):
         if prefix[-1] != '.':
-            prefix += '.'
+            prefix += sep
 
         _dict = dictset(defaults)
         for key, val in self.items():
@@ -190,8 +199,8 @@ class dictset(dict):
         for key in keys:
             if key in self:
                 if check_type and not isinstance(self[key], check_type):
-                    errors.append(err or ('`%s` must be type `%s`, got `%s` instead'\
-                             % (key, check_type, type(self[key]))))
+                    errors.append('%s: `%s` must be type `%s`, got `%s` instead'\
+                             % (err, key, check_type, type(self[key])))
 
                 if not allow_empty and not self[key]:
                     errors.append(err or 'Empty key: `%s`' % key)
@@ -217,10 +226,11 @@ class dictset(dict):
         return _d
 
     @classmethod
-    def build_from(cls, source, target_rules, allow_empty=True, inverse=False):
+    def build_from(cls, source, rules, allow_empty=True,
+                    allow_missing=False, inverse=False):
         _d = dictset()
 
-        flat_rules = dictset(target_rules).flat()
+        flat_rules = dictset(rules).flat()
         flat_source = dictset(source).flat()
         flat_source.update(source)
 
@@ -234,7 +244,10 @@ class dictset(dict):
             if key.endswith('.'):
                 _val = flat_source.mget(key)
             else:
-                _val = flat_source.get(key)
+                if allow_missing:
+                    _val = flat_source.get(key, key)
+                else:
+                    _val = flat_source[key]
 
             if _val != "" or allow_empty:
                 _d[val] = _val

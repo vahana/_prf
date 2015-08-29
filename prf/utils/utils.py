@@ -179,6 +179,13 @@ def prep_params(params):
     specials._scalar = params.aslist('_scalar', pop=True, allow_missing=True)
     specials._group = params.aslist('_group', pop=True, allow_missing=True)
 
+    specials._frequencies = params.asstr('_frequencies', pop=True, allow_missing=True)
+    specials._fq_normalize = params.asbool('_fq_normalize', pop=True, allow_missing=True)
+
+    for each in params.keys():
+        if each.startswith('_'):
+            specials[each] = params.pop(each)
+
     return dictset(params), specials
 
 

@@ -61,7 +61,12 @@ def create_response(resp, params):
     return resp
 
 def _raise(response):
-    raise exception_response(status_code=response.status_code, **response.json())
+    try:
+        error = response.json()
+    except:
+        error = {'message': response.text}
+
+    raise exception_response(status_code=response.status_code, **error)
 
 def exception_response(status_code, **kw):
     # for some reason 400 is mapped to HTTPClientError in pyramid instead of HTTPBadRequest

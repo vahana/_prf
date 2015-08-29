@@ -62,13 +62,13 @@ def asbool(dset, value):
 
 
 @parametrize
-def aslist(dset, value, sep=',', remove_empty=True, unique=False):
+def aslist(dset, value, typecast=str, sep=',', remove_empty=True, unique=False):
     if isinstance(value, list):
         _lst = value
     elif isinstance(value, basestring):
         _lst = split_strip(value, sep)
     else:
-        _lst = [str(value)]
+        _lst = [value]
 
     if remove_empty:
         _lst = (filter(bool, _lst))
@@ -76,7 +76,7 @@ def aslist(dset, value, sep=',', remove_empty=True, unique=False):
     if unique:
         _lst = list(set(_lst))
 
-    return _lst
+    return [typecast(e) for e in _lst]
 
 
 @parametrize
@@ -92,6 +92,22 @@ def asfloat(dset, value):
 @parametrize
 def asstr(dset, value):
     return unicode(value)
+
+
+@parametrize
+def asrange(dset, value, typecast=str, sep='-'):
+    if isinstance(value, list):
+        list_ = value
+    elif isinstance(value, basestring):
+        rng = split_strip(value, sep)
+        if len(rng) !=2:
+            raise DValueError('bad range')
+        list_ = range(int(rng[0]), int(rng[1])+1)
+
+    else:
+        list_ = [value]
+
+    return [typecast(e) for e in list_]
 
 
 def asdict(dset, name, _type=None, _set=False, pop=False):
