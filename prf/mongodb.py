@@ -230,30 +230,69 @@ class BaseMixin(object):
         accumulators = dictset([[e[6:],specials[e]] \
                 for e in specials if e.startswith('_group$')])
 
+        def match(aggr):
+            if queryset._query:
+                aggr.append({'$match':queryset._query})
+            return aggr
+
         def unwind(aggr):
+            return aggr
+
             _prj = {"_id": "$_id"}
             unwinds = []
-            nesteds = []
 
-            for each in specials._group:
-                num_dots = each.count('.')
+            for op, name in accumulators.items():
+                num_dots = name.count('.')
                 if num_dots:
-                    nesteds.append([each, num_dots])
+                    new_name = name.replace('.', '__')
+                    accumulators[op] = new_name
+                    _prj[new_name]='$%s' % name
+                    for x in range(num_dots):
+                        unwinds.append({'$unwind': '$%s' % new_name})
 
-            for each, num_dots in nesteds:
-                _prj[each]='$%s'%each
-                for x in range(num_dots):
-                    unwinds.append({'$unwind': '$%s' % each.replace('.','_')})
-
-            if nesteds:
+            if unwinds:
                 aggr.append({'$project':_prj})
                 aggr.extend(unwinds)
 
             return aggr
 
-        def match(aggr):
-            if queryset._query:
-                aggr.append({'$match':queryset._query})
+        def group(aggr):
+            group_dict = {}
+
+            for each in specials._group:
+                group_dict[each] = '$%s' % each
+
+            if group_dict:
+                _d = {'_id': group_dict,
+                      'count': {'$sum':1}}
+
+                for op, val in accumulators.items():
+                    _op = op.lower()
+                    if _op in ['$addtoset', '$set']:
+                        op = '$addToSet'
+                    elif _op in ['$push', '$list']:
+                        op = '$push'
+
+                    for _v in split_strip(val):
+                        _d[_v.replace('.', '__')] = {op :'$%s' % _v}
+
+                aggr.append({'$group':_d})
+
+            return aggr
+
+        def project(aggr):
+            _prj = {'_id':0, 'count':1}
+
+            for each in specials._group:
+                _prj[each] = '$_id.%s' % each
+
+            for each in accumulators.values():
+                for _v in split_strip(each):
+                    _prj[_v] = '$%s' % _v.replace('.', '__')
+
+            aggr.append(
+                {'$project': _prj}
+            )
             return aggr
 
         def sort(aggr):
@@ -268,30 +307,6 @@ class BaseMixin(object):
 
             return aggr
 
-        def group(aggr):
-            group_dict = {}
-
-            for each in specials._group:
-                group_dict[each] = '$%s' % each
-
-            if group_dict:
-                _d = {'_id': group_dict,
-                      'count': {'$sum':1}}
-
-                for key, val in accumulators.items():
-                    _key = key.lower()
-                    if _key in ['$addtoset', '$set']:
-                        key = '$addToSet'
-                    elif _key in ['$push', '$list']:
-                        key = '$push'
-
-                    for _v in split_strip(val):
-                        _d[_v] = {key :'$%s' % _v}
-
-                aggr.append({'$group':_d})
-
-            return aggr
-
         def limit(aggr):
             start = specials._start
             aggr.append({'$skip':start})
@@ -301,29 +316,16 @@ class BaseMixin(object):
                 aggr.append({'$limit':end})
             return aggr
 
-        def project(aggr):
-            _prj = {'_id':0, 'count':1}
-
-            for each in specials._group:
-                _prj[each] = '$_id.%s' % each
-
-            for each in accumulators.values():
-                for _v in split_strip(each):
-                    _prj[_v] = '$%s' % _v
-
-            aggr.append(
-                {'$project': _prj}
-            )
-            return aggr
-
         def aggregate(aggr):
             log.debug(aggr)
             return cls._collection.aggregate(aggr, cursor={})
 
         if specials.asbool('_count', False):
-            return len(list(aggregate(group(match(aggr)))))
+            aggr = group(match(aggr))
+            return len(list(aggregate(aggr)))
 
-        return aggregate(limit(sort(project(group(match(aggr))))))
+        aggr = limit(sort(project(group(unwind(match(aggr))))))
+        return aggregate(aggr)
 
     @classmethod
     def group(cls, params, _limit=1):
