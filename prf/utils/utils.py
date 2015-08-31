@@ -175,12 +175,6 @@ def prep_params(params):
     _start = params.pop('_start', None)
 
     specials._start, specials._limit = process_limit(_start, _page, _limit)
-    specials._distinct = params.pop('_distinct', None)
-    specials._scalar = params.aslist('_scalar', pop=True, allow_missing=True)
-    specials._group = params.aslist('_group', pop=True, allow_missing=True)
-
-    specials._frequencies = params.asstr('_frequencies', pop=True, allow_missing=True)
-    specials._fq_normalize = params.asbool('_fq_normalize', pop=True, allow_missing=True)
 
     for each in params.keys():
         if each.startswith('_'):

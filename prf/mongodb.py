@@ -6,7 +6,7 @@ from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
 import pymongo
 
 import prf.exc
-from prf.utils import dictset, prep_params, split_strip, to_dunders, DValueError
+from prf.utils import dictset, process_limit, split_strip, to_dunders, DValueError
 from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
@@ -130,7 +130,34 @@ class BaseMixin(object):
             return {name: _default}
 
     @classmethod
-    def prep_mongo_params(cls, params):
+    def prep_params(cls, params):
+
+        specials = dictset(
+            _sort=None,
+            _fields=None,
+            _count=None,
+            _start=None,
+            _limit=None,
+            _page=None,
+            _frequencies=None,
+            _group=None,
+            _distinct=None,
+            _scalar=None
+        )
+
+        specials._sort = params.aslist('_sort', default=[], pop=True)
+        specials._fields = params.aslist('_fields', default=[], pop=True)
+        specials._count = '_count' in params; params.pop('_count', None)
+
+        specials._start, specials._limit = process_limit(
+                                            params.pop('_start', None),
+                                            params.pop('_page', None),
+                                            params.pop('_limit', 1))
+
+        for each in params.keys():
+            if each.startswith('_'):
+                specials[each] = params.pop(each)
+
         list_ops = ('in', 'nin', 'all')
         for key in params.copy():
             pos = key.rfind('__')
@@ -155,10 +182,13 @@ class BaseMixin(object):
                 elif op[2:] == 'int':
                     params[key[:pos]] = params.asint(key, pop=True)
 
-        return params
+        return params, specials
 
     @classmethod
     def get_frequencies(cls, queryset, specials):
+        specials.asstr('_frequencies',  allow_missing=True)
+        specials.asbool('_fq_normalize',  default=False)
+
         reverse = not bool(specials._sort and specials._sort[0].startswith('-'))
         for each in  sorted(
             queryset.item_frequencies(specials._frequencies,
@@ -194,11 +224,11 @@ class BaseMixin(object):
     @classmethod
     def get_group(cls, queryset, specials):
         aggr = []
-
+        specials.aslist('_group', allow_missing=True)
         queryset = queryset or cls.objects
 
         accumulators = dictset([[e[6:],specials[e]] \
-                        for e in specials if e.startswith('_group$')])
+                for e in specials if e.startswith('_group$')])
 
         def unwind(aggr):
             _prj = {"_id": "$_id"}
@@ -255,7 +285,9 @@ class BaseMixin(object):
                     elif _key in ['$push', '$list']:
                         key = '$push'
 
-                    _d[val] = {key :'$%s'%val}
+                    for _v in split_strip(val):
+                        _d[_v] = {key :'$%s' % _v}
+
                 aggr.append({'$group':_d})
 
             return aggr
@@ -276,7 +308,8 @@ class BaseMixin(object):
                 _prj[each] = '$_id.%s' % each
 
             for each in accumulators.values():
-                _prj[each] = '$%s'%each
+                for _v in split_strip(each):
+                    _prj[_v] = '$%s' % _v
 
             aggr.append(
                 {'$project': _prj}
@@ -309,8 +342,7 @@ class BaseMixin(object):
     def get_collection(cls, **params):
         params = dictset(params)
         log.debug(params)
-        params, specials = prep_params(params)
-        params = cls.prep_mongo_params(params)
+        params, specials = cls.prep_params(params)
 
         start = specials._start
         end = specials._start+specials._limit if specials._limit > -1 else None
@@ -323,10 +355,10 @@ class BaseMixin(object):
         if specials._frequencies:
             return cls.get_frequencies(query_set, specials)
 
-        if specials._group:
+        elif specials._group:
             return cls.get_group(query_set, specials)
 
-        if specials._distinct:
+        elif specials._distinct:
             return cls.get_distinct(query_set, specials)
 
         if specials.asbool('_count', False):
@@ -345,7 +377,7 @@ class BaseMixin(object):
         query_set._total = _total
 
         if specials._scalar:
-            return query_set.scalar(*specials._scalar)
+            return query_set.scalar(*specials.aslist('_scalar'))
 
         return query_set
 
