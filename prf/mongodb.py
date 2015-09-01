@@ -230,6 +230,9 @@ class BaseMixin(object):
         accumulators = dictset([[e[6:],specials[e]] \
                 for e in specials if e.startswith('_group$')])
 
+
+        def undot(name): return name.replace('.', '__')
+
         def match(aggr):
             if queryset._query:
                 aggr.append({'$match':queryset._query})
@@ -244,7 +247,7 @@ class BaseMixin(object):
             for op, name in accumulators.items():
                 num_dots = name.count('.')
                 if num_dots:
-                    new_name = name.replace('.', '__')
+                    new_name = undot(name)
                     accumulators[op] = new_name
                     _prj[new_name]='$%s' % name
                     for x in range(num_dots):
@@ -260,7 +263,7 @@ class BaseMixin(object):
             group_dict = {}
 
             for each in specials._group:
-                group_dict[each] = '$%s' % each
+                group_dict[undot(each)] = '$%s' % each
 
             if group_dict:
                 _d = {'_id': group_dict,
@@ -274,7 +277,7 @@ class BaseMixin(object):
                         op = '$push'
 
                     for _v in split_strip(val):
-                        _d[_v.replace('.', '__')] = {op :'$%s' % _v}
+                        _d[undot(_v)] = {op :'$%s' % _v}
 
                 aggr.append({'$group':_d})
 
@@ -284,11 +287,11 @@ class BaseMixin(object):
             _prj = {'_id':0, 'count':1}
 
             for each in specials._group:
-                _prj[each] = '$_id.%s' % each
+                _prj[each] = '$_id.%s' % undot(each)
 
             for each in accumulators.values():
                 for _v in split_strip(each):
-                    _prj[_v] = '$%s' % _v.replace('.', '__')
+                    _prj[_v] = '$%s' % undot(_v)
 
             aggr.append(
                 {'$project': _prj}
@@ -311,7 +314,7 @@ class BaseMixin(object):
             start = specials._start
             aggr.append({'$skip':start})
 
-            if '_limit' in specials:
+            if '_limit' in specials and specials._limit != -1:
                 end = specials._start+specials._limit
                 aggr.append({'$limit':end})
             return aggr
