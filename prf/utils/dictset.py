@@ -190,20 +190,24 @@ class dictset(dict):
         else:
             return cls({key: cls.from_dotted(sufix, val)})
 
-    def has(self, keys, check_type=basestring, allow_empty=False, err='', _all=True,
-                                                                allow_missing=False):
+    def has(self, keys, check_type=basestring, allow_empty=False,
+                        err='', _all=True, allow_missing=False,
+                        allowed_values=[]):
         errors = []
+
         if isinstance(keys, basestring):
             keys = [keys]
 
         for key in keys:
             if key in self:
                 if check_type and not isinstance(self[key], check_type):
-                    errors.append('%s: `%s` must be type `%s`, got `%s` instead'\
-                             % (err, key, check_type, type(self[key])))
+                    errors.append(err or '`%s` must be type `%s`, got `%s`'\
+                                          % (key, check_type, type(self[key])))
 
-                if not allow_empty and not self[key]:
-                    errors.append(err or 'Empty key: `%s`' % key)
+                if allowed_values and self[key] not in allowed_values:
+                    errors.append(err or '`%s` allowed values are: %s, got: `%s`'\
+                                          % (key, allowed_values, self[key]))
+
             elif not allow_missing:
                 errors.append(err or 'Missing key: `%s`' % key)
 

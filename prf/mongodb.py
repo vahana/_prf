@@ -222,20 +222,19 @@ class BaseMixin(object):
         return sorted(queryset.distinct(specials._distinct), reverse=reverse)[start:end]
 
     @classmethod
-    def get_group(cls, queryset, specials):
+    def get_group(cls, match_query, specials):
         aggr = []
         specials.aslist('_group', allow_missing=True)
-        queryset = queryset or cls.objects
 
         accumulators = dictset([[e[6:],specials[e]] \
                 for e in specials if e.startswith('_group$')])
 
-
-        def undot(name): return name.replace('.', '__')
+        def undot(name):
+            return name.replace('.', '__')
 
         def match(aggr):
-            if queryset._query:
-                aggr.append({'$match':queryset._query})
+            if match_query:
+                aggr.append({'$match':match_query})
             return aggr
 
         def unwind(aggr):
@@ -299,7 +298,7 @@ class BaseMixin(object):
             return aggr
 
         def sort(aggr):
-            sort_dict = {}
+            sort_dict = {'count': -1}
             for each in specials._sort:
                 if each[0] == '-':
                     sort_dict[each[1:]] = -1
@@ -361,7 +360,7 @@ class BaseMixin(object):
             return cls.get_frequencies(query_set, specials)
 
         elif specials._group:
-            return cls.get_group(query_set, specials)
+            return cls.get_group(query_set._query, specials)
 
         elif specials._distinct:
             return cls.get_distinct(query_set, specials)
@@ -468,9 +467,17 @@ class BaseMixin(object):
 
     @classmethod
     def to_dicts(cls, keyname, **params):
-        fields = params.pop('fields', [])
-        return dictset([[e[keyname], e.to_dict(fields=fields)]
-                for e in cls.get_collection(**params)])
+        params = dictset(params)
+        _fields = params.aslist('_fields', default=[])
+
+        if len(_fields) == 1:
+            _d = dictset()
+            for e in cls.get_collection(**params):
+                _d[e[keyname]] = e.to_dict(fields=_fields).get(_fields[0])
+            return _d
+        else:
+            return dictset([[e[keyname], e.to_dict(fields=_fields)]
+                        for e in cls.get_collection(**params)])
 
     @classmethod
     def to_distincts(cls, fields, reverse=False):

@@ -1,6 +1,6 @@
 import logging
 import requests
-from urlparse import urljoin
+from urlparse import urlparse, urljoin
 from functools import partial
 
 from prf.utils.utils import json_dumps, urlencode, pager
@@ -31,7 +31,7 @@ class Request(object):
                       delay=0, reqs_over_time = None,
                       cookies=None, headers=None):
 
-        self.base_url = base_url
+        self.base_url = base_url.strip('/')
         self.cache_options = cache_options or {}
         self._raise = _raise
         self.delay = delay
@@ -84,15 +84,30 @@ class Request(object):
         return hasattr(resp, 'from_cache') and resp.from_cache
 
     def prepare_url(self, path='', params={}):
-        if self.base_url:
-            url = '%s/%s' % (self.base_url, path) if path else self.base_url
-        else:
-            url = path
+        path = path.strip('/')
+        path_ps = urlparse(path)
+        url_ps = urlparse(self.base_url)
+
+        if path:
+            if not path_ps.netloc:
+                url_ps = path_ps._replace(
+                            scheme=url_ps.scheme,
+                            netloc=url_ps.netloc,
+                            path= '%s/%s' % (url_ps.path, path),
+                    )
+            else:
+                url_ps = path_ps
 
         if params:
-            url = '%s%s%s' % (url, ('&' if '?' in url else '?'), urlencode(params))
+            new_query = urlencode(params)
 
-        return url
+            if path_ps.query:
+                new_query = '%s&%s' % (new_query, path_ps.query)
+
+            url_ps = url_ps._replace(query=new_query)
+
+        return url_ps.geturl()
+
 
     def get(self, path='', params={}, **kw):
         url = self.prepare_url(path, params)
