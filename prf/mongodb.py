@@ -271,12 +271,16 @@ class BaseMixin(object):
                 for op, val in accumulators.items():
                     _op = op.lower()
                     if _op in ['$addtoset', '$set']:
+                        sfx = 'set'
                         op = '$addToSet'
                     elif _op in ['$push', '$list']:
+                        sfx = 'list'
                         op = '$push'
+                    else:
+                        sfx = op[1:]
 
                     for _v in split_strip(val):
-                        _d[undot(_v)] = {op :'$%s' % _v}
+                        _d['%s_%s' % (undot(_v), sfx)] = {op :'$%s' % _v}
 
                 aggr.append({'$group':_d})
 
@@ -285,10 +289,17 @@ class BaseMixin(object):
         def project(aggr):
             _prj = {'_id':0, 'count':1}
 
+
             for each in specials._group:
                 _prj[each] = '$_id.%s' % undot(each)
 
-            for each in accumulators.values():
+            _gkeys = {}
+            for each in aggr:
+                if '$group' in each:
+                    _gkeys = each['$group'].keys()
+
+            for each in _gkeys:
+                if each == '_id': continue
                 for _v in split_strip(each):
                     _prj[_v] = '$%s' % undot(_v)
 
@@ -298,14 +309,16 @@ class BaseMixin(object):
             return aggr
 
         def sort(aggr):
-            sort_dict = {'count': -1}
+            sort_dict = {}
+
             for each in specials._sort:
                 if each[0] == '-':
                     sort_dict[each[1:]] = -1
                 else:
                     sort_dict[each] = 1
-            if sort_dict:
-                aggr.append({'$sort':sort_dict})
+
+            sort_dict = sort_dict or {'count': -1}
+            aggr.append({'$sort':sort_dict})
 
             return aggr
 
