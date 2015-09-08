@@ -142,12 +142,14 @@ class BaseMixin(object):
             _frequencies=None,
             _group=None,
             _distinct=None,
-            _scalar=None
+            _scalar=None,
+            _first=None,
         )
 
         specials._sort = params.aslist('_sort', default=[], pop=True)
         specials._fields = params.aslist('_fields', default=[], pop=True)
-        specials._count = '_count' in params; params.pop('_count', None)
+        specials._count = '_count' in params; params.pop('_count', False)
+        specials._first = '_first' in params; params.pop('_first', False)
 
         specials._start, specials._limit = process_limit(
                                             params.pop('_start', None),
@@ -378,8 +380,12 @@ class BaseMixin(object):
         elif specials._distinct:
             return cls.get_distinct(query_set, specials)
 
-        if specials.asbool('_count', False):
+        elif specials._first:
+            return query_set[:1]
+
+        if specials._count:
             return _total
+
 
         if specials._sort:
             query_set = query_set.order_by(*specials._sort)
