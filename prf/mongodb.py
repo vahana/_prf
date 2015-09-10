@@ -156,6 +156,9 @@ class BaseMixin(object):
                                             params.pop('_page', None),
                                             params.pop('_limit', 1))
 
+        specials._end = specials._start+specials._limit\
+                             if specials._limit > -1 else None
+
         for each in params.keys():
             if each.startswith('_'):
                 specials[each] = params.pop(each)
@@ -202,8 +205,6 @@ class BaseMixin(object):
 
     @classmethod
     def get_distinct(cls, queryset, specials):
-        start = specials._start
-        end = specials._start+specials._limit
         reverse = False
 
         if specials.asbool('_count', False):
@@ -221,7 +222,12 @@ class BaseMixin(object):
             if _sort != specials._distinct:
                 raise prf.exc.HTTPBadRequest('Must sort only on distinct')
 
-        return sorted(queryset.distinct(specials._distinct), reverse=reverse)[start:end]
+        dset = sorted(queryset.distinct(specials._distinct), reverse=reverse)
+
+        if specials._end is None:
+            return dset[specials._start:]
+        else:
+            return dset[specials._start: specials._end]
 
     @classmethod
     def get_group(cls, match_query, specials):
@@ -325,12 +331,10 @@ class BaseMixin(object):
             return aggr
 
         def limit(aggr):
-            start = specials._start
-            aggr.append({'$skip':start})
+            aggr.append({'$skip':specials._start})
+            if specials._end is not None:
+                aggr.append({'$limit':specials._end})
 
-            if '_limit' in specials and specials._limit != -1:
-                end = specials._start+specials._limit
-                aggr.append({'$limit':end})
             return aggr
 
         def aggregate(aggr):
@@ -363,9 +367,6 @@ class BaseMixin(object):
         log.debug(params)
         params, specials = cls.prep_params(params)
 
-        start = specials._start
-        end = specials._start+specials._limit if specials._limit > -1 else None
-
         query_set = cls.objects
 
         query_set = query_set(**params)
@@ -386,14 +387,13 @@ class BaseMixin(object):
         if specials._count:
             return _total
 
-
         if specials._sort:
             query_set = query_set.order_by(*specials._sort)
 
-        if end is not None:
-            query_set = query_set[start:end]
+        if specials._end is None:
+            query_set = query_set[specials._start:]
         else:
-            query_set = query_set[start:]
+            query_set = query_set[specials._start:specials._end]
 
         log.debug('get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
 

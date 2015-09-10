@@ -60,12 +60,12 @@ class Request(object):
 
         self.session.cookies.update(resp.cookies)
 
-    def json(self, resp):
+    def json(self, resp, err=''):
         try:
             return dictset(resp.json())
-        except:
-            log.error('Response does not contain json body')
-            return None
+        except Exception as e:
+            log.error('Failed to convert to json: %s - %s' % (e, err))
+            return dictset()
 
     def is_json(self, data):
         return isinstance(data, (tuple, list, dict)) \
@@ -149,7 +149,8 @@ class Request(object):
                     for url in urls]
         elif params:
             reqs = [requests.Request(method='GET',
-                                     url=self.prepare_url('', param), **kw)\
+                                     url=self.prepare_url(
+                                        param.pop('path', ''), param), **kw)\
                     for param in params]
 
         return self.multi_submit(reqs)
