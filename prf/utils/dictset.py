@@ -75,6 +75,12 @@ class dictset(dict):
         else:
             return super(dictset, self).__contains__(item)
 
+    def __add__(self, item):
+        return self.copy().update(item)
+
+    def __iadd__(self, item):
+        return self.update(item)
+
     def __getitem__(self, key):
         try:
             return super(dictset, self).__getitem__(key)
