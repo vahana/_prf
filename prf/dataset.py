@@ -14,10 +14,6 @@ log = logging.getLogger(__name__)
 DS_COLL_PREFIX = 'ds_'
 
 
-def cls2collection(name):
-    return DS_COLL_PREFIX + name
-
-
 def get_uniques(index_meta):
     for index in index_meta:
         if isinstance(index, dict) and index.get('unique', False):
@@ -70,18 +66,15 @@ def define_document(name, meta={}, redefine=False):
         raise ValueError('Document class name can not be empty')
 
     name = str(name)
-
     meta['ordering'] = ['-id']
 
     if redefine:
-        klass = type(name, (DatasetDoc,), {'meta': meta or {}})
-    else:
-        try:
-            klass = get_document_cls(name)
-        except ValueError:
-            klass = type(name, (DatasetDoc,), {'meta': meta or {}})
+        return type(name, (DatasetDoc,), {'meta': meta})
 
-    return klass
+    try:
+        return get_document_cls(name)
+    except ValueError:
+        return type(name, (DatasetDoc,), {'meta': meta})
 
 
 class Log(mongo.DynamicEmbeddedDocument):
@@ -129,13 +122,12 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
 class DatasetDoc(DynamicBase):
     __metaclass__ = VersionedDocumentMetaclass
 
-    COLL_PREFIX = 'ds_'
     meta = {'abstract': True}
     log = mongo.EmbeddedDocumentField(Log)
 
     @classmethod
     def set_collection_name(cls):
-        cls._meta['collection'] = cls.COLL_PREFIX + cls.__name__
+        cls._meta['collection'] = DS_COLL_PREFIX + cls.__name__
 
     @classmethod
     def _get_uniques(cls):
@@ -150,6 +142,10 @@ class DatasetDoc(DynamicBase):
         cls.objects(v__lt=self.v, **params)\
                    .update(set__latest=False)
 
+    def __eq__(self, other):
+        remove = ['-v', '-latest', '-log', '-id', '-self']
+        return self.to_dict(remove) == other.to_dict(remove)
+
     def clean(self):
         if not ObjectId.is_valid(self.id):
             self._foreign_id = self.id
@@ -161,7 +157,7 @@ class DatasetDoc(DynamicBase):
         else:
             self.log = Log()
 
-    def get_last_version(self, key=None):
+    def get_latest_version(self, key=None):
         params = {}
         cls = self.__class__
 
@@ -190,17 +186,21 @@ class DatasetDoc(DynamicBase):
         try:
             obj = None
             if merge:
-                obj = self.get_last_version(merge)
+                obj = self.get_latest_version(merge)
                 if obj:
+                    if obj == self:
+                        return # dont save if data did not change
                     self.merge_with(obj.to_dict())
 
             if v:
                 self.v = v
             else:
                 if not merge:
-                    obj = self.get_last_version()
+                    obj = self.get_latest_version()
 
                 if obj:
+                    if obj == self:
+                        return # dont save if data did not change
                     self.v = obj.v + 1 # next version
                 else:
                     self.v = 1
