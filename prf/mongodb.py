@@ -6,7 +6,8 @@ from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
 import pymongo
 
 import prf.exc
-from prf.utils import dictset, process_limit, split_strip, to_dunders, DValueError
+from prf.utils import dictset, process_limit, split_strip,\
+                      to_dunders, DValueError, process_fields
 from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
@@ -381,7 +382,7 @@ class BaseMixin(object):
         elif specials._distinct:
             return cls.get_distinct(query_set, specials)
 
-        elif specials._first:
+        if specials._first:
             return query_set[:1]
 
         if specials._count:
@@ -395,12 +396,19 @@ class BaseMixin(object):
         else:
             query_set = query_set[specials._start:specials._end]
 
-        log.debug('get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
+        if specials._scalar:
+            return query_set.scalar(*specials.aslist('_scalar'))
+
+        if specials._fields:
+            only, exclude = process_fields(specials._fields)
+            if only:
+                query_set = query_set.only(*only)
+            elif exclude:
+                query_set = query_set.exclude(*exclude)
 
         query_set._total = _total
 
-        if specials._scalar:
-            return query_set.scalar(*specials.aslist('_scalar'))
+        log.debug('get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
 
         return query_set
 
@@ -489,10 +497,10 @@ class BaseMixin(object):
         params = dictset(params)
         _fields = params.aslist('_fields', default=[])
 
-        if len(_fields) == 1:
+        if len(_fields) == 1: #if one field, assign the value directly
             _d = dictset()
             for e in cls.get_collection(**params):
-                _d[e[keyname]] = e.to_dict(fields=_fields).get(_fields[0])
+                _d[e[keyname]] = getattr(e, _fields[0])
             return _d
         else:
             return dictset([[e[keyname], e.to_dict(fields=_fields)]

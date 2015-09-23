@@ -13,6 +13,8 @@ from prf.utils import dictset, split_strip
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = 'ds_'
 
+def cls2collection(name):
+    return DS_COLL_PREFIX + name
 
 def get_uniques(index_meta):
     for index in index_meta:
@@ -127,7 +129,7 @@ class DatasetDoc(DynamicBase):
 
     @classmethod
     def set_collection_name(cls):
-        cls._meta['collection'] = DS_COLL_PREFIX + cls.__name__
+        cls._meta['collection'] = cls2collection(cls.__name__)
 
     @classmethod
     def _get_uniques(cls):
@@ -142,7 +144,7 @@ class DatasetDoc(DynamicBase):
         cls.objects(v__lt=self.v, **params)\
                    .update(set__latest=False)
 
-    def __eq__(self, other):
+    def is_eq(self, other):
         remove = ['-v', '-latest', '-log', '-id', '-self']
         return self.to_dict(remove) == other.to_dict(remove)
 
@@ -188,8 +190,8 @@ class DatasetDoc(DynamicBase):
             if merge:
                 obj = self.get_latest_version(merge)
                 if obj:
-                    if obj == self:
-                        return # dont save if data did not change
+                    if self.is_eq(obj):
+                        return obj # dont save if data did not change
                     self.merge_with(obj.to_dict())
 
             if v:
@@ -199,8 +201,8 @@ class DatasetDoc(DynamicBase):
                     obj = self.get_latest_version()
 
                 if obj:
-                    if obj == self:
-                        return # dont save if data did not change
+                    if self.is_eq(obj):
+                        return obj # dont save if data did not change
                     self.v = obj.v + 1 # next version
                 else:
                     self.v = 1
