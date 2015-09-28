@@ -144,13 +144,15 @@ class BaseMixin(object):
             _group=None,
             _distinct=None,
             _scalar=None,
-            _first=None,
+            _ix=None,
         )
 
         specials._sort = params.aslist('_sort', default=[], pop=True)
         specials._fields = params.aslist('_fields', default=[], pop=True)
         specials._count = '_count' in params; params.pop('_count', False)
-        specials._first = '_first' in params; params.pop('_first', False)
+        specials._ix = params.asint('_ix', default=0, pop=True, _raise=False)
+        if specials._ix < 0:
+            raise prf.exc.HTTPBadRequest('`_ix` can not be negative')
 
         specials._start, specials._limit = process_limit(
                                             params.pop('_start', None),
@@ -382,8 +384,8 @@ class BaseMixin(object):
         elif specials._distinct:
             return cls.get_distinct(query_set, specials)
 
-        if specials._first:
-            return query_set[:1]
+        if '_ix' in specials:
+            return query_set[specials._ix].to_dict(specials._fields)
 
         if specials._count:
             return _total
