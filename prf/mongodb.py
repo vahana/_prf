@@ -150,15 +150,12 @@ class BaseMixin(object):
         specials._sort = params.aslist('_sort', default=[], pop=True)
         specials._fields = params.aslist('_fields', default=[], pop=True)
         specials._count = '_count' in params; params.pop('_count', False)
-        specials._ix = params.asint('_ix', default=0, pop=True, _raise=False)
-        if specials._ix < 0:
-            raise prf.exc.HTTPBadRequest('`_ix` can not be negative')
-
         specials._start, specials._limit = process_limit(
                                             params.pop('_start', None),
                                             params.pop('_page', None),
                                             params.pop('_limit', 1))
 
+        specials._ix = params.asint('_ix', pop=True, allow_missing=True, _raise=False)
         specials._end = specials._start+specials._limit\
                              if specials._limit > -1 else None
 
@@ -363,6 +360,16 @@ class BaseMixin(object):
             specials['_limit'] = _limit
         return cls.get_group(None, specials)
 
+    @classmethod
+    def _ix(cls, specials, total):
+        if specials._ix < 0:
+            _ix = max(total + specials._ix, 0)
+        else:
+            _ix = min(specials._ix, total-1)
+
+        specials._start = _ix
+        specials._end = _ix + 1
+        specials._limit = 1
 
     @classmethod
     def get_collection(cls, **params):
@@ -384,14 +391,14 @@ class BaseMixin(object):
         elif specials._distinct:
             return cls.get_distinct(query_set, specials)
 
-        if '_ix' in specials:
-            return query_set[specials._ix].to_dict(specials._fields)
-
         if specials._count:
             return _total
 
         if specials._sort:
             query_set = query_set.order_by(*specials._sort)
+
+        if specials._ix is not None:
+            cls._ix(specials, _total)
 
         if specials._end is None:
             query_set = query_set[specials._start:]
