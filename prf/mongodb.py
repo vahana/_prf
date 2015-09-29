@@ -287,8 +287,10 @@ class BaseMixin(object):
                     else:
                         sfx = op[1:]
 
+                    _dd = {}
                     for _v in split_strip(val):
-                        _d['%s_%s' % (undot(_v), sfx)] = {op :'$%s' % _v}
+                        _dd[undot(_v)] = '$%s' % _v
+                    _d[sfx] = {op:_dd}
 
                 aggr.append({'$group':_d})
 
@@ -339,7 +341,8 @@ class BaseMixin(object):
 
         def aggregate(aggr):
             log.debug(aggr)
-            return cls._collection.aggregate(aggr, cursor={})
+            return cls._collection.aggregate(aggr, cursor={},
+                                             allowDiskUse=True)
 
         if specials.asbool('_count', False):
             aggr = group(match(aggr))
