@@ -296,3 +296,8 @@ def pager(start, page, total):
         while 1:
             yield (start, page)
             start += page
+
+
+def extract_domain(url):
+    import tldextract
+    return tldextract.extract(url).registered_domain
