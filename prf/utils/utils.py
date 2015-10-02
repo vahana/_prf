@@ -301,3 +301,36 @@ def pager(start, page, total):
 def extract_domain(url):
     import tldextract
     return tldextract.extract(url).registered_domain
+
+
+def format_phone(number, country_code='US'):
+    import phonenumbers as pn
+
+    try:
+        phone = pn.parse(number, country_code)
+        if not pn.is_valid_number(phone):
+            raise ValueError('Invalid phone number')
+
+        return pn.format_number(phone,
+                pn.PhoneNumberFormat.INTERNATIONAL)
+
+    except pn.NumberParseException as e:
+        raise ValueError(e)
+
+
+def normalize_phone(number, country_code='US', _raise=True):
+    import phonenumbers as pn
+
+    try:
+        phone = pn.parse(number, country_code)
+        if not pn.is_valid_number(phone):
+            if _raise:
+                raise ValueError('Invalid phone number')
+            else:
+                return None
+
+        return str(phone.national_number)
+
+    except pn.NumberParseException as e:
+        if _raise:
+            raise ValueError(e)
