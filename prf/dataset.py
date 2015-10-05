@@ -149,10 +149,6 @@ class DatasetDoc(DynamicBase):
         return self.to_dict(remove) == other.to_dict(remove)
 
     def clean(self):
-        if not ObjectId.is_valid(self.id):
-            self._foreign_id = self.id
-            self.id = None
-
         if self.log:
             if isinstance(self.log, dict):
                 self.log = Log(**self.log)
