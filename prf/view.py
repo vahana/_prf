@@ -151,7 +151,6 @@ class BaseView(object):
             return obj
 
         fields = self._params.get('_fields')
-
         def process_dict(d_):
             if not fields:
                 return d_

@@ -62,10 +62,10 @@ class Request(object):
 
     def json(self, resp, err=''):
         try:
-            return dictset(resp.json())
+            return resp.json()
         except Exception as e:
             log.error('Failed to convert to json: %s - %s' % (e, err))
-            return dictset()
+            return {}
 
     def is_json(self, data):
         return isinstance(data, (tuple, list, dict)) \
@@ -189,8 +189,8 @@ class Request(object):
 
         return resp
 
-    def head(self, path='', params={}):
-        resp = self.session.head(self.prepare_url(path, params))
+    def head(self, path='', params={}, **kw):
+        resp = self.session.head(self.prepare_url(path, params), **kw)
         if not resp.ok:
             return self.raise_or_log(resp)
 

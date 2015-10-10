@@ -116,14 +116,12 @@ class BaseMixin(object):
 
     @classmethod
     def process_empty_op(cls, name, value):
-        _field = getattr(cls, name, None)
         try:
-            _default = Field2Default[type(getattr(cls, name)) if _field\
-                                     else mongo.StringField]
-        except KeyError:
+            _field = getattr(cls, name)
+            _default = Field2Default[type(_field)]
+        except (KeyError, AttributeError) as e:
             raise prf.exc.HTTPBadRequest(
-                'Can not use `empty` for field `%s` of type %s'\
-                    % (name, type(getattr(cls, name))))
+                'Can not use `empty` for field `%s`: dynamic field or unknown type' % (name, ))
 
         if int(value) == 0:
             return {'%s__ne' % name: _default}
@@ -159,12 +157,14 @@ class BaseMixin(object):
         specials._end = specials._start+specials._limit\
                              if specials._limit > -1 else None
 
+        specials._asdict = params.pop('_asdict', False)
+
         for each in params.keys():
             if each.startswith('_'):
                 specials[each] = params.pop(each)
 
         list_ops = ('in', 'nin', 'all')
-        for key in params.copy():
+        for key in params.keys():
             pos = key.rfind('__')
             if pos == -1:
                 continue
@@ -178,7 +178,7 @@ class BaseMixin(object):
 
             elif op in ['exists', 'size', 'gt', 'gte', 'lt', 'lte'] and\
                                     isinstance(params[key], basestring):
-                params[key] = int(params[key])
+                params.asint(key)
 
             elif op.startswith('as'):
                 if op[2:] == 'bool':
@@ -186,6 +186,10 @@ class BaseMixin(object):
 
                 elif op[2:] == 'int':
                     params[key[:pos]] = params.asint(key, pop=True)
+
+                elif op[2:] == 'str':
+                    params[key[:pos]] = params.asstr(key, pop=True)
+
 
         return params, specials
 
@@ -230,12 +234,13 @@ class BaseMixin(object):
             return dset[specials._start: specials._end]
 
     @classmethod
-    def get_group(cls, match_query, specials):
+    def get_group(cls, queryset, specials):
         aggr = []
         specials.aslist('_group', allow_missing=True)
+        match_query = queryset._query
 
         accumulators = dictset([[e[6:],specials[e]] \
-                for e in specials if e.startswith('_group$')])
+            for e in specials if e.startswith('_group$')])
 
         def undot(name):
             return name.replace('.', '__')
@@ -349,19 +354,14 @@ class BaseMixin(object):
             return len(list(aggregate(aggr)))
 
         aggr = limit(sort(project(group(unwind(match(aggr))))))
-        return aggregate(aggr)
 
-    @classmethod
-    def group(cls, params, _limit=1):
-        log.debug(params)
-        specials = dictset(
-            _group = params,
-            _sort = [],
-            _offset = 0,
-        )
-        if _limit:
-            specials['_limit'] = _limit
-        return cls.get_group(None, specials)
+        if specials.asbool('_asdict', False):
+            return dict([
+                         [e[specials._group[0]],
+                          e.get('list', e.get('set', [{}]))[0]]
+                        for e in aggregate(aggr)])
+        else:
+            return aggregate(aggr)
 
     @classmethod
     def _ix(cls, specials, total):
@@ -389,7 +389,7 @@ class BaseMixin(object):
             return cls.get_frequencies(query_set, specials)
 
         elif specials._group:
-            return cls.get_group(query_set._query, specials)
+            return cls.get_group(query_set, specials)
 
         elif specials._distinct:
             return cls.get_distinct(query_set, specials)
@@ -506,6 +506,13 @@ class BaseMixin(object):
 
     @classmethod
     def to_dicts(cls, keyname, **params):
+
+        def to_dict(_d, fields):
+            if isinstance(_d, dict):
+                return dictset(_d).subset(fields)
+            else:
+                return _d.to_dict(fields=fields)
+
         params = dictset(params)
         _fields = params.aslist('_fields', default=[])
 
@@ -515,7 +522,7 @@ class BaseMixin(object):
                 _d[e[keyname]] = getattr(e, _fields[0])
             return _d
         else:
-            return dictset([[e[keyname], e.to_dict(fields=_fields)]
+            return dictset([[e[keyname], to_dict(e, _fields)]
                         for e in cls.get_collection(**params)])
 
     @classmethod

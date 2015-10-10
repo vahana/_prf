@@ -34,7 +34,8 @@ def parametrize(func):
             result = func(dset, value, **kw)
         except:
             if _raise:
-                raise
+                import sys
+                raise DValueError(sys.exc_value)
             else:
                 result = default
 
@@ -89,7 +90,6 @@ def aslist(dset, value, typecast=str, sep=',', remove_empty=True, unique=False):
 @parametrize
 def asint(dset, value):
     return int(value)
-
 
 @parametrize
 def asfloat(dset, value):
