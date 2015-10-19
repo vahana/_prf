@@ -159,9 +159,12 @@ class dictset(dict):
         merge(self, d_)
         return self
 
-    def pop_by_values(self, val):
+    def pop_by_values(self, vals):
+        if not isinstance(vals, list):
+            vals = [vals]
+
         for k, v in self.items():
-            if v == val:
+            if v in vals:
                 self.pop(k)
         return self
 
