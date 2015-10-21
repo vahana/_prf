@@ -13,8 +13,10 @@ from prf.utils import dictset, split_strip
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = 'ds_'
 
+
 def cls2collection(name):
     return DS_COLL_PREFIX + name
+
 
 def get_uniques(index_meta):
     for index in index_meta:
@@ -25,40 +27,44 @@ def get_uniques(index_meta):
     return []
 
 
+def get_dataset_names(match=""):
+    db = mongo.connection.get_db()
+    match = match.lower()
+    return [[name, name[len(DS_COLL_PREFIX):]] for name in db.collection_names()
+             if match in name.lower() and name.startswith(DS_COLL_PREFIX)]
+
+
 def get_document_meta(doc_name=None):
     db = mongo.connection.get_db()
     documen_metas = dictset()
 
-    coll_names = db.collection_names()
-
-    if doc_name and doc_name not in [e[len(DS_COLL_PREFIX):]
-                                        for e in coll_names]:
+    names = get_dataset_names(doc_name or '')
+    if not names:
         return dictset()
 
-    for name in coll_names:
-        if name.startswith(DS_COLL_PREFIX):
-            _doc_name = name[3:]
+    for name, _doc_name in names:
+        _doc_name = name[len(DS_COLL_PREFIX):]
 
-            meta = dictset(
-                _cls = _doc_name,
-                collection = name,
-            )
+        meta = dictset(
+            _cls = _doc_name,
+            collection = name,
+        )
 
-            indexes = []
-            for ix_name, index in db[name].index_information().items():
-                fields = ['%s%s' % (('-' if order == -1 else ''), name)
-                            for (name,order) in index['key']]
+        indexes = []
+        for ix_name, index in db[name].index_information().items():
+            fields = ['%s%s' % (('-' if order == -1 else ''), name)
+                        for (name,order) in index['key']]
 
-                indexes.append(dictset({'name': ix_name,
-                                'fields':fields,
-                                'unique': index.get('unique', False)}))
+            indexes.append(dictset({'name': ix_name,
+                            'fields':fields,
+                            'unique': index.get('unique', False)}))
 
-            meta['indexes'] = indexes
+        meta['indexes'] = indexes
 
-            if doc_name == _doc_name:
-                return meta
+        if doc_name == _doc_name:
+            return meta
 
-            documen_metas[_doc_name] = meta
+        documen_metas[_doc_name] = meta
 
     return documen_metas
 

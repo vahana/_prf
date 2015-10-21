@@ -143,11 +143,13 @@ class BaseMixin(object):
             _distinct=None,
             _scalar=None,
             _ix=None,
+            _explain=None,
         )
 
         specials._sort = params.aslist('_sort', default=[], pop=True)
         specials._fields = params.aslist('_fields', default=[], pop=True)
         specials._count = '_count' in params; params.pop('_count', False)
+        specials._explain = '_explain' in params; params.pop('_explain', False)
         specials._start, specials._limit = process_limit(
                                             params.pop('_start', None),
                                             params.pop('_page', None),
@@ -165,6 +167,10 @@ class BaseMixin(object):
 
         list_ops = ('in', 'nin', 'all')
         for key in params.keys():
+            if params[key] == 'null':
+                params[key] = None
+                continue
+
             pos = key.rfind('__')
             if pos == -1:
                 continue
@@ -377,11 +383,11 @@ class BaseMixin(object):
     @classmethod
     def get_collection(cls, **params):
         params = dictset(params)
-        log.debug(params)
+        log.debug('cls: %s, params: %s', cls.__name__, params)
+
         params, specials = cls.prep_params(params)
 
         query_set = cls.objects
-
         query_set = query_set(**params)
         _total = query_set.count()
 
@@ -419,8 +425,10 @@ class BaseMixin(object):
                 query_set = query_set.exclude(*exclude)
 
         query_set._total = _total
+        log.debug('_query: %s', query_set._query)
 
-        log.debug('get_collection.query_set: %s(%s)', cls.__name__, query_set._query)
+        if specials._explain and isinstance(query_set, mongo.QuerySet):
+            return query_set.explain()
 
         return query_set
 
