@@ -297,10 +297,16 @@ class BaseMixin(object):
                         op = '$push'
                     else:
                         sfx = op[1:]
+                        op = '$%s'%sfx
 
                     _dd = {}
-                    for _v in split_strip(val):
-                        _dd[undot(_v)] = '$%s' % _v
+
+                    if sfx in ['set', 'list']:
+                        for _v in split_strip(val):
+                            _dd[undot(_v)] = '$%s' % _v
+                    else:
+                        _dd = '$%s' % val
+
                     _d[sfx] = {op:_dd}
 
                 aggr.append({'$group':_d})

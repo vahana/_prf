@@ -108,11 +108,11 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
         if current_meta:
             attrs_meta.update(current_meta)
         else:
-            attrs_meta['indexes'] += ['latest', '-v']
+            attrs_meta['indexes'] += ['latest', 'v']
             if 'unique' in attrs_meta and attrs_meta['unique']:
                 uniques = attrs_meta.aslist('unique', pop=True)
                 attrs_meta['indexes'] += [
-                    {'fields': ['-v'] + uniques,
+                    {'fields': ['v'] + uniques,
                      'unique': True}
                 ]
                 attrs_meta['indexes'] += uniques
