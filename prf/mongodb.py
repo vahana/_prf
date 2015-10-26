@@ -245,7 +245,7 @@ class BaseMixin(object):
         specials.aslist('_group', allow_missing=True)
         match_query = queryset._query
 
-        accumulators = dictset([[e[6:],specials[e]] \
+        accumulators = dictset([[e[7:],specials[e]] \
             for e in specials if e.startswith('_group_')])
 
         def undot(name):
@@ -257,19 +257,24 @@ class BaseMixin(object):
             return aggr
 
         def unwind(aggr):
-            return aggr
-
             _prj = {"_id": "$_id"}
             unwinds = []
 
-            for op, name in accumulators.items():
+            for op, name in accumulators.copy().items():
+                if op != 'unwind':
+                    continue
+
+                accumulators.pop(op)
                 num_dots = name.count('.')
                 if num_dots:
                     new_name = undot(name)
-                    accumulators[op] = new_name
+                    # accumulators[op] = new_name
                     _prj[new_name]='$%s' % name
                     for x in range(num_dots):
                         unwinds.append({'$unwind': '$%s' % new_name})
+                else:
+                    _prj[name]='$%s' % name
+                    unwinds.append({'$unwind': '$%s' % name})
 
             if unwinds:
                 aggr.append({'$project':_prj})
@@ -289,14 +294,14 @@ class BaseMixin(object):
 
                 for op, val in accumulators.items():
                     _op = op.lower()
-                    if _op in ['_addtoset', '_set']:
+                    if _op in ['addtoset', 'set']:
                         sfx = 'set'
                         op = '$addToSet'
-                    elif _op in ['_push', '_list']:
+                    elif _op in ['push', 'list']:
                         sfx = 'list'
                         op = '$push'
                     else:
-                        sfx = op[1:]
+                        sfx = op
                         op = '$%s'%sfx
 
                     _dd = {}

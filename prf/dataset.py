@@ -130,8 +130,12 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
 class DatasetDoc(DynamicBase):
     __metaclass__ = VersionedDocumentMetaclass
 
-    meta = {'abstract': True}
+    meta = {
+        'abstract': True,
+    }
+
     log = mongo.EmbeddedDocumentField(Log)
+    ds_meta = mongo.DictField()
 
     @classmethod
     def set_collection_name(cls):
