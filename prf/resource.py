@@ -88,14 +88,17 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path_prefix = kwargs.pop('path_prefix', '')
     name_prefix = kwargs.pop('name_prefix', '')
 
-    id_name = ('/{%s}' % (kwargs.pop('id_name', view._id_name)
-               or DEFAULT_ID_NAME) if collection_name else '')
-
-    path = os.path.join(path_prefix, (collection_name or member_name))
+    id_name = kwargs.pop('id_name', view._id_name) or DEFAULT_ID_NAME
 
     _acl = kwargs.pop('acl', view._acl)
+    if _acl:
+        _acl._id_name = id_name
+
+    id_slug = ('/{%s}' % id_name if collection_name else '')
+    path = os.path.join(path_prefix, (collection_name or member_name))
+
     _auth = config.registry.get('prf.auth', False)
-    _traverse = kwargs.pop('traverse', None) or id_name
+    _traverse = kwargs.pop('traverse', None) or id_slug
     added_routes = {}
 
     def add_route_and_view(config, action, route_name, path, request_method,
@@ -118,19 +121,19 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
                            path, 'GET')
 
     add_route_and_view(config, Actions.show, name_prefix + member_name, path
-                       + id_name, 'GET', traverse=_traverse)
+                       + id_slug, 'GET', traverse=_traverse)
 
     add_route_and_view(config, Actions.update, name_prefix + member_name, path
-                       + id_name, 'PUT', traverse=_traverse)
+                       + id_slug, 'PUT', traverse=_traverse)
 
     add_route_and_view(config, Actions.patch, name_prefix + member_name, path
-                       + id_name, 'PATCH', traverse=_traverse)
+                       + id_slug, 'PATCH', traverse=_traverse)
 
     add_route_and_view(config, Actions.create, name_prefix + (collection_name
                        or member_name), path, 'POST')
 
     add_route_and_view(config, Actions.delete, name_prefix + member_name, path
-                       + id_name, 'DELETE', traverse=_traverse)
+                       + id_slug, 'DELETE', traverse=_traverse)
 
     if collection_name:
         add_route_and_view(config, Actions.update_many, name_prefix

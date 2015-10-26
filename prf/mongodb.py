@@ -246,7 +246,7 @@ class BaseMixin(object):
         match_query = queryset._query
 
         accumulators = dictset([[e[6:],specials[e]] \
-            for e in specials if e.startswith('_group$')])
+            for e in specials if e.startswith('_group_')])
 
         def undot(name):
             return name.replace('.', '__')
@@ -289,10 +289,10 @@ class BaseMixin(object):
 
                 for op, val in accumulators.items():
                     _op = op.lower()
-                    if _op in ['$addtoset', '$set']:
+                    if _op in ['_addtoset', '_set']:
                         sfx = 'set'
                         op = '$addToSet'
-                    elif _op in ['$push', '$list']:
+                    elif _op in ['_push', '_list']:
                         sfx = 'list'
                         op = '$push'
                     else:
