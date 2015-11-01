@@ -273,6 +273,11 @@ class dictset(dict):
     def unflat(self):
         return dictset(args_to_dict(self))
 
+    def set_default(self, name, val):
+        if name not in self.flat():
+            self.merge(dictset.from_dotted(name, val))
+        return val
+
 
 #based on jsonurl
 
