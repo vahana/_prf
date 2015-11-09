@@ -500,8 +500,8 @@ class BaseMixin(object):
             if not hasattr(self, attr):
                 setattr(self, attr, val)
 
-    def to_dict(self, fields=None, ops=None):
-        ops = ops or dictset()
+    def to_dict(self, fields=None):
+        ops = process_fields(fields)
         _d = dictset(self.to_mongo().to_dict())
 
         if '_id' in _d:

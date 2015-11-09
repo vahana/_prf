@@ -136,16 +136,12 @@ class BaseView(object):
         raise AttributeError(attr)
 
     def serialize(self, obj, many):
-        kw = {}
         fields = self._params.get('_fields')
-        flat = self._params.asbool('_flat', default=False)
 
-        if fields is not None:
-            kw = process_fields(fields)
-
-        kw['flat'] = flat or bool(kw.get('nested'))
-        serializer = self._serializer(context={'request':self.request},
-                                        many=many, strict=True, **kw)
+        serializer = self._serializer(
+                            context={'request':self.request, 'fields':fields},
+                            many=many, strict=True,
+                            **process_fields(fields).subset('only,exclude'))
 
         return serializer.dump(obj).data
 

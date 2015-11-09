@@ -16,13 +16,6 @@ class BaseSchema(Schema):
 
     _model = None
 
-    def __init__(self, *arg, **kw):
-        kw.pop('nested', None)
-        kw.pop('flat', None)
-        kw.pop('show_as', None)
-
-        super(BaseSchema, self).__init__(*arg, **kw)
-
     def make_object(self, data):
         return self._model(**data)
 
@@ -31,28 +24,21 @@ class DynamicSchema(object):
     def __init__(self, **kw):
         self.only = []
         self.exclude = []
-        self.nested = {}
-        self.flat = False
-        self.show_as = {}
         self.__dict__.update(kw)
 
     def dump(self, objs):
-        fields = self.only + ['-%s'%each for each in self.exclude]
 
-        def to_dict(obj, fields):
+        def to_dict(obj):
             if hasattr(obj, 'to_dict'):
-                return obj.to_dict(fields, ops=dictset(
-                                                flat=self.flat,
-                                                nested=self.nested,
-                                                show_as=self.show_as))
+                return obj.to_dict(self.context.get('fields'))
             else:
                 return obj
 
         try:
             if self.many:
-                objs = [to_dict(each, fields) for each in objs]
+                objs = [to_dict(each) for each in objs]
             else:
-                objs = to_dict(objs, fields)
+                objs = to_dict(objs)
 
             return dictset(data=objs)
         except AttributeError as e:
