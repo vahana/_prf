@@ -16,6 +16,13 @@ class BaseSchema(Schema):
 
     _model = None
 
+    def __init__(self, *arg, **kw):
+        kw.pop('nested', None)
+        kw.pop('flat', None)
+        kw.pop('show_as', None)
+
+        super(BaseSchema, self).__init__(*arg, **kw)
+
     def make_object(self, data):
         return self._model(**data)
 
@@ -24,6 +31,9 @@ class DynamicSchema(object):
     def __init__(self, **kw):
         self.only = []
         self.exclude = []
+        self.nested = {}
+        self.flat = False
+        self.show_as = {}
         self.__dict__.update(kw)
 
     def dump(self, objs):
@@ -31,7 +41,10 @@ class DynamicSchema(object):
 
         def to_dict(obj, fields):
             if hasattr(obj, 'to_dict'):
-                return obj.to_dict(fields)
+                return obj.to_dict(fields, ops=dictset(
+                                                flat=self.flat,
+                                                nested=self.nested,
+                                                show_as=self.show_as))
             else:
                 return obj
 

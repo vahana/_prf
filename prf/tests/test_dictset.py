@@ -113,9 +113,9 @@ class TestDictSet():
         d1 = dictset(a=[dict(c=1), 1])
         assert isinstance(d1.a[0], dictset)
 
-    def test_mget(self):
+    def test_get_tree(self):
         d1 = dictset({'a.b':1, 'a.c':2})
-        assert d1.mget('a') == {'c': 2, 'b': 1}
+        assert d1.get_tree('a') == {'c': 2, 'b': 1}
 
     def test_from_dotted(self):
         assert dictset.from_dotted('a.b.c', 1) == {'a': {'b': {'c': 1}}}

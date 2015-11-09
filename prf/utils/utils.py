@@ -61,41 +61,6 @@ def process_limit(start, page, limit):
     return start, limit
 
 
-def expand_list(param):
-    _new = []
-    if isinstance(param, (list, set)):
-        for each in param:
-            if isinstance(each, basestring) and each.find(',') != -1:
-                _new.extend(split_strip(each))
-            elif isinstance(each, (list, set)):
-                _new.extend(each)
-            else:
-                _new.append(each)
-    elif isinstance(param, basestring) and param.find(',') != -1:
-
-        _new = split_strip(param)
-
-    return _new
-
-
-def process_fields(fields):
-    fields_only = []
-    fields_exclude = []
-
-    if isinstance(fields, basestring):
-        fields = split_strip(fields)
-
-    for field in expand_list(fields):
-        field = field.strip()
-        if not field:
-            continue
-        if field[0] == '-':
-            fields_exclude.append(field[1:])
-        else:
-            fields_only.append(field)
-    return fields_only, fields_exclude
-
-
 def snake2camel(text):
     '''turn the snake case to camel case: snake_camel -> SnakeCamel'''
     return ''.join([a.title() for a in text.split('_')])

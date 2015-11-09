@@ -6,10 +6,11 @@ from pyramid.request import Request
 from pyramid.response import Response
 
 import prf.exc
-from prf.utils import dictset, issequence, prep_params, process_fields,\
+from prf.utils import dictset, issequence, prep_params,\
                       json_dumps, urlencode, args_to_dict
 from prf.serializer import DynamicSchema
 from prf import resource
+from prf.utils import process_fields
 
 log = logging.getLogger(__name__)
 
@@ -137,10 +138,12 @@ class BaseView(object):
     def serialize(self, obj, many):
         kw = {}
         fields = self._params.get('_fields')
+        flat = self._params.asbool('_flat', default=False)
 
         if fields is not None:
-            kw['only'], kw['exclude'] = process_fields(fields)
+            kw = process_fields(fields)
 
+        kw['flat'] = flat or bool(kw.get('nested'))
         serializer = self._serializer(context={'request':self.request},
                                         many=many, strict=True, **kw)
 
@@ -280,12 +283,6 @@ class BaseView(object):
             pass
         finally:
             return collection
-
-    def validate_dict_param(self, name, keys=[]):
-        self._params.has(name, dict)
-        for key in keys:
-            self._params[name].has(key, check_type=None,
-                        err='`%s.%s` missing or empty' % (name, key))
 
     def get_settings(self, key=None):
         if key:

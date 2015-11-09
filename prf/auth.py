@@ -58,7 +58,7 @@ class BaseACL(object):
 
 def includeme(config):
     settings = dictset(config.get_settings())
-    auth_params = settings.mget('auth',
+    auth_params = settings.get_tree('auth',
                                 defaults=dict(hashalg='sha512',
                                               http_only=True,
                                               callback=None,

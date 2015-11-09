@@ -1,5 +1,5 @@
 import urllib, re
-from prf.utils.utils import process_fields, DKeyError, DValueError
+from prf.utils.utils import DKeyError, DValueError, split_strip
 from prf.utils.convert import *
 
 
@@ -32,6 +32,58 @@ def merge(d1, d2, prefix_keys=None):
 
         prefix_keys.append(key)
         merge(d1, d2, prefix_keys)
+
+
+def expand_list(param):
+    _new = []
+    if isinstance(param, (list, set)):
+        for each in param:
+            if isinstance(each, basestring) and each.find(',') != -1:
+                _new.extend(split_strip(each))
+            elif isinstance(each, (list, set)):
+                _new.extend(each)
+            else:
+                _new.append(each)
+    elif isinstance(param, basestring) and param.find(',') != -1:
+
+        _new = split_strip(param)
+
+    return _new
+
+
+def process_fields(fields):
+    fields_only = []
+    fields_exclude = []
+    nested = {}
+    show_as = {}
+
+    if isinstance(fields, basestring):
+        fields = split_strip(fields)
+
+    for field in expand_list(fields):
+        field = field.strip()
+        if not field:
+            continue
+        if field[0] == '-':
+            fields_exclude.append(field[1:])
+        else:
+            if '__as__' in field:
+                key,_,val = field.partition('__as__')
+                show_as[key] = val
+                field = key
+
+            if '.' in field:
+                key = field.split('.')[0]
+                nested[field] = key
+                field = key
+
+            fields_only.append(field)
+
+    return dictset({
+             'only': fields_only,
+             'exclude':fields_exclude,
+             'nested': nested,
+             'show_as': show_as})
 
 
 class dictset(dict):
@@ -106,19 +158,21 @@ class dictset(dict):
         return dictset(super(dictset, self).copy())
 
     def subset(self, keys):
-        only, exclude = process_fields(keys)
+        only, exclude, nested = process_fields(keys).mget(['only','exclude', 'nested'])
+
+        _d = dictset()
 
         if only and exclude:
-            raise DValueError('Can only supply either positive or negative keys, but not both'
-                             )
+            raise DValueError('Can only supply either positive or negative keys,'
+                              ' but not both')
 
-        if only:
-            return dictset([[k, v] for (k, v) in self.items() if k in only])
+        if only or nested:
+            _d = dictset([[k, v] for (k, v) in self.items() if k in only+nested.keys()])
         elif exclude:
-            return dictset([[k, v] for (k, v) in self.items() if k
+            _d = dictset([[k, v] for (k, v) in self.items() if k
                            not in exclude])
 
-        return dictset()
+        return _d
 
     def asbool(self, *arg, **kw):
         return asbool(self, *arg, **kw)
@@ -148,8 +202,8 @@ class dictset(dict):
         return asrange(self, *arg, **kw)
 
     def remove(self, keys):
-        only, _ = process_fields(keys)
-        return dictset([[k, v] for (k, v) in self.items() if k not in only])
+        for k in keys:
+            self.pop(k, None)
 
     def update(self, d_):
         super(dictset, self).update(dictset(d_))
@@ -168,7 +222,7 @@ class dictset(dict):
                 self.pop(k)
         return self
 
-    def mget(self, prefix, defaults={}, sep='.'):
+    def get_tree(self, prefix, defaults={}, sep='.'):
         if prefix[-1] != '.':
             prefix += sep
 
@@ -178,6 +232,9 @@ class dictset(dict):
                 _k = key.partition(prefix)[-1]
                 _dict[_k] = val
         return _dict
+
+    def mget(self, keys):
+        return [self[e] for e in split_strip(keys) if e in self]
 
     @classmethod
     def from_dotted(cls, dotkey, val):
@@ -207,17 +264,22 @@ class dictset(dict):
         if isinstance(keys, basestring):
             keys = [keys]
 
-        for key in keys:
-            if key in self:
-                if check_type and not isinstance(self[key], check_type):
-                    errors.append(err or '`%s` must be type `%s`, got `%s`'\
-                                          % (key, check_type, type(self[key])))
+        self_flat = self.flat().update(self) # update with self to include high level keys too
 
-                if allowed_values and self[key] not in allowed_values:
+        for key in keys:
+            if key in self_flat:
+                if check_type and not isinstance(self_flat[key], check_type):
+                    errors.append(err or '`%s` must be type `%s`, got `%s`'\
+                                          % (key, check_type, type(self_flat[key])))
+
+                if allowed_values and self_flat[key] not in allowed_values:
                     errors.append(err or '`%s` allowed values are: %s, got: `%s`'\
-                                          % (key, allowed_values, self[key]))
+                                          % (key, allowed_values, self_flat[key]))
 
             elif not allow_missing:
+                if allowed_values:
+                    err = 'Missing key or invalid values: `%s`. Allowed values are: %s'\
+                                          % (key, allowed_values)
                 errors.append(err or 'Missing key: `%s`' % key)
 
         if (errors and _all) or (not _all and len(errors) >= len(keys)):
@@ -255,7 +317,7 @@ class dictset(dict):
                 key,val = val,key # flip em
 
             if key.endswith('.'):
-                _val = flat_source.mget(key)
+                _val = flat_source.get_treet(key)
             else:
                 if allow_missing:
                     _val = flat_source.get(key, key)
@@ -322,8 +384,10 @@ def dict_to_args(d):
             args[k] = v
     return args
 
+
 def dot_split(s):
     return [part for part in re.split("(?<!\.)\.(?!\.)", s)]
+
 
 def args_to_dict(args):
     d = dictset()
@@ -361,7 +425,10 @@ def args_to_dict(args):
                 if not last:
                     if int(bit) > len(ctx) - 1:
                         ctx.append(dictset() if next_is_dict else [])
-                    ctx = ctx[int(bit)]
+                    try:
+                        ctx = ctx[int(bit)]
+                    except IndexError as e:
+                        pass
                 else:
                     ctx.append(type_cast(value))
                     ctx = None

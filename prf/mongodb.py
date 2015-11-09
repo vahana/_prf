@@ -144,10 +144,12 @@ class BaseMixin(object):
             _scalar=None,
             _ix=None,
             _explain=None,
+            _flat=None,
         )
 
         specials._sort = params.aslist('_sort', default=[], pop=True)
         specials._fields = params.aslist('_fields', default=[], pop=True)
+        specials._flat = '_flat' in params; params.pop('_flat', False)
         specials._count = '_count' in params; params.pop('_count', False)
         specials._explain = '_explain' in params; params.pop('_explain', False)
         specials._start, specials._limit = process_limit(
@@ -429,7 +431,8 @@ class BaseMixin(object):
             return query_set.scalar(*specials.aslist('_scalar'))
 
         if specials._fields:
-            only, exclude = process_fields(specials._fields)
+            only, exclude = process_fields(specials._fields).mget(['only', 'exclude'])
+
             if only:
                 query_set = query_set.only(*only)
             elif exclude:
@@ -497,8 +500,8 @@ class BaseMixin(object):
             if not hasattr(self, attr):
                 setattr(self, attr, val)
 
-    def to_dict(self, fields=None):
-        fields = fields or []
+    def to_dict(self, fields=None, ops=None):
+        ops = ops or dictset()
         _d = dictset(self.to_mongo().to_dict())
 
         if '_id' in _d:
@@ -506,6 +509,19 @@ class BaseMixin(object):
 
         if fields:
             _d = dictset(_d).subset(fields)
+
+        nested_keys = ops.get('nested', {}).keys()
+        if nested_keys:
+            flat_d = _d.flat().subset(nested_keys)
+            _d.remove(ops.get('nested', {}).values())
+            _d.update(flat_d)
+
+        for key, new_key in ops.get('show_as', {}).items():
+            if key in _d:
+                _d[new_key] = _d.pop(key)
+
+        if ops.get('flat', False):
+            _d = _d.flat()
 
         return _d
 

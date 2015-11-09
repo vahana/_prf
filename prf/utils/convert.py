@@ -41,6 +41,8 @@ def parametrize(func):
 
         if pop:
             dset.pop(name, None)
+            if set_as:
+                dset[set_as] = result
         else:
             dset[set_as or name] = result
 
