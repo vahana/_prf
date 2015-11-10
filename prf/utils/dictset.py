@@ -51,7 +51,7 @@ def expand_list(param):
     return _new
 
 
-def process_fields(fields):
+def process_fields(fields, parse=True):
     fields_only = []
     fields_exclude = []
     nested = {}
@@ -62,21 +62,28 @@ def process_fields(fields):
 
     for field in expand_list(fields):
         field = field.strip()
+        negative = False
+
         if not field:
             continue
+
         if field[0] == '-':
-            fields_exclude.append(field[1:])
+            field = field[1:]
+            negative = True
+
+        if parse and '__as__' in field:
+            root,_,val = field.partition('__as__')
+            show_as[root] = val
+            field = root
+
+        if parse and '.' in field:
+            root = field.split('.')[0]
+            nested[field] = root
+            field = root
+
+        if negative:
+            fields_exclude.append(field)
         else:
-            if '__as__' in field:
-                key,_,val = field.partition('__as__')
-                show_as[key] = val
-                field = key
-
-            if '.' in field:
-                key = field.split('.')[0]
-                nested[field] = key
-                field = key
-
             fields_only.append(field)
 
     return dictset({
@@ -157,8 +164,26 @@ class dictset(dict):
     def copy(self):
         return dictset(super(dictset, self).copy())
 
+    def extract(self, fields):
+        only, exclude, nested, show_as =\
+                process_fields(fields).mget(
+                               ['only','exclude', 'nested', 'show_as'])
+
+        _d = self.subset(only + ['-'+e for e in exclude])
+
+        if nested:
+            flat_d = _d.flat().subset(nested.keys())
+            _d.remove(nested.values())
+            _d.update(flat_d)
+
+        for key, new_key in show_as.items():
+            if key in _d:
+                _d[new_key] = _d.pop(key)
+
+        return _d
+
     def subset(self, keys):
-        only, exclude, nested = process_fields(keys).mget(['only','exclude', 'nested'])
+        only, exclude = process_fields(keys, parse=False).mget(['only','exclude'])
 
         _d = dictset()
 
@@ -166,8 +191,8 @@ class dictset(dict):
             raise DValueError('Can only supply either positive or negative keys,'
                               ' but not both')
 
-        if only or nested:
-            _d = dictset([[k, v] for (k, v) in self.items() if k in only+nested.keys()])
+        if only:
+            _d = dictset([[k, v] for (k, v) in self.items() if k in only])
         elif exclude:
             _d = dictset([[k, v] for (k, v) in self.items() if k
                            not in exclude])

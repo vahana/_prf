@@ -501,27 +501,13 @@ class BaseMixin(object):
                 setattr(self, attr, val)
 
     def to_dict(self, fields=None):
-        ops = process_fields(fields)
         _d = dictset(self.to_mongo().to_dict())
 
         if '_id' in _d:
             _d['id']=_d.pop('_id')
 
         if fields:
-            _d = dictset(_d).subset(fields)
-
-        nested_keys = ops.get('nested', {}).keys()
-        if nested_keys:
-            flat_d = _d.flat().subset(nested_keys)
-            _d.remove(ops.get('nested', {}).values())
-            _d.update(flat_d)
-
-        for key, new_key in ops.get('show_as', {}).items():
-            if key in _d:
-                _d[new_key] = _d.pop(key)
-
-        if ops.get('flat', False):
-            _d = _d.flat()
+            _d = dictset(_d).extract(fields)
 
         return _d
 
