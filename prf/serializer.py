@@ -29,10 +29,13 @@ class DynamicSchema(object):
     def dump(self, objs):
 
         def to_dict(obj):
+            if isinstance(obj, dict):
+                return dictset(obj).extract(self.context.get('fields'))
+
             if hasattr(obj, 'to_dict'):
                 return obj.to_dict(self.context.get('fields'))
             else:
-                return obj
+                raise prf.exc.HTTPBadRequest('can not serialize %s type' % type(obj))
 
         try:
             if self.many:

@@ -154,7 +154,7 @@ class BaseView(object):
             if not fields:
                 return d_
             else:
-                return dictset(d_).subset(fields)
+                return dictset(d_).extract(fields)
 
         if isinstance(obj, dict):
             return process_dict(obj)

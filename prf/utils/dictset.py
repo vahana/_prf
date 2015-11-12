@@ -165,6 +165,9 @@ class dictset(dict):
         return dictset(super(dictset, self).copy())
 
     def extract(self, fields):
+        if fields is None:
+            return self
+
         only, exclude, nested, show_as =\
                 process_fields(fields).mget(
                                ['only','exclude', 'nested', 'show_as'])
@@ -183,6 +186,9 @@ class dictset(dict):
         return _d
 
     def subset(self, keys):
+        if keys is None:
+            return self
+
         only, exclude = process_fields(keys, parse=False).mget(['only','exclude'])
 
         _d = dictset()
