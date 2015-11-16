@@ -306,6 +306,11 @@ class BaseMixin(object):
                         sfx = op
                         op = '$%s'%sfx
 
+
+                    if val == '$ROOT':
+                        _d[sfx] = {op:'$$ROOT'}
+                        continue
+
                     _dd = {}
 
                     if sfx in ['set', 'list']:
@@ -322,8 +327,6 @@ class BaseMixin(object):
 
         def project(aggr):
             _prj = {'_id':0, 'count':1}
-
-
             for each in specials._group:
                 _prj[each] = '$_id.%s' % undot(each)
 
@@ -333,7 +336,8 @@ class BaseMixin(object):
                     _gkeys = each['$group'].keys()
 
             for each in _gkeys:
-                if each == '_id': continue
+                if each == '_id':
+                    continue
                 for _v in split_strip(each):
                     _prj[_v] = '$%s' % undot(_v)
 
@@ -554,6 +558,12 @@ class BaseMixin(object):
             _d[fld] = sorted(cls.objects.distinct(fld), reverse=reverse)
 
         return _d
+
+    @classmethod
+    def get_collection_qs(cls, qs):
+        from urlparse import parse_qsl
+        return cls.get_collection(**dict(parse_qsl(qs)))
+
 
 class Base(BaseMixin, mongo.Document):
     __metaclass__ = TopLevelDocumentMetaclass

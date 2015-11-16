@@ -35,7 +35,7 @@ class DynamicSchema(object):
             if hasattr(obj, 'to_dict'):
                 return obj.to_dict(self.context.get('fields'))
             else:
-                raise prf.exc.HTTPBadRequest('can not serialize %s type' % type(obj))
+                return obj
 
         try:
             if self.many:

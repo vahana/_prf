@@ -181,7 +181,7 @@ class dictset(dict):
 
         for key, new_key in show_as.items():
             if key in _d:
-                _d[new_key] = _d.pop(key)
+                _d.merge(dictset({new_key:_d.pop(key)}).unflat())
 
         return _d
 
@@ -297,24 +297,33 @@ class dictset(dict):
 
         self_flat = self.flat().update(self) # update with self to include high level keys too
 
+        def missing_key_error(_type, key):
+            if _type == dict:
+                missing = ['%s.%s' % (key, val) for val in allowed_values]
+            else:
+                missing = allowed_values
+
+            return 'Missing key or invalid values for `%s`. Allowed values are: `%s`'\
+                                          % (key, missing)
+
         for key in keys:
             if key in self_flat:
                 if check_type and not isinstance(self_flat[key], check_type):
-                    errors.append(err or '`%s` must be type `%s`, got `%s`'\
-                                          % (key, check_type, type(self_flat[key])))
+                    errors.append(err or u'`%s` must be type `%s`, got `%s` instead'\
+                                          % (key, check_type.__name__,
+                                             type(self_flat[key]).__name__))
 
                 if allowed_values and self_flat[key] not in allowed_values:
-                    errors.append(err or '`%s` allowed values are: %s, got: `%s`'\
-                                          % (key, allowed_values, self_flat[key]))
+                    errors.append(err or missing_key_error(check_type, key))
 
             elif not allow_missing:
                 if allowed_values:
-                    err = 'Missing key or invalid values: `%s`. Allowed values are: %s'\
-                                          % (key, allowed_values)
+                    err = missing_key_error(check_type, key)
+
                 errors.append(err or 'Missing key: `%s`' % key)
 
         if (errors and _all) or (not _all and len(errors) >= len(keys)):
-            raise DValueError(str(errors))
+            raise DValueError('.'.join(errors))
 
         return True
 

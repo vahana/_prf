@@ -143,7 +143,9 @@ class DatasetDoc(DynamicBase):
 
     @classmethod
     def _get_uniques(cls):
-        return get_uniques(cls._meta['indexes'])
+        uniques = get_uniques(cls._meta['indexes'])
+        uniques.remove('v')
+        return uniques
 
     def _unset_latest(self):
         params = {}
@@ -234,7 +236,6 @@ class DatasetDoc(DynamicBase):
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
 
-
     @classmethod
     def drop_index(cls, name=None):
         try:
@@ -244,5 +245,18 @@ class DatasetDoc(DynamicBase):
                 cls._collection.drop_index(name)
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
+
+    @classmethod
+    def fix_latest(cls, **q):
+        latest_objects = [dictset(each).extract(cls._get_uniques()+['max__as__v']) for each in
+                            cls.get_collection(_group=cls._get_uniques(),
+                                                _group_max='v',
+                                                _group_list=cls._get_uniques(), **q)]
+
+        cls.objects.update(set__latest=False)
+
+        for each in latest_objects:
+            cls.objects(**each).update(set__latest=True)
+
 
 
