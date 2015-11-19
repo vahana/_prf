@@ -28,7 +28,7 @@ def get_view_class(view, resource):
     if isinstance(view, types.TypeType):
         return view
 
-    _, prefix_name = get_uri_elements(resource)
+    _, prefix_name = get_resource_elements(resource)
     parts = [a for a in prefix_name.split(':') if a]
     parts += [resource.collection_name or resource.member_name]
 
@@ -42,8 +42,7 @@ def get_view_class(view, resource):
     return maybe_dotted('%s.views.%s' % (resource.config.package_name, view))
 
 
-def get_uri_elements(resource):
-    # figure out the url name and paths prefixes
+def get_resource_elements(resource):
     path_prefix = ''
     name_prefix = ''
     path_segs = []
@@ -57,20 +56,19 @@ def get_uri_elements(resource):
         else:
             id_full = '%s_%s' % (res.member_name, DEFAULT_ID_NAME)
 
-        return '%s/{%s}' % (res.path, id_full)
+        return '%s/{%s}' % (res.path, id_full) if not res.is_singular else res.path
 
-    if resource.parent:
-        path_prefix = get_path_pattern(resource.parent)
+    path_prefix = '/'.join(filter(bool,
+                            [resource.config.route_prefix,
+                             get_path_pattern(resource.parent),
+                             resource.prefix]))
 
-    if resource.parent.uid:
-        name_prefix = '%s:' % resource.parent.uid
-
-    if resource.prefix:
-        path_prefix = path_prefix + '/' + resource.prefix if path_prefix else resource.prefix
-        name_prefix = '%s:%s' % (name_prefix, resource.prefix)
-
-    if resource.config.route_prefix:
-        name_prefix = '%s:%s' % (resource.config.route_prefix, name_prefix)
+    name_prefix = ':'.join(filter(bool,
+                            [resource.config.route_prefix,
+                             resource.parent.uid,
+                             resource.prefix]))
+    if name_prefix:
+        name_prefix += ':'
 
     return path_prefix, name_prefix
 
@@ -230,7 +228,7 @@ class Resource(object):
         root_resource = self.config.get_root_resource()
 
         kwargs['path_prefix'], kwargs['name_prefix'] = \
-                            get_uri_elements(child_resource)
+                            get_resource_elements(child_resource)
 
         # set some defaults
         kwargs.setdefault('renderer', child_view._default_renderer)
