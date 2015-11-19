@@ -47,30 +47,22 @@ def add_error_view(config, exc, http_exc=None, error=''):
     config.add_view(view, context=exc)
 
 
-def add_login_views(config, user_model, route_prefix=''):
+def add_account_views(config, user_model, route_prefix=''):
 
     user_model = config.maybe_dotted(user_model)
     AccountView.set_user_model(user_model)
 
     route_tmpl = '%s%%s' % (route_prefix + ':' if route_prefix else '')
 
-    route_name = route_tmpl % 'login'
-    config.add_route(route_name,
-                     '%s' % os.path.join(route_prefix, 'login'))
+    for action, method in [['login', 'POST'], ['logout', 'POST']]:
+        route_name = route_tmpl % action
+        config.add_route(route_name,
+                         '%s' % os.path.join(route_prefix, action))
 
-    config.add_view(view=AccountView, attr='login', route_name=route_name,
-                    request_method='POST',
-                    renderer='json',
-                    permission=NO_PERMISSION_REQUIRED)
-
-    route_name = route_tmpl % 'logout'
-    config.add_route(route_name,
-                     '%s' % os.path.join(route_prefix, 'logout'))
-
-    config.add_view(view=AccountView, attr='logout', route_name=route_name,
-                    renderer='json',
-                    permission=NO_PERMISSION_REQUIRED)
-
+        config.add_view(view=AccountView, attr=action, route_name=route_name,
+                        request_method=method,
+                        renderer='json',
+                        permission=NO_PERMISSION_REQUIRED)
 
 def set_default_acl(config, acl_model):
     acl_model = maybe_dotted(acl_model)
@@ -124,6 +116,6 @@ def includeme(config):
     add_error_view(config, httpexceptions.HTTPForbidden, prf.exc.HTTPForbidden)
     add_error_view(config, httpexceptions.HTTPNotFound, prf.exc.HTTPNotFound)
 
-    config.add_directive('add_login_views', add_login_views)
+    config.add_directive('add_account_views', add_account_views)
 
     config.set_root_factory(RootFactory)

@@ -283,7 +283,7 @@ class BaseView(object):
     def get_settings(self, key=None):
         if key:
             return self.request.registry.settings[key]
-        return self.request.registry.settings
+        return dictset(self.request.registry.settings)
 
 class NoOp(BaseView):
 

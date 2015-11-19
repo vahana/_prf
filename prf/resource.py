@@ -24,19 +24,18 @@ class Actions(object):
 def get_view_class(view, resource):
     '''Returns the dotted path to the default view class.'''
 
-    parts = [a.member_name for a in resource.ancestors] \
-        + [resource.collection_name or resource.member_name]
-    if resource.prefix:
-        parts.insert(-1, resource.prefix)
-
-    view_file = '%s' % '_'.join(parts)
-    view_class = '%sView' % snake2camel(view_file)
-
     view = maybe_dotted(view)
     if isinstance(view, types.TypeType):
         return view
 
-    elif isinstance(view, types.ModuleType):
+    _, prefix_name = get_uri_elements(resource)
+    parts = [a for a in prefix_name.split(':') if a]
+    parts += [resource.collection_name or resource.member_name]
+
+    view_file = '%s' % '_'.join(parts)
+    view_class = '%sView' % snake2camel(view_file)
+
+    if isinstance(view, types.ModuleType):
         return getattr(view, view_class)
 
     view = '%s:%s' % (view_file, view_class)
@@ -49,32 +48,26 @@ def get_uri_elements(resource):
     name_prefix = ''
     path_segs = []
 
-    for anc in resource.ancestors:
-        if not anc.is_singular:
-            if anc.id_name:
-                id_full = anc.id_name
-            else:
-                id_full = '%s_%s' % (anc.member_name, DEFAULT_ID_NAME)
+    def get_path_pattern(res):
+        if not res or (res and not res.path):
+            return ''
 
-            if id_full == resource.id_name:
-                raise ValueError(
-                    "id name `%s` for `%s` matches with ancestor `%s`" % (id_full, resource, anc))
-
-            path_segs.append('%s/{%s}' % (anc.collection_name, id_full))
+        if res.id_name:
+            id_full = res.id_name
         else:
-            path_segs.append(anc.member_name)
+            id_full = '%s_%s' % (res.member_name, DEFAULT_ID_NAME)
 
-    if path_segs:
-        path_prefix = '/'.join(path_segs)
+        return '%s/{%s}' % (res.path, id_full)
+
+    if resource.parent:
+        path_prefix = get_path_pattern(resource.parent)
+
+    if resource.parent.uid:
+        name_prefix = '%s:' % resource.parent.uid
 
     if resource.prefix:
-        path_prefix += '/' + resource.prefix
-
-    name_segs = [a.member_name for a in resource.ancestors]
-    name_segs.insert(1, resource.prefix)
-    name_segs = filter(bool, name_segs)
-    if name_segs:
-        name_prefix = ':'.join(name_segs) + ':'
+        path_prefix = path_prefix + '/' + resource.prefix if path_prefix else resource.prefix
+        name_prefix = '%s:%s' % (name_prefix, resource.prefix)
 
     if resource.config.route_prefix:
         name_prefix = '%s:%s' % (resource.config.route_prefix, name_prefix)
@@ -150,7 +143,7 @@ class Resource(object):
 
     def __init__(self, config, member_name='', collection_name='',
                  parent=None, uid='', children=None, id_name='', prefix='',
-                 http_cache=0):
+                 http_cache=0, path=''):
 
         if parent and not member_name:
             raise ValueError('member_name can not be empty')
@@ -165,6 +158,7 @@ class Resource(object):
         self.children = children or []
         self._ancestors = []
         self.uid = self.get_uid(collection_name or member_name)
+        self.path = ''
 
     def __repr__(self):
         return "%s(uid='%s')" % (self.__class__.__name__, self.uid)
@@ -213,7 +207,9 @@ class Resource(object):
         """
 
         parent = self
-        prefix = kwargs.pop('prefix', '')
+
+        prefix_from_member, _, member_name = member_name.rpartition('/')
+        prefix = kwargs.pop('prefix', prefix_from_member)
 
         if collection_name == '':
             collection_name = member_name + 's'
@@ -265,4 +261,6 @@ class Resource(object):
         _add(self.get_uid())
         if self.collection_name:
             _add(self.get_uid(self.collection_name))
+
+        self.path = path
 
