@@ -73,7 +73,7 @@ def process_fields(fields, parse=True):
 
         if parse and '__as__' in field:
             root,_,val = field.partition('__as__')
-            show_as[root] = val
+            show_as[root] = val or root.split('.')[-1]
             field = root
 
         if parse and '.' in field:
@@ -172,10 +172,37 @@ class dictset(dict):
                 process_fields(fields).mget(
                                ['only','exclude', 'nested', 'show_as'])
 
+        nested_keys = nested.keys()
         _d = self.subset(only + ['-'+e for e in exclude])
 
+
+        def process_list(flat_d):
+            for nkey, nval in nested.items():
+                if '..' in nkey:
+                    pref, suf = nkey.split('..', 1)
+                    ix=0
+                    _lst = []
+
+                    while True:
+                        kk = '%s.%s.%s'%(pref,ix,suf)
+                        if kk not in flat_d:
+                            break
+                        _lst.append(flat_d.pop(kk))
+                        ix+=1
+
+                    new_key = '%s.%s'%(pref,suf)
+                    nested_keys.append(new_key)
+                    flat_d[new_key] = _lst
+
+                    if nkey in show_as:
+                        show_as[new_key] = show_as.pop(nkey)
+
+
         if nested:
-            flat_d = _d.flat().subset(nested.keys())
+            flat_d = _d.flat()
+            process_list(flat_d)
+
+            flat_d = flat_d.subset(nested_keys)
             _d.remove(nested.values())
             _d.update(flat_d)
 

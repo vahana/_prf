@@ -28,7 +28,7 @@ def get_view_class(view, resource):
     if isinstance(view, types.TypeType):
         return view
 
-    _, prefix_name = get_resource_elements(resource)
+    _, prefix_name = get_parent_elements(resource)
     parts = [a for a in prefix_name.split(':') if a]
     parts += [resource.collection_name or resource.member_name]
 
@@ -42,7 +42,7 @@ def get_view_class(view, resource):
     return maybe_dotted('%s.views.%s' % (resource.config.package_name, view))
 
 
-def get_resource_elements(resource):
+def get_parent_elements(resource):
     path_prefix = ''
     name_prefix = ''
     path_segs = []
@@ -51,12 +51,9 @@ def get_resource_elements(resource):
         if not res or (res and not res.path):
             return ''
 
-        if res.id_name:
-            id_full = res.id_name
-        else:
-            id_full = '%s_%s' % (res.member_name, DEFAULT_ID_NAME)
-
-        return '%s/{%s}' % (res.path, id_full) if not res.is_singular else res.path
+        id_full = res.id_name if res.id_name else '%s_%s' %\
+                                             (res.member_name, DEFAULT_ID_NAME)
+        return res.path if res.is_singular else '%s/{%s}' % (res.path, id_full)
 
     path_prefix = '/'.join(filter(bool,
                             [resource.config.route_prefix,
@@ -228,7 +225,7 @@ class Resource(object):
         root_resource = self.config.get_root_resource()
 
         kwargs['path_prefix'], kwargs['name_prefix'] = \
-                            get_resource_elements(child_resource)
+                            get_parent_elements(child_resource)
 
         # set some defaults
         kwargs.setdefault('renderer', child_view._default_renderer)
