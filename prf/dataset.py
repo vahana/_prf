@@ -149,9 +149,7 @@ class DatasetDoc(DynamicBase):
 
     @classmethod
     def _get_uniques(cls):
-        uniques = get_uniques(cls._meta['indexes'])
-        uniques.remove('v')
-        return uniques
+        return get_uniques(cls._meta['indexes'])
 
     def get_uniques_params(self):
         params = {}
@@ -166,6 +164,7 @@ class DatasetDoc(DynamicBase):
 
             params[each] = self_dict[each]
 
+        params.pop('v', None)
         return params
 
     def _unset_latest(self):
