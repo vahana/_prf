@@ -99,28 +99,34 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
         super_new = super(VersionedDocumentMetaclass, cls)
         attrs_meta = dictset(attrs.get('meta', {}))
         attrs_meta.setdefault('indexes', [])
+        skip_versioning = False
 
         if attrs_meta.asbool('abstract', default=False):
             return super_new.__new__(cls, name, bases, attrs)
+
+        attrs['v'] = mongo.IntField(default=1)
+        attrs['latest'] = mongo.BooleanField(default=True)
 
         current_meta = get_document_meta(name)
 
         if current_meta:
             attrs_meta.update(current_meta)
         else:
-            attrs_meta['indexes'] += ['latest', 'v']
-            if 'unique' in attrs_meta and attrs_meta['unique']:
-                uniques = attrs_meta.aslist('unique', pop=True)
-                attrs_meta['indexes'] += [
-                    {'fields': ['v'] + uniques,
-                     'unique': True}
-                ]
-                attrs_meta['indexes'] += uniques
+            if 'uniques' in attrs_meta and attrs_meta['uniques']:
+
+                attrs_meta['indexes'] += ['latest', 'v']
+
+                uniques = attrs_meta.aslist('uniques', pop=True)
+                for each in uniques:
+                    if each in attrs_meta['indexes']:
+                        attrs_meta['indexes'].remove(each)
+
+                    attrs_meta['indexes'] += [
+                        {'fields': [each, 'v'],
+                         'unique': True}
+                    ]
 
         attrs['meta'] = attrs_meta
-        attrs['v'] = mongo.IntField(default=1)
-        attrs['latest'] = mongo.BooleanField(default=True)
-
         new_class = super_new.__new__(cls, name, bases, attrs)
         new_class.set_collection_name()
         new_class.create_indexes()
@@ -147,12 +153,24 @@ class DatasetDoc(DynamicBase):
         uniques.remove('v')
         return uniques
 
-    def _unset_latest(self):
+    def get_uniques_params(self):
         params = {}
-        cls = self.__class__
-        for each in cls._get_uniques():
-            params[each] = self[each]
 
+        cls = self.__class__
+        self_dict = self.to_dict().flat()
+        for each in cls._get_uniques():
+            if each not in self_dict:
+                raise KeyError(
+                    '`%s` unique key not found in %s' %
+                                (each, self_dict.unflat()))
+
+            params[each] = self_dict[each]
+
+        return params
+
+    def _unset_latest(self):
+        cls = self.__class__
+        params = self.get_uniques_params()
         cls.objects(v__lt=self.v, **params)\
                    .update(set__latest=False)
 
@@ -168,22 +186,13 @@ class DatasetDoc(DynamicBase):
             self.log = Log()
 
     def get_latest_version(self, key=None):
-        params = {}
         cls = self.__class__
+        params = {}
 
         if isinstance(key, basestring) and key:
             params[key] = self[key]
         else:
-            uniques = cls._get_uniques()
-            if not uniques:
-                return None
-            for each in uniques:
-                if each not in self:
-                    raise KeyError(
-                        '`%s` unique key not found in %s' %
-                                    (each, self.to_dict()))
-
-                params[each] = self[each]
+            params = self.get_uniques_params()
 
         obj = cls.objects(**params).order_by('-v').limit(1)
         if obj:
