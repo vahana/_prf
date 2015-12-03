@@ -1,6 +1,10 @@
+import re
 import json
 import logging
 import urllib
+from datetime import datetime
+import uuid
+
 from urlparse import urlparse
 from pyramid.request import Request
 from pyramid.response import Response
@@ -13,6 +17,13 @@ from prf import resource
 from prf.utils import process_fields
 
 log = logging.getLogger(__name__)
+
+CONSTANTS = {
+    '_TODAY': lambda: datetime.utcnow().strftime('%Y_%m_%d'),
+    '_NOW': lambda: datetime.utcnow().strftime('%Y_%m_%dT%H_%M_%S'),
+    '_UUID': lambda: uuid.uuid4().get_hex()
+}
+
 
 class ViewMapper(object):
 
@@ -87,6 +98,7 @@ class BaseView(object):
         self.show_returns_many = False
 
         self.process_params()
+        self.process_variables()
 
         # no accept headers, use default
         if '' in request.accept:
@@ -128,6 +140,33 @@ class BaseView(object):
 
         if self.request.method == 'GET':
             self._params.setdefault('_limit', 20)
+
+    def process_variables(self):
+        flat_params = self._params.flat()
+
+        def process_each(param):
+            name_parts = []
+            for each in re.split('\$([^$]*)\$', param):
+                if each in CONSTANTS:
+                    name_parts.append(CONSTANTS[each]())
+                elif each in flat_params:
+                    val = process_each(flat_params[each])
+                    name_parts.append(val)
+                else:
+                    name_parts.append(each)
+
+            if name_parts:
+                param = ''.join(name_parts)
+
+            return param
+
+        for key, val in flat_params.items():
+            if not isinstance(val, basestring):
+                continue
+
+            flat_params[key] = process_each(val)
+
+        self._params = flat_params.unflat()
 
     def __getattr__(self, attr):
         if attr in resource.Actions.all():
