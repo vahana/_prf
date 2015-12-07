@@ -19,12 +19,14 @@ def cls2collection(name):
 
 
 def get_uniques(index_meta):
+    uniques = []
+
     for index in index_meta:
         if isinstance(index, dict) and index.get('unique', False):
-            return [(each[1:] if each[0]=='-' else each)
-                            for each in index['fields'] if each != '-v']
+            uniques.append( [(each[1:] if each[0]=='-' else each)
+                            for each in index['fields'] if each not in ['v', '-v']])
 
-    return []
+    return uniques
 
 
 def get_dataset_names(match=""):
@@ -151,15 +153,24 @@ class DatasetDoc(DynamicBase):
     def _get_uniques(cls):
         return get_uniques(cls._meta['indexes'])
 
+    @classmethod
+    def _get_unique_meta_fields(cls):
+        _fields = []
+        for each in cls._get_uniques():
+            if each[0].startswith('ds_meta.'):
+                _fields.append(each[0])
+
+        return _fields
+
     def get_uniques_params(self):
         params = {}
 
         cls = self.__class__
         self_dict = self.to_dict().flat()
-        for each in cls._get_uniques():
+        for each in cls._get_unique_meta_fields():
             if each not in self_dict:
                 raise KeyError(
-                    '`%s` unique key not found in %s' %
+                    'unique key `%s` not found in %s' %
                                 (each, self_dict.unflat()))
 
             params[each] = self_dict[each]
@@ -224,6 +235,7 @@ class DatasetDoc(DynamicBase):
                     self.v = 1
 
             self.latest = True
+
             obj = super(DatasetDoc, self).save(**kw)
             self._unset_latest()
             return obj

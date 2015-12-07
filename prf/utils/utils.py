@@ -299,3 +299,10 @@ def normalize_phone(number, country_code='US', _raise=True):
     except pn.NumberParseException as e:
         if _raise:
             raise ValueError(e)
+
+
+def dl2ld(dl):
+    "dict of lists to list of dicts"
+
+    return [{key:value[index] for key, value in dl.items()}
+            for index in range(len(dl.values()[0]))]

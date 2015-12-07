@@ -208,9 +208,9 @@ class dictset(dict):
 
         for key, new_key in show_as.items():
             if key in _d:
-                _d.merge(dictset({new_key:_d.pop(key)}).unflat())
+                _d.merge(dictset({new_key:_d.pop(key)}))
 
-        return _d
+        return _d.unflat()
 
     def subset(self, keys):
         if keys is None:
@@ -407,6 +407,15 @@ class dictset(dict):
             self.merge(dictset.from_dotted(name, val))
         return val
 
+    def get_first(self, keys):
+        for key in keys:
+            if key in self:
+                return self[key]
+
+        raise DKeyError('Neither of `%s` keys found' % keys)
+
+    def fget(self, key, default=None):
+        return self.flat().get(key, default)
 
 #based on jsonurl
 

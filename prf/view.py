@@ -11,7 +11,7 @@ from pyramid.response import Response
 
 import prf.exc
 from prf.utils import dictset, issequence, prep_params,\
-                      json_dumps, urlencode, args_to_dict
+                      json_dumps, urlencode
 from prf.serializer import DynamicSchema
 from prf import resource
 from prf.utils import process_fields
@@ -100,6 +100,8 @@ class BaseView(object):
         self.process_params()
         self.process_variables()
 
+        self._params = self._params.unflat()
+
         # no accept headers, use default
         if '' in request.accept:
             request.override_renderer = self._default_renderer
@@ -123,25 +125,24 @@ class BaseView(object):
 
     def process_params(self):
         ctype = self.request.content_type
-        params = self.request.params.mixed()
+
+        self._params = dictset(self.request.params.mixed())
 
         if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
             if ctype == 'application/json':
                 try:
-                    params.update(self.request.json)
+                    self._params.update(self.request.json)
                 except ValueError, e:
                     log.error("Expecting JSON. Received: '%s'. Request: %s %s"
                               ,self.request.body, self.request.method, self.request.url)
-
-
-            params = args_to_dict(params)
-
-        self._params = dictset(params)
 
         if self.request.method == 'GET':
             self._params.setdefault('_limit', 20)
 
     def process_variables(self):
+        if self.request.method  == 'GET':
+            return
+
         flat_params = self._params.flat()
 
         def process_each(param):
