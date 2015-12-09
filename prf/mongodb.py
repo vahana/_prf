@@ -198,7 +198,7 @@ class BaseMixin(object):
                 elif op[2:] == 'str':
                     params[key[:pos]] = params.asstr(key, pop=True)
 
-        return params.flat(), specials
+        return params, specials
 
     @classmethod
     def get_frequencies(cls, queryset, specials):
