@@ -115,11 +115,9 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
             attrs_meta.update(current_meta)
         else:
             if 'uniques' in attrs_meta and attrs_meta['uniques']:
+                attrs_meta['indexes'] += ['latest', 'v'] #why ?
 
-                attrs_meta['indexes'] += ['latest', 'v']
-
-                uniques = attrs_meta.aslist('uniques', pop=True)
-                for each in uniques:
+                for each in attrs_meta.aslist('uniques', pop=True):
                     if each in attrs_meta['indexes']:
                         attrs_meta['indexes'].remove(each)
 
@@ -167,15 +165,16 @@ class DatasetDoc(DynamicBase):
 
         cls = self.__class__
         self_dict = self.to_dict().flat()
-        for each in cls._get_unique_meta_fields():
-            if each not in self_dict:
-                raise KeyError(
-                    'unique key `%s` not found in %s' %
-                                (each, self_dict.unflat()))
+        unique_meta_fields = cls._get_unique_meta_fields()
+        for each in unique_meta_fields:
+            if each in self_dict:
+                params[each] = self_dict[each]
 
-            params[each] = self_dict[each]
+        if not params:
+            raise prf.exc.HTTPBadRequest('at least one of %s unique'
+                                         ' fields must be present in %s'\
+                                        % (unique_meta_fields, self_dict))
 
-        params.pop('v', None)
         return params
 
     def _unset_latest(self):
