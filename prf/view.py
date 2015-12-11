@@ -100,8 +100,6 @@ class BaseView(object):
         self.process_params()
         self.process_variables()
 
-        self._params = self._params.unflat()
-
         # no accept headers, use default
         if '' in request.accept:
             request.override_renderer = self._default_renderer

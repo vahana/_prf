@@ -266,7 +266,7 @@ class DatasetDoc(DynamicBase):
             raise prf.exc.HTTPBadRequest(e)
 
     @classmethod
-    def fix_latest(cls, **q):
+    def fix_verions(cls, **q):
         latest_objects = [dictset(each).extract(cls._get_uniques()+['max__as__v']) for each in
                             cls.get_collection(_group=cls._get_uniques(),
                                                 _group_max='v',

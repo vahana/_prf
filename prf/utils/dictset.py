@@ -417,6 +417,9 @@ class dictset(dict):
     def fget(self, key, default=None):
         return self.flat().get(key, default)
 
+    def deep_update(self, _dict):
+        return self.flat().update(_dict.flat()).unflat()
+
 #based on jsonurl
 
 def type_cast(value):
@@ -465,16 +468,16 @@ def dot_split(s):
     return [part for part in re.split("(?<!\.)\.(?!\.)", s)]
 
 
-def args_to_dict(args):
-    d = dictset()
-    keys = args.keys()
+def args_to_dict(_args):
+    _d = dictset()
+    keys = _args.keys()
     keys.sort()
 
     for arg in keys:
-        value = args[arg]
+        value = _args[arg]
 
         bits = dot_split(arg)
-        ctx = d
+        ctx = _d
 
         for i in range(len(bits)):
             bit = bits[i]
@@ -508,4 +511,4 @@ def args_to_dict(args):
                 else:
                     ctx.append(type_cast(value))
                     ctx = None
-    return d
+    return _d
