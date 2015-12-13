@@ -30,11 +30,12 @@ class TopLevelDocumentMetaclass(TLDMetaclass):
 
         return new_klass
 
-def get_document_cls(name):
+def get_document_cls(name, _raise=True):
     try:
         return mongo.document.get_document(name)
     except Exception as e:
-        raise DValueError('`%s` document does not exist' % name)
+        if _raise:
+            raise DValueError('`%s` document does not exist' % name)
 
 
 def drop_collections(name_prefix):
