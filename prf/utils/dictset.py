@@ -239,6 +239,9 @@ class dictset(dict):
         return aslist(self, *arg, **kw)
 
     def asset(self, *arg, **kw):
+        return asset(self, *arg, **kw)
+
+    def asset(self, *arg, **kw):
         return self.aslist(*arg, unique=True, **kw)
 
     def asint(self, *arg, **kw):

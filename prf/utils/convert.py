@@ -89,6 +89,10 @@ def aslist(dset, value, typecast=str, sep=',', remove_empty=True, unique=False):
     return [typecast(e) for e in _lst]
 
 
+def asset(*args, **kw):
+    return set(aslist(*args, **kw))
+
+
 @parametrize
 def asint(dset, value):
     return int(value)
