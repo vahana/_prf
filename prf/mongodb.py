@@ -6,8 +6,9 @@ from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
 import pymongo
 
 import prf.exc
-from prf.utils import dictset, process_limit, split_strip,\
-                      to_dunders, DValueError, process_fields
+from prf.utils import dictset, split_strip,\
+                      to_dunders, process_fields, qs2dict
+from prf.utils.qs import prep_params
 from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
@@ -35,7 +36,7 @@ def get_document_cls(name, _raise=True):
         return mongo.document.get_document(name)
     except Exception as e:
         if _raise:
-            raise DValueError('`%s` document does not exist' % name)
+            raise dictset.DValueError('`%s` document does not exist' % name)
 
 
 def drop_collections(name_prefix):
@@ -129,77 +130,6 @@ class BaseMixin(object):
         else:
             return {name: _default}
 
-    @classmethod
-    def prep_params(cls, params):
-
-        specials = dictset(
-            _sort=None,
-            _fields=None,
-            _count=None,
-            _start=None,
-            _limit=None,
-            _page=None,
-            _frequencies=None,
-            _group=None,
-            _distinct=None,
-            _scalar=None,
-            _ix=None,
-            _explain=None,
-            _flat=None,
-        )
-
-        specials._sort = params.aslist('_sort', default=[], pop=True)
-        specials._fields = params.aslist('_fields', default=[], pop=True)
-        specials._flat = '_flat' in params; params.pop('_flat', False)
-        specials._count = '_count' in params; params.pop('_count', False)
-        specials._explain = '_explain' in params; params.pop('_explain', False)
-        specials._start, specials._limit = process_limit(
-                                            params.pop('_start', None),
-                                            params.pop('_page', None),
-                                            params.pop('_limit', 1))
-
-        specials._ix = params.asint('_ix', pop=True, allow_missing=True, _raise=False)
-        specials._end = specials._start+specials._limit\
-                             if specials._limit > -1 else None
-
-        specials._asdict = params.pop('_asdict', False)
-
-        for each in params.keys():
-            if each.startswith('_'):
-                specials[each] = params.pop(each)
-
-        list_ops = ('in', 'nin', 'all')
-        for key in params.keys():
-            if params[key] == 'null':
-                params[key] = None
-                continue
-
-            pos = key.rfind('__')
-            if pos == -1:
-                continue
-
-            op = key[pos+2:]
-            if op in list_ops:
-                params[key] = split_strip(params[key])
-
-            elif op == 'empty':
-                params.update(cls.process_empty_op(key[:pos], params.pop(key)))
-
-            elif op in ['exists', 'size', 'gt', 'gte', 'lt', 'lte'] and\
-                                    isinstance(params[key], basestring):
-                params.asint(key)
-
-            elif op.startswith('as'):
-                if op[2:] == 'bool':
-                    params[key[:pos]] = params.asbool(key, pop=True)
-
-                elif op[2:] == 'int':
-                    params[key[:pos]] = params.asint(key, pop=True)
-
-                elif op[2:] == 'str':
-                    params[key[:pos]] = params.asstr(key, pop=True)
-
-        return params, specials
 
     @classmethod
     def get_frequencies(cls, queryset, specials):
@@ -402,7 +332,7 @@ class BaseMixin(object):
         params = dictset(params)
         log.debug('cls: %s, params: %s', cls.__name__, params)
 
-        params, specials = cls.prep_params(params)
+        params, specials = prep_params(params)
 
         query_set = cls.objects
         query_set = query_set(**params)
@@ -494,15 +424,25 @@ class BaseMixin(object):
     def id_str(self):
         return str(self.id)
 
-    def update_with(self, _dict):
+    def update_with(self, _dict, overwrite=True, flatten_first=False):
+        self_dict = dictset(self._data)
+
+        if flatten_first:
+            self_dict = self_dict.flat()
+            _dict = dictset(_dict).flat()
+
         for key, val in _dict.items():
+            if overwrite or key not in self_dict:
+                self_dict[key] = val
+
+        for key, val in self_dict.unflat().items():
             setattr(self, key, val)
+
         return self
 
-    def merge_with(self, _dict):
-        for attr, val in _dict.items():
-            if not hasattr(self, attr):
-                setattr(self, attr, val)
+    def merge_with(self, _dict, flatten_first=False):
+        return self.update_with(_dict, overwrite=False,
+                            flatten_first=flatten_first)
 
     def to_dict(self, fields=None):
         _d = dictset(self.to_mongo().to_dict())
@@ -561,8 +501,7 @@ class BaseMixin(object):
 
     @classmethod
     def get_collection_qs(cls, qs):
-        from urlparse import parse_qsl
-        return cls.get_collection(**dict(parse_qsl(qs)))
+        return cls.get_collection(**qs2dict(qs))
 
 
 class Base(BaseMixin, mongo.Document):

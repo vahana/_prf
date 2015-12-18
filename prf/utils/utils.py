@@ -306,3 +306,9 @@ def dl2ld(dl):
 
     return [{key:value[index] for key, value in dl.items()}
             for index in range(len(dl.values()[0]))]
+
+
+def qs2dict(qs):
+    from urlparse import parse_qsl
+    from prf.utils import dictset
+    return dictset(parse_qsl(qs))

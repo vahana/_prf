@@ -10,13 +10,14 @@ from pyramid.request import Request
 from pyramid.response import Response
 
 import prf.exc
-from prf.utils import dictset, issequence, prep_params,\
-                      json_dumps, urlencode
+from prf.utils import dictset, issequence, json_dumps, urlencode
 from prf.serializer import DynamicSchema
 from prf import resource
 from prf.utils import process_fields
+from prf.utils.qs import typecast
 
 log = logging.getLogger(__name__)
+
 
 CONSTANTS = {
     '_TODAY': lambda: datetime.utcnow().strftime('%Y_%m_%d'),
@@ -136,6 +137,8 @@ class BaseView(object):
 
         if self.request.method == 'GET':
             self._params.setdefault('_limit', 20)
+
+        self._params = typecast(self._params)
 
     def process_variables(self):
         if self.request.method  == 'GET':

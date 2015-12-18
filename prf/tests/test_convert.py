@@ -94,10 +94,10 @@ class TestConvert():
         from datetime import datetime
 
         with pytest.raises(DKeyError):
-            as_datetime(dict(), 'a')
+            asdt(dict(), 'a')
 
         with pytest.raises(DValueError):
-            as_datetime(dict(a='asdfasdf'), 'a')
+            asdt(dict(a='asdfasdf'), 'a')
 
-        assert as_datetime(dict(a='2000-01-01T01:01:01'), 'a') == datetime(2000,01,01,01,01,01)
+        assert asdt(dict(a='2000-01-01T01:01:01'), 'a') == datetime(2000,01,01,01,01,01)
 

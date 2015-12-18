@@ -1,5 +1,6 @@
+import re
 from datetime import datetime
-from dateutil import parser as dt_parser
+import dateutil
 
 from prf.utils.utils import DKeyError, DValueError, split_strip
 
@@ -161,21 +162,21 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
 
 
 @parametrize
-def as_datetime(dset, value):
+def asdt(dset, value):
+    matches = ('seconds', 'minutes', 'hours', 'days', 'weeks', 'months', 'years')
     if isinstance(value, datetime):
         value = value.isoformat()
 
-    return dt_parser.parse(value)
-
-    # if name in dset:
-    #     try:
-    #         dset[name] = dt_parser.parse(dset[name], default=default)
-    #     except ValueError as e:
-    #         raise DValueError(e)
-    # elif not allow_missing:
-    #     raise DKeyError("Missing '%s'" % name)
-
-    # if pop:
-    #     return dset.pop(name, None)
-    # else:
-    #     return dset.get(name, None)
+    # is it a relative date ?
+    rg = re.compile('([-+ ]\\d+)( )((?:[a-z][a-z]+))',re.IGNORECASE|re.DOTALL)
+    m = rg.search(value)
+    if m:
+        number = int(m.group(1))
+        word = m.group(3).lower()
+        if word in matches:
+            return datetime.utcnow()+dateutil.relativedelta.relativedelta(**{word:number})
+    try:
+        return dateutil.parser.parse(value)
+    except ValueError as e:
+        raise DValueError(
+            'Datetime was not recognized. Did you miss +- signs for relative dates?')

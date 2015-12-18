@@ -253,8 +253,8 @@ class dictset(dict):
     def asdict(self, *arg, **kw):
         return asdict(self, *arg, **kw)
 
-    def as_datetime(self, *arg, **kw):
-        return as_datetime(self, *arg, **kw)
+    def asdt(self, *arg, **kw):
+        return asdt(self, *arg, **kw)
 
     def asstr(self, *arg, **kw):
         return asstr(self, *arg, **kw)
