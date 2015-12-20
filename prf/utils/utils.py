@@ -1,5 +1,7 @@
 import re
 import json
+import dateutil
+from datetime import datetime
 import logging
 from urlparse import urlparse, parse_qs
 from datetime import date, datetime
@@ -307,8 +309,32 @@ def dl2ld(dl):
     return [{key:value[index] for key, value in dl.items()}
             for index in range(len(dl.values()[0]))]
 
-
 def qs2dict(qs):
     from urlparse import parse_qsl
     from prf.utils import dictset
     return dictset(parse_qsl(qs))
+
+
+def str2dt(strdt):
+    if not strdt:
+        raise DValueError('Datetime string can not be empty or None')
+
+    if isinstance(strdt, datetime):
+        return datetime
+
+    matches = ('seconds', 'minutes', 'hours', 'days', 'weeks', 'months', 'years')
+    # is it a relative date ?
+    rg = re.compile('([-+ ]\\d+)( +)((?:[a-z][a-z]+))',re.IGNORECASE|re.DOTALL)
+    m = rg.search(strdt)
+    if m:
+        number = int(m.group(1))
+        word = m.group(3).lower()
+        if word in matches:
+            return datetime.utcnow()+dateutil.relativedelta.relativedelta(**{word:number})
+
+    try:
+        return dateutil.parser.parse(strdt)
+    except ValueError as e:
+        raise DValueError(
+            'Datetime string `%s` not recognized. Did you miss +- signs for relative dates?' % strdt)
+

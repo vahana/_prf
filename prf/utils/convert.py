@@ -1,8 +1,4 @@
-import re
-from datetime import datetime
-import dateutil
-
-from prf.utils.utils import DKeyError, DValueError, split_strip
+from prf.utils.utils import DKeyError, DValueError, split_strip, str2dt
 
 def parametrize(func):
 
@@ -163,20 +159,4 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
 
 @parametrize
 def asdt(dset, value):
-    matches = ('seconds', 'minutes', 'hours', 'days', 'weeks', 'months', 'years')
-    if isinstance(value, datetime):
-        value = value.isoformat()
-
-    # is it a relative date ?
-    rg = re.compile('([-+ ]\\d+)( )((?:[a-z][a-z]+))',re.IGNORECASE|re.DOTALL)
-    m = rg.search(value)
-    if m:
-        number = int(m.group(1))
-        word = m.group(3).lower()
-        if word in matches:
-            return datetime.utcnow()+dateutil.relativedelta.relativedelta(**{word:number})
-    try:
-        return dateutil.parser.parse(value)
-    except ValueError as e:
-        raise DValueError(
-            'Datetime was not recognized. Did you miss +- signs for relative dates?')
+    value = str2dt(value)
