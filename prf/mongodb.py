@@ -424,25 +424,19 @@ class BaseMixin(object):
     def id_str(self):
         return str(self.id)
 
-    def update_with(self, _dict, overwrite=True, flatten_first=False):
-        self_dict = dictset(self._data)
-
-        if flatten_first:
-            self_dict = self_dict.flat()
-            _dict = dictset(_dict).flat()
-
-        for key, val in _dict.items():
-            if overwrite or key not in self_dict:
-                self_dict[key] = val
+    def update_with(self, _dict, overwrite=True, flatten_first=False, reverse=False):
+        self_dict = self.to_dict().update_with(_dict, overwrite=overwrite,
+                                    flatten_first=flatten_first, reverse=reverse)
 
         for key, val in self_dict.unflat().items():
             setattr(self, key, val)
 
         return self
 
-    def merge_with(self, _dict, flatten_first=False):
+    def merge_with(self, _dict, flatten_first=False, reverse=False):
         return self.update_with(_dict, overwrite=False,
-                            flatten_first=flatten_first)
+                            flatten_first=flatten_first,
+                            reverse=reverse)
 
     def to_dict(self, fields=None):
         _d = dictset(self.to_mongo().to_dict())

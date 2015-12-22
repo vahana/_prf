@@ -12,6 +12,7 @@ from prf.utils import dictset, split_strip
 
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = 'ds_'
+EXCLUDED_FIELDS = ['-v', '-latest', '-log', '-id', '-self']
 
 
 def cls2collection(name):
@@ -24,7 +25,7 @@ def get_uniques(index_meta):
     for index in index_meta:
         if isinstance(index, dict) and index.get('unique', False):
             uniques.append( [(each[1:] if each[0]=='-' else each)
-                            for each in index['fields'] if each not in ['v', '-v']])
+                            for each in index['fields']])
 
     return uniques
 
@@ -116,13 +117,12 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
         else:
             if 'uniques' in attrs_meta and attrs_meta['uniques']:
                 attrs_meta['indexes'] += ['latest', 'v'] #why ?
-
                 for each in attrs_meta.aslist('uniques', pop=True):
                     if each in attrs_meta['indexes']:
                         attrs_meta['indexes'].remove(each)
 
                     attrs_meta['indexes'] += [
-                        {'fields': [each, 'v'],
+                        {'fields': each + ['v'] if isinstance(each, list) else [each, 'v'],
                          'unique': True}
                     ]
 
@@ -183,9 +183,9 @@ class DatasetDoc(DynamicBase):
         cls.objects(v__lt=self.v, **params)\
                    .update(set__latest=False)
 
-    def is_eq(self, other):
-        remove = ['-v', '-latest', '-log', '-id', '-self']
-        return self.to_dict(remove) == other.to_dict(remove)
+    def contains(self, other):
+        other_dict = other.to_dict(EXCLUDED_FIELDS)
+        return self.to_dict(other_dict.keys()) == other_dict
 
     def clean(self):
         if self.log:
@@ -211,39 +211,26 @@ class DatasetDoc(DynamicBase):
         if skip_versioning:
             return super(DatasetDoc, self).save(**kw)
 
-        try:
-            obj = None
+        latest_obj = self.get_latest_version()
+        if not latest_obj:
+            self.v = 1
+        else:
+            if latest_obj.contains(self):
+                return latest_obj # dont save if data did not change
+
             if merge:
-                obj = self.get_latest_version(merge)
-                if obj:
-                    if self.is_eq(obj):
-                        return obj # dont save if data did not change
-                    self.merge_with(obj.to_dict())
+                self.merge_with(latest_obj.to_dict(EXCLUDED_FIELDS))
 
-            if v:
-                self.v = v
-            else:
-                if not merge:
-                    obj = self.get_latest_version()
+            self.v = v or latest_obj.v + 1 # next version
 
-                if obj:
-                    if self.is_eq(obj):
-                        return obj # dont save if data did not change
-                    self.v = obj.v + 1 # next version
-                else:
-                    self.v = 1
+        self.latest = True
 
-            self.latest = True
-
+        try:
             obj = super(DatasetDoc, self).save(**kw)
             self._unset_latest()
             return obj
-
         except mongo.NotUniqueError as e:
-            #try next version
-            return self.save(v=self.v+1, merge=merge, **kw)
-        except KeyError as e:
-            log.error(e)
+            return self.save(v=self.v+1, **kw)
 
     @classmethod
     def create_indexes(cls, name=None):

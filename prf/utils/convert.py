@@ -69,7 +69,7 @@ def asbool(dset, value):
 
 
 @parametrize
-def aslist(dset, value, typecast=str, sep=',', remove_empty=True, unique=False):
+def aslist(dset, value, sep=',', remove_empty=True, unique=False):
     if isinstance(value, list):
         _lst = value
     elif isinstance(value, basestring):
@@ -83,7 +83,7 @@ def aslist(dset, value, typecast=str, sep=',', remove_empty=True, unique=False):
     if unique:
         _lst = list(set(_lst))
 
-    return [typecast(e) for e in _lst]
+    return _lst
 
 
 def asset(*args, **kw):

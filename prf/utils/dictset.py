@@ -423,6 +423,28 @@ class dictset(dict):
     def deep_update(self, _dict):
         return self.flat().update(_dict.flat()).unflat()
 
+    def update_with(self, _dict, overwrite=True, flatten_first=False, reverse=False):
+        if not reverse:
+            self_dict = self
+        else:
+            self_dict = _dict
+            _dict = self
+
+        if flatten_first:
+            self_dict = self_dict.flat()
+            _dict = dictset(_dict).flat()
+
+        for key, val in _dict.items():
+            if overwrite or key not in self_dict:
+                self_dict[key] = val
+
+        return self_dict
+
+    def merge_with(self, _dict, flatten_first=False, reverse=False):
+        return self.update_with(_dict, overwrite=False,
+                            flatten_first=flatten_first,
+                            reverse=reverse)
+
 #based on jsonurl
 
 def type_cast(value):
