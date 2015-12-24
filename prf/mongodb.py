@@ -433,11 +433,6 @@ class BaseMixin(object):
 
         return self
 
-    def merge_with(self, _dict, flatten_first=False, reverse=False):
-        return self.update_with(_dict, overwrite=False,
-                            flatten_first=flatten_first,
-                            reverse=reverse)
-
     def to_dict(self, fields=None):
         _d = dictset(self.to_mongo().to_dict())
 

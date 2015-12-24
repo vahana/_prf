@@ -155,8 +155,9 @@ class DatasetDoc(DynamicBase):
     def _get_unique_meta_fields(cls):
         _fields = []
         for each in cls._get_uniques():
-            if each[0].startswith('ds_meta.'):
-                _fields.append(each[0])
+            for e in each:
+                if e.startswith('ds_meta.'):
+                    _fields.append(e)
 
         return _fields
 
@@ -171,6 +172,7 @@ class DatasetDoc(DynamicBase):
                 params[each] = self_dict[each]
 
         if not params:
+            import ipdb;ipdb.set_trace()
             raise prf.exc.HTTPBadRequest('at least one of %s unique'
                                          ' fields must be present in %s'\
                                         % (unique_meta_fields, self_dict))
@@ -183,9 +185,9 @@ class DatasetDoc(DynamicBase):
         cls.objects(v__lt=self.v, **params)\
                    .update(set__latest=False)
 
-    def contains(self, other):
-        other_dict = other.to_dict(EXCLUDED_FIELDS)
-        return self.to_dict(other_dict.keys()) == other_dict
+    def contains(self, other, exclude=None):
+        other_dict = other.to_dict(exclude)
+        return not other_dict or self.to_dict(other_dict.keys()) == other_dict
 
     def clean(self):
         if self.log:
@@ -207,30 +209,41 @@ class DatasetDoc(DynamicBase):
         if obj:
             return obj[0]
 
-    def save(self, v=None, merge=False, skip_versioning=False, **kw):
-        if skip_versioning:
-            return super(DatasetDoc, self).save(**kw)
+    def merge_save(self, merge_keys=None):
+        cls = self.__class__
 
-        latest_obj = self.get_latest_version()
-        if not latest_obj:
-            self.v = 1
+        if isinstance(merge_keys, bool):
+            latest = self.get_latest_version()
+            if not latest:
+                raise prf.exc.HTTPBadRequest(
+                        '`%s` object not found with default unique keys'
+                        'to merge with: %s' % (cls, self.to_dict()))
+
+            if latest.contains(self, EXCLUDED_FIELDS+['-ds_meta']):
+                return
+
+            cls(**latest.to_dict(EXCLUDED_FIELDS).merge_with(self.to_dict()))\
+                .save_version(v=latest.v+1)
+
         else:
-            if latest_obj.contains(self):
-                return latest_obj # dont save if data did not change
+            for each in cls.objects(**merge_keys):
+                if each.contains(self, EXCLUDED_FIELDS+['-ds_meta']):
+                    continue
 
-            if merge:
-                self.merge_with(latest_obj.to_dict(EXCLUDED_FIELDS))
+                cls(**each.to_dict(EXCLUDED_FIELDS).merge_with(self.to_dict()))\
+                    .save_version(v=each.v+1)
 
-            self.v = v or latest_obj.v + 1 # next version
-
+    def save_version(self, v=1, **kw):
+        self.v = v
         self.latest = True
+        self.id = None # must be a new object
 
         try:
             obj = super(DatasetDoc, self).save(**kw)
             self._unset_latest()
             return obj
         except mongo.NotUniqueError as e:
-            return self.save(v=self.v+1, **kw)
+            return self.save_version(v=self.v+1, **kw)
 
     @classmethod
     def create_indexes(cls, name=None):
