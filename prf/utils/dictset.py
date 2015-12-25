@@ -1,4 +1,6 @@
 import urllib, re
+from collections import OrderedDict
+
 from prf.utils.utils import DKeyError, DValueError, split_strip
 from prf.utils.convert import *
 
@@ -121,6 +123,9 @@ class dictset(dict):
             raise DKeyError(e.message)
 
     def __setattr__(self, key, val):
+        if key == '_ordered_dict':
+            return super(dictset, self).__setattr__(key, val)
+
         if isinstance(val, dict):
             val = dictset(val)
         self[key] = val
@@ -400,9 +405,17 @@ class dictset(dict):
         return _d.unflat()
 
     def flat(self):
-        return dictset(dict_to_args(self))
+        _flat = dict_to_args(self)
+        _d = dictset(_flat)
+        _d._ordered_dict = _flat
+        return _d
 
     def unflat(self):
+        if hasattr(self, '_ordered_dict'):
+            _d = dictset(args_to_dict(self._ordered_dict))
+            del self._ordered_dict
+            return _d
+
         return dictset(args_to_dict(self))
 
     def set_default(self, name, val):
@@ -456,7 +469,7 @@ def type_cast(value):
 
 
 def list_to_args(l):
-    args = dictset()
+    args = OrderedDict()
     pos = 0
     for i in l:
         if isinstance(i, dict):
@@ -474,7 +487,7 @@ def list_to_args(l):
 
 
 def dict_to_args(d):
-    args = dictset()
+    args = OrderedDict()
     for k, v in d.items():
         if isinstance(v, dict):
             sub = dict_to_args(v)
@@ -496,7 +509,7 @@ def dot_split(s):
 def args_to_dict(_args):
     _d = dictset()
     keys = _args.keys()
-    keys.sort()
+    # keys.sort()
 
     for arg in keys:
         value = _args[arg]

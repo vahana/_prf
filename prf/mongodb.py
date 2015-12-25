@@ -492,6 +492,11 @@ class BaseMixin(object):
     def get_collection_qs(cls, qs):
         return cls.get_collection(**qs2dict(qs))
 
+    def contains(self, other, exclude=None):
+        if not isinstance(other, dict):
+            other = other.to_dict(exclude)
+        return not other or self.to_dict(other.keys()) == other
+
 
 class Base(BaseMixin, mongo.Document):
     __metaclass__ = TopLevelDocumentMetaclass

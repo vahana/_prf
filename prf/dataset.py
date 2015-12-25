@@ -172,7 +172,6 @@ class DatasetDoc(DynamicBase):
                 params[each] = self_dict[each]
 
         if not params:
-            import ipdb;ipdb.set_trace()
             raise prf.exc.HTTPBadRequest('at least one of %s unique'
                                          ' fields must be present in %s'\
                                         % (unique_meta_fields, self_dict))
@@ -184,10 +183,6 @@ class DatasetDoc(DynamicBase):
         params = self.get_uniques_params()
         cls.objects(v__lt=self.v, **params)\
                    .update(set__latest=False)
-
-    def contains(self, other, exclude=None):
-        other_dict = other.to_dict(exclude)
-        return not other_dict or self.to_dict(other_dict.keys()) == other_dict
 
     def clean(self):
         if self.log:
@@ -212,26 +207,23 @@ class DatasetDoc(DynamicBase):
     def merge_save(self, merge_keys=None):
         cls = self.__class__
 
+        def _save(obj):
+            return cls(**obj.to_dict(EXCLUDED_FIELDS).merge_with(self.to_dict()))\
+                        .save_version(v=obj.v+1)
+
         if isinstance(merge_keys, bool):
             latest = self.get_latest_version()
-            if not latest:
-                raise prf.exc.HTTPBadRequest(
-                        '`%s` object not found with default unique keys'
-                        'to merge with: %s' % (cls, self.to_dict()))
-
-            if latest.contains(self, EXCLUDED_FIELDS+['-ds_meta']):
-                return
-
-            cls(**latest.to_dict(EXCLUDED_FIELDS).merge_with(self.to_dict()))\
-                .save_version(v=latest.v+1)
-
+            if latest:
+                if not latest.contains(self, EXCLUDED_FIELDS+['-ds_meta']):
+                    return _save(latest)
+            else:
+                log.debug('`%s` object not found with default unique keys '
+                          'to merge with: %s', cls, self.to_dict())
+                self.save_version()
         else:
             for each in cls.objects(**merge_keys):
-                if each.contains(self, EXCLUDED_FIELDS+['-ds_meta']):
-                    continue
-
-                cls(**each.to_dict(EXCLUDED_FIELDS).merge_with(self.to_dict()))\
-                    .save_version(v=each.v+1)
+                if not each.contains(self, EXCLUDED_FIELDS+['-ds_meta']):
+                    _save(each)
 
     def save_version(self, v=1, **kw):
         self.v = v
