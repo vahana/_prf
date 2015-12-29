@@ -208,9 +208,10 @@ class Request(object):
 
 class PRFRequest(Request):
     def get_paginated(self, page_size, **kw):
-        params = kw.get('params', {})
+        params = kw.pop('params', {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
+
         url_ptrn = '%s?_start=%%s&_limit=%%s' % self.base_url
 
         pagr = partial(pager, _start, page_size, _limit)
@@ -225,8 +226,14 @@ class PRFRequest(Request):
                     break
                 yield resp
         else:
-            urls = [url_ptrn % (start, count) for (start, count) in pagr()]
-            for resp in self.mget(urls, **kw):
+            _params =[]
+            for start, count in pagr():
+                _params.append(params.update({
+                    '_start': start,
+                    '_limit': count,
+                }))
+
+            for resp in self.mget(params=_params, **kw):
                 if resp.json()['count'] == 0:
                     break
                 yield resp

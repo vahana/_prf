@@ -240,7 +240,11 @@ def chunks(_list, chunk_size):
 def encoded_dict(in_dict):
     out_dict = {}
     for k, v in in_dict.iteritems():
-        out_dict[k] = unicode(v).encode('utf-8')
+
+        if isinstance(v, dict):
+            out_dict[k] = encoded_dict(v)
+        else:
+            out_dict[k] = unicode(v).encode('utf-8')
 
     return out_dict
 

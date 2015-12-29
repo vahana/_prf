@@ -217,8 +217,8 @@ class DatasetDoc(DynamicBase):
                 if not latest.contains(self, EXCLUDED_FIELDS+['-ds_meta']):
                     return _save(latest)
             else:
-                log.debug('`%s` object not found with default unique keys '
-                          'to merge with: %s', cls, self.to_dict())
+                log.debug('`%s` object not found with default unique keys %s',
+                            cls, self._get_unique_meta_fields())
                 self.save_version()
         else:
             for each in cls.objects(**merge_keys):

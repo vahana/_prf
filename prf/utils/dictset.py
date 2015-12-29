@@ -404,6 +404,11 @@ class dictset(dict):
 
         return _d.unflat()
 
+    def pop(self, *arg, **kw):
+        if hasattr(self, '_ordered_dict'):
+            self._ordered_dict.pop(*arg, **kw)
+        return super(dictset, self).pop(*arg, **kw)
+
     def flat(self):
         _flat = dict_to_args(self)
         _d = dictset(_flat)
