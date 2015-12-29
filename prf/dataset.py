@@ -171,11 +171,6 @@ class DatasetDoc(DynamicBase):
             if each in self_dict:
                 params[each] = self_dict[each]
 
-        if not params:
-            raise prf.exc.HTTPBadRequest('at least one of %s unique'
-                                         ' fields must be present in %s'\
-                                        % (unique_meta_fields, self_dict))
-
         return params
 
     def _unset_latest(self):
