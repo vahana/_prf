@@ -12,7 +12,7 @@ from prf.utils import dictset, split_strip
 
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = 'ds_'
-EXCLUDED_FIELDS = ['-v', '-latest', '-log', '-id', '-self']
+EXCLUDED_FIELDS = ['-v', '-latest', '-id', '-self']
 
 
 def cls2collection(name):
@@ -199,8 +199,12 @@ class DatasetDoc(DynamicBase):
         if obj:
             return obj[0]
 
-    def merge_save(self, merge_keys=None):
+    def merge_save(self, merge_keys=None, create=False):
         cls = self.__class__
+
+        def _contains(obj1, obj2):
+            _excluded = EXCLUDED_FIELDS+['-log']
+            return obj1.contains(obj2, _excluded)
 
         def _save(obj):
             return cls(**obj.to_dict(EXCLUDED_FIELDS).merge_with(self.to_dict()))\
@@ -209,21 +213,18 @@ class DatasetDoc(DynamicBase):
         if isinstance(merge_keys, bool):
             latest = self.get_latest_version()
             if latest:
-                if not latest.contains(self, EXCLUDED_FIELDS+['-ds_meta']):
+                if not _contains(latest, self):
                     return _save(latest)
-            else:
-                log.debug('`%s` object not found with default unique keys %s',
-                            cls, self._get_unique_meta_fields())
+            elif create:
                 self.save_version()
         else:
             for each in cls.objects(**merge_keys):
-                if not each.contains(self, EXCLUDED_FIELDS+['-ds_meta']):
+                if not _contains(each, self):
                     _save(each)
 
     def save_version(self, v=1, **kw):
         self.v = v
         self.latest = True
-        self.id = None # must be a new object
 
         try:
             obj = super(DatasetDoc, self).save(**kw)
