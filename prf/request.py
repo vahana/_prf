@@ -211,14 +211,12 @@ class PRFRequest(Request):
         params = kw.pop('params', {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
-
-        url_ptrn = '%s?_start=%%s&_limit=%%s' % self.base_url
-
         pagr = partial(pager, _start, page_size, _limit)
 
         if _limit == -1:
             for start, count in pagr():
-                resp = self.get(url_ptrn % (start, count), **kw)
+                _params = params.copy().update({'_start':start, '_limit': count})
+                resp = self.get(params=_params, **kw)
                 if not resp.ok:
                     raise prf.exc._raise(resp)
 
