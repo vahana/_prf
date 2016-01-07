@@ -314,7 +314,7 @@ class BaseMixin(object):
                           e.get('list', e.get('set', [{}]))[0]]
                         for e in aggregate(aggr)])
         else:
-            return aggregate(aggr)
+            return [e for e in aggregate(aggr)]
 
     @classmethod
     def _ix(cls, specials, total):
