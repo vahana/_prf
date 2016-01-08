@@ -37,39 +37,31 @@ def get_dataset_names(match=""):
              if match in name.lower() and name.startswith(DS_COLL_PREFIX)]
 
 
-def get_document_meta(doc_name=None):
+def get_document_meta(doc_name):
     db = mongo.connection.get_db()
-    documen_metas = dictset()
 
-    names = get_dataset_names(doc_name or '')
-    if not names:
+    name = DS_COLL_PREFIX + doc_name
+
+    if name not in db.collection_names():
         return dictset()
 
-    for name, _doc_name in names:
-        _doc_name = name[len(DS_COLL_PREFIX):]
+    meta = dictset(
+        _cls = doc_name,
+        collection = name,
+    )
 
-        meta = dictset(
-            _cls = _doc_name,
-            collection = name,
-        )
+    indexes = []
+    for ix_name, index in db[name].index_information().items():
+        fields = ['%s%s' % (('-' if order == -1 else ''), name)
+                    for (name,order) in index['key']]
 
-        indexes = []
-        for ix_name, index in db[name].index_information().items():
-            fields = ['%s%s' % (('-' if order == -1 else ''), name)
-                        for (name,order) in index['key']]
+        indexes.append(dictset({'name': ix_name,
+                        'fields':fields,
+                        'unique': index.get('unique', False)}))
 
-            indexes.append(dictset({'name': ix_name,
-                            'fields':fields,
-                            'unique': index.get('unique', False)}))
+    meta['indexes'] = indexes
 
-        meta['indexes'] = indexes
-
-        if doc_name == _doc_name:
-            return meta
-
-        documen_metas[_doc_name] = meta
-
-    return documen_metas
+    return meta
 
 
 def define_document(name, meta={}, redefine=False):
@@ -93,7 +85,7 @@ class Log(mongo.DynamicEmbeddedDocument):
     synced_at = mongo.DateTimeField(default=datetime.utcnow)
     updated_at = mongo.DateTimeField()
     tag = mongo.ListField(mongo.StringField())
-    importer = mongo.DictField()
+    # importer = mongo.DictField()
 
 
 class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
@@ -152,30 +144,33 @@ class DatasetDoc(DynamicBase):
         return get_uniques(cls._meta['indexes'])
 
     @classmethod
+    def get_ds_meta_params(cls, ds_meta):
+        params = dictset()
+        for key in cls._get_unique_meta_fields():
+            if key not in ds_meta:
+                continue
+            params['ds_meta.%s'%key] = ds_meta[key]
+
+        return params
+
+    @classmethod
+    def get_latest(cls, ds_meta):
+        return cls.get(latest=True,
+            **cls.get_ds_meta_params(ds_meta))
+
+    @classmethod
     def _get_unique_meta_fields(cls):
         _fields = []
         for each in cls._get_uniques():
             for e in each:
                 if e.startswith('ds_meta.'):
-                    _fields.append(e)
+                    _fields.append(e[8:])
 
         return _fields
 
-    def get_uniques_params(self):
-        params = {}
-
-        cls = self.__class__
-        self_dict = self.to_dict().flat()
-        unique_meta_fields = cls._get_unique_meta_fields()
-        for each in unique_meta_fields:
-            if each in self_dict:
-                params[each] = self_dict[each]
-
-        return params
-
     def _unset_latest(self):
         cls = self.__class__
-        params = self.get_uniques_params()
+        params = cls.get_ds_meta_params(self.ds_meta)
         cls.objects(v__lt=self.v, **params)\
                    .update(set__latest=False)
 
@@ -186,43 +181,11 @@ class DatasetDoc(DynamicBase):
         else:
             self.log = Log()
 
-    def get_latest_version(self, key=None):
-        cls = self.__class__
-        params = {}
+    def save_version(self, v=None, **kw):
+        if v is None:
+            latest = self.get_latest(self.ds_meta)
+            v = latest.v + 1 if latest else 1
 
-        if isinstance(key, basestring) and key:
-            params[key] = self[key]
-        else:
-            params = self.get_uniques_params()
-
-        obj = cls.objects(**params).order_by('-v').limit(1)
-        if obj:
-            return obj[0]
-
-    def merge_save(self, merge_keys=None, create=False):
-        cls = self.__class__
-
-        def _contains(obj1, obj2):
-            _excluded = EXCLUDED_FIELDS+['-log']
-            return obj1.contains(obj2, _excluded)
-
-        def _save(obj):
-            return cls(**obj.to_dict(EXCLUDED_FIELDS).merge_with(self.to_dict()))\
-                        .save_version(v=obj.v+1)
-
-        if isinstance(merge_keys, bool):
-            latest = self.get_latest_version()
-            if latest:
-                if not _contains(latest, self):
-                    return _save(latest)
-            elif create:
-                self.save_version()
-        else:
-            for each in cls.objects(**merge_keys):
-                if not _contains(each, self):
-                    _save(each)
-
-    def save_version(self, v=1, **kw):
         self.v = v
         self.latest = True
 
