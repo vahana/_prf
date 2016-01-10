@@ -497,6 +497,12 @@ class BaseMixin(object):
             other = other.to_dict(exclude)
         return not other or self.to_dict(other.keys()) == other
 
+    def save_safe(self):
+        try:
+            return self.save()
+        except mongo.ValidationError as e:
+            log.error('%s: %s' % (e, self.to_dict()))
+
 
 class Base(BaseMixin, mongo.Document):
     __metaclass__ = TopLevelDocumentMetaclass
