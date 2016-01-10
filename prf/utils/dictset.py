@@ -463,6 +463,11 @@ class dictset(dict):
                             flatten_first=flatten_first,
                             reverse=reverse)
 
+    def contains(self, other, exclude=None):
+        other_ = other.subset(exclude)
+        return not other_ or self.subset(other_.keys()) == other_
+
+
 #based on jsonurl
 
 def type_cast(value):

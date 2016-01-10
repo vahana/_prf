@@ -12,8 +12,6 @@ from prf.utils import dictset, split_strip
 
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = 'ds_'
-EXCLUDED_FIELDS = ['-v', '-latest', '-id', '-self']
-
 
 def cls2collection(name):
     return DS_COLL_PREFIX + name
@@ -85,7 +83,6 @@ class Log(mongo.DynamicEmbeddedDocument):
     synced_at = mongo.DateTimeField(default=datetime.utcnow)
     updated_at = mongo.DateTimeField()
     tag = mongo.ListField(mongo.StringField())
-    # importer = mongo.DictField()
 
 
 class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
@@ -94,7 +91,6 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
         super_new = super(VersionedDocumentMetaclass, cls)
         attrs_meta = dictset(attrs.get('meta', {}))
         attrs_meta.setdefault('indexes', [])
-        skip_versioning = False
 
         if attrs_meta.asbool('abstract', default=False):
             return super_new.__new__(cls, name, bases, attrs)
@@ -102,26 +98,38 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
         attrs['v'] = mongo.IntField(default=1)
         attrs['latest'] = mongo.BooleanField(default=True)
 
+        pk_ = []
         current_meta = get_document_meta(name)
-
         if current_meta:
+            for each in current_meta['indexes']:
+                if each['unique']:
+                    pk_ = each['fields']
+                    if each['name'].startswith('pk_'):
+                        break
+
             attrs_meta.update(current_meta)
         else:
-            if 'uniques' in attrs_meta and attrs_meta['uniques']:
-                attrs_meta['indexes'] += ['latest', 'v'] #why ?
-                for each in attrs_meta.aslist('uniques', pop=True):
-                    if each in attrs_meta['indexes']:
-                        attrs_meta['indexes'].remove(each)
+            attrs_meta['indexes'].append('latest')
+            attrs_meta['indexes'].append('v')
 
-                    attrs_meta['indexes'] += [
-                        {'fields': each + ['v'] if isinstance(each, list) else [each, 'v'],
-                         'unique': True}
-                    ]
+            pk_ = attrs_meta.aslist('pk', pop=True)
+
+            for each in pk_:
+                attrs_meta['indexes'].append(each)
+
+            if pk_:
+                pk_.append('v')
+                attrs_meta['indexes'].append({
+                    'name': 'pk_%s' % '_'.join(pk_),
+                    'fields': pk_,
+                    'unique': True})
 
         attrs['meta'] = attrs_meta
         new_class = super_new.__new__(cls, name, bases, attrs)
         new_class.set_collection_name()
         new_class.create_indexes()
+        new_class._pk = pk_
+
         return new_class
 
 
@@ -143,37 +151,6 @@ class DatasetDoc(DynamicBase):
     def _get_uniques(cls):
         return get_uniques(cls._meta['indexes'])
 
-    @classmethod
-    def get_ds_meta_params(cls, ds_meta):
-        params = dictset()
-        for key in cls._get_unique_meta_fields():
-            if key not in ds_meta:
-                continue
-            params['ds_meta.%s'%key] = ds_meta[key]
-
-        return params
-
-    @classmethod
-    def get_latest(cls, ds_meta):
-        return cls.get(latest=True,
-            **cls.get_ds_meta_params(ds_meta))
-
-    @classmethod
-    def _get_unique_meta_fields(cls):
-        _fields = []
-        for each in cls._get_uniques():
-            for e in each:
-                if e.startswith('ds_meta.'):
-                    _fields.append(e[8:])
-
-        return _fields
-
-    def _unset_latest(self):
-        cls = self.__class__
-        params = cls.get_ds_meta_params(self.ds_meta)
-        cls.objects(v__lt=self.v, **params)\
-                   .update(set__latest=False)
-
     def clean(self):
         if self.log:
             if isinstance(self.log, dict):
@@ -181,20 +158,36 @@ class DatasetDoc(DynamicBase):
         else:
             self.log = Log()
 
+    def get_params_from_pk(self):
+        return self.to_dict(self._pk).subset('-v').flat()
+
+    def get_latest(self):
+        params = self.get_params_from_pk()
+        return self.get(latest=True, **params)
+
+    def _unset_latest(self):
+        cls = self.__class__
+        params = self.get_params_from_pk()
+        cls.objects(v__lt=self.v, **params)\
+                   .update(set__latest=False)
+
     def save_version(self, v=None, **kw):
         if v is None:
-            latest = self.get_latest(self.ds_meta)
-            v = latest.v + 1 if latest else 1
+            latest = self.get_latest()
+            self.v = latest.v + 1 if latest else 1
+        else:
+            self.v = v
 
-        self.v = v
         self.latest = True
 
         try:
             obj = super(DatasetDoc, self).save(**kw)
-            self._unset_latest()
+            if self.v > 1:
+                self._unset_latest()
             return obj
         except mongo.NotUniqueError as e:
             return self.save_version(v=self.v+1, **kw)
+
 
     @classmethod
     def create_indexes(cls, name=None):
