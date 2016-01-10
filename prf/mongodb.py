@@ -500,7 +500,7 @@ class BaseMixin(object):
     def save_safe(self):
         try:
             return self.save()
-        except mongo.ValidationError as e:
+        except Exception as e:
             log.error('%s: %s' % (e, self.to_dict()))
 
 
