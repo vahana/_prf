@@ -103,7 +103,7 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
         if current_meta:
             for each in current_meta['indexes']:
                 if each['unique']:
-                    pk_ = each['fields']
+                    pk_ = [e[1:] if e[0]=='-' else e for e in each['fields']]
                     if each['name'].startswith('pk_'):
                         break
 
