@@ -129,7 +129,6 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
         new_class.set_collection_name()
         new_class.create_indexes()
         new_class._pk = pk_
-
         return new_class
 
 
@@ -211,14 +210,28 @@ class DatasetDoc(DynamicBase):
 
     @classmethod
     def fix_verions(cls, **q):
-        latest_objects = [dictset(each).extract(cls._get_uniques()+['max__as__v']) for each in
-                            cls.get_collection(_group=cls._get_uniques(),
-                                                _group_max='v',
-                                                _group_list=cls._get_uniques(), **q)]
+        keys = [e for e in cls._pk if e != 'v']
+
+        latest_objects = [dictset(each).extract(keys+['max__as__v']).flat() for each in
+            cls.get_collection(
+                _group=keys, _group_max='v',
+                **q)]
+
+        total = len(latest_objects)
+
+        log.debug('Set latest to False for all')
 
         cls.objects.update(set__latest=False)
 
         for each in latest_objects:
+            log.debug('Processing %s: %s' % (total, each))
+            total -=1
+
+            each.pop_by_values(None)
+            if each.keys() == ['v']:
+                log.warning('WTF')
+                continue
+
             cls.objects(**each).update(set__latest=True)
 
 
