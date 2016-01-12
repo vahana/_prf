@@ -100,19 +100,7 @@ class BaseView(object):
 
         self.process_params()
         self.process_variables()
-
-        # no accept headers, use default
-        if '' in request.accept:
-            request.override_renderer = self._default_renderer
-
-        elif 'application/json' in request.content_type:
-            request.override_renderer = 'json'
-
-        else:
-            raise prf.exc.HTTPNotAcceptable('Unsupported content-type: `%s`. '
-                                         'Service accepts only `application/json` content'
-                                          % request.content_type)
-
+        self.set_renderer()
         self.init()
 
     def init(self):
@@ -124,17 +112,28 @@ class BaseView(object):
         rname = self.request.matched_route.name
         return self.request.registry['prf.resources_map'][rname]
 
+    def set_renderer(self):
+        # no accept headers, use default
+        if '' in self.request.accept:
+            self.request.override_renderer = self._default_renderer
+
+        elif 'application/json' in self.request.accept:
+            self.request.override_renderer = 'json'
+
+        elif 'text/plain' in self.request.accept:
+            self.request.override_renderer = 'string'
+
     def process_params(self):
         ctype = self.request.content_type
 
         self._params = dictset(self.request.params.mixed())
-
-        if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
-            try:
-                self._params.update(self.request.json)
-            except ValueError, e:
-                log.error("Expecting JSON. Received: '%s'. Request: %s %s"
-                          ,self.request.body, self.request.method, self.request.url)
+        if 'application/json' in ctype:
+            if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+                try:
+                    self._params.update(self.request.json)
+                except ValueError, e:
+                    raise prf.exc.HTTPBadRequest("Expecting JSON. Received: '%s'. Request: %s %s"
+                               % (self.request.body, self.request.method, self.request.url))
 
         if self.request.method == 'GET':
             self._params.setdefault('_limit', 20)
