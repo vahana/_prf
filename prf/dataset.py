@@ -162,11 +162,19 @@ class DatasetDoc(DynamicBase):
 
     def get_latest(self):
         params = self.get_params_from_pk()
+        if not params:
+            log.warning('pk params empty for %s', self.ds_meta)
+            return
+
         return self.get(latest=True, **params)
 
     def _unset_latest(self):
         cls = self.__class__
         params = self.get_params_from_pk()
+        if not params:
+            log.warning('pk params empty for %s', self.ds_meta)
+            return
+
         cls.objects(v__lt=self.v, **params)\
                    .update(set__latest=False)
 
