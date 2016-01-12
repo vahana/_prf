@@ -117,6 +117,10 @@ def HTTPBadRequest(*arg, **kw):
 def HTTPMethodNotAllowed(*arg, **kw):
     return create_response(http_exc.HTTPMethodNotAllowed(*arg), kw)
 
+def HTTPNotAcceptable(*arg, **kw):
+    return create_response(http_exc.HTTPNotAcceptable(*arg), kw)
+
+
 # 50x
 def HTTPServerError(*arg, **kw):
     return create_response(http_exc.HTTPServerError(*arg), kw)

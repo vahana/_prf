@@ -105,11 +105,13 @@ class BaseView(object):
         if '' in request.accept:
             request.override_renderer = self._default_renderer
 
-        elif 'application/json' in request.accept:
+        elif 'application/json' in request.content_type:
             request.override_renderer = 'json'
 
-        elif 'text/plain' in request.accept:
-            request.override_renderer = 'string'
+        else:
+            raise prf.exc.HTTPNotAcceptable('Unsupported content-type: `%s`. '
+                                         'Service accepts only `application/json` content'
+                                          % request.content_type)
 
         self.init()
 
@@ -128,12 +130,11 @@ class BaseView(object):
         self._params = dictset(self.request.params.mixed())
 
         if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
-            if ctype == 'application/json':
-                try:
-                    self._params.update(self.request.json)
-                except ValueError, e:
-                    log.error("Expecting JSON. Received: '%s'. Request: %s %s"
-                              ,self.request.body, self.request.method, self.request.url)
+            try:
+                self._params.update(self.request.json)
+            except ValueError, e:
+                log.error("Expecting JSON. Received: '%s'. Request: %s %s"
+                          ,self.request.body, self.request.method, self.request.url)
 
         if self.request.method == 'GET':
             self._params.setdefault('_limit', 20)
