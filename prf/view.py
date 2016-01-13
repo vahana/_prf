@@ -123,6 +123,9 @@ class BaseView(object):
         elif 'text/plain' in self.request.accept:
             self.request.override_renderer = 'string'
 
+        elif 'text/csv' in self.request.accept:
+            self.request.override_renderer = 'tab'
+
     def process_params(self):
         ctype = self.request.content_type
 
@@ -178,9 +181,10 @@ class BaseView(object):
 
     def serialize(self, obj, many):
         fields = self._params.get('_fields')
+        flat = self._params.asbool('_flat', default=False)
 
         serializer = self._serializer(
-                            context={'request':self.request, 'fields':fields},
+                            context={'request':self.request, 'fields':fields, 'flat': flat},
                             many=many, strict=True,
                             **process_fields(fields).subset('only,exclude'))
 

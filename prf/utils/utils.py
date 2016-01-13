@@ -342,3 +342,58 @@ def str2dt(strdt):
         raise DValueError(
             'Datetime string `%s` not recognized. Did you miss +- signs for relative dates?' % strdt)
 
+
+class TabRenderer(object):
+    def __init__(self, info):
+        pass
+
+    def __call__(self, value, system):
+        import prf
+        from prf import dictset
+        import tablib
+        from datetime import datetime, date
+
+        request = system.get('request')
+
+        response = request.response
+        if 'text/csv' in request.accept:
+            response.content_type = 'text/csv'
+            _format = 'csv'
+        else:
+            raise prf.exc.HTTPBadRequest('Unsupported Accept Header `%s`' % request.accept)
+
+        data = value.get('data', [])
+
+        if not data:
+            return '--EMPTY--'
+
+        def pop_(each, key):
+            val = each.pop(key, '')
+            if isinstance(val, (datetime, date)):
+                return val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
+            else:
+                return unicode(val)
+
+        try:
+            d_ = data[0]
+            column_names = d_.flat().keys()
+            tabdata = tablib.Dataset(headers = column_names)
+
+            for each in data:
+                row = []
+                each = each.flat()
+
+                for col in column_names:
+                    row.append(pop_(each, col))
+
+                for key in each.keys():
+                    column_names.append(key)
+                    tabdata.append_col((tabdata.height)*[''], header=key)
+                    row.append(pop_(each, col))
+
+                tabdata.append(row)
+
+            return getattr(tabdata, _format)
+        except Exception as e:
+            raise prf.exc.HTTPBadRequest(
+                'Could not convert to format `%s`: %s' % (_format, e) )

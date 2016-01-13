@@ -27,13 +27,15 @@ class DynamicSchema(object):
         self.__dict__.update(kw)
 
     def dump(self, objs):
+        flat = self.context.get('flat')
 
         def to_dict(obj):
             if isinstance(obj, dict):
-                return dictset(obj).extract(self.context.get('fields'))
-
+                d_ = dictset(obj).extract(self.context.get('fields'))
+                return d_ if not flat else d_.flat()
             if hasattr(obj, 'to_dict'):
-                return obj.to_dict(self.context.get('fields'))
+                d_ = obj.to_dict(self.context.get('fields'))
+                return d_ if not flat else d_.flat()
             else:
                 return obj
 
