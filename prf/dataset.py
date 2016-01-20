@@ -80,7 +80,6 @@ def define_document(name, meta={}, redefine=False):
 
 class Log(mongo.DynamicEmbeddedDocument):
     created_at = mongo.DateTimeField(default=datetime.utcnow)
-    synced_at = mongo.DateTimeField(default=datetime.utcnow)
     updated_at = mongo.DateTimeField()
     tag = mongo.ListField(mongo.StringField())
 
