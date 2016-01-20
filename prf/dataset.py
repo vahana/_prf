@@ -111,7 +111,7 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
             attrs_meta['indexes'].append('latest')
             attrs_meta['indexes'].append('v')
 
-            pk_ = attrs_meta.aslist('pk', pop=True)
+            pk_ = attrs_meta.aslist('pk', pop=True, default=[])
 
             for each in pk_:
                 attrs_meta['indexes'].append(each)
