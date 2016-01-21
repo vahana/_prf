@@ -159,4 +159,4 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
 
 @parametrize
 def asdt(dset, value):
-    value = str2dt(value)
+    return str2dt(value)
