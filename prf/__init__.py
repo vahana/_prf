@@ -7,7 +7,7 @@ from pyramid.security import  NO_PERMISSION_REQUIRED
 import prf.exc
 from prf.utils import maybe_dotted, aslist, dictset
 from prf.utils.utils import DKeyError, DValueError
-from prf.utility_views import AccountView
+from prf.utility_views import AccountView, APIView
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
@@ -64,6 +64,14 @@ def add_account_views(config, user_model, route_prefix=''):
                         renderer='json',
                         permission=NO_PERMISSION_REQUIRED)
 
+def add_api_view(config):
+    config.add_route('prf_api','/')
+    config.add_view(view=APIView, attr='show', route_name='prf_api',
+                    request_method='GET',
+                    renderer='json',
+                    permission=NO_PERMISSION_REQUIRED)
+
+
 def set_default_acl(config, acl_model):
     acl_model = maybe_dotted(acl_model)
     config.set_root_factory(acl_model)
@@ -117,5 +125,10 @@ def includeme(config):
     add_error_view(config, httpexceptions.HTTPNotFound, prf.exc.HTTPNotFound)
 
     config.add_directive('add_account_views', add_account_views)
+    config.add_directive('add_api_view', add_api_view)
 
-    config.set_root_factory(RootFactory)
+    if settings.asbool('show_api', default=True):
+        config.add_api_view()
+
+    # root = config.get_root_resource()
+    # root.add_singular('_', view='prf.utility_views.APIView')
