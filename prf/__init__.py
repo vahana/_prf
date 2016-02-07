@@ -130,5 +130,4 @@ def includeme(config):
     if settings.asbool('show_api', default=True):
         config.add_api_view()
 
-    # root = config.get_root_resource()
-    # root.add_singular('_', view='prf.utility_views.APIView')
+    config.set_root_factory(RootFactory)
