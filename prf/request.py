@@ -226,10 +226,10 @@ class PRFRequest(Request):
         else:
             _params =[]
             for start, count in pagr():
-                _params.append(params.update({
+                _params.append({
                     '_start': start,
                     '_limit': count,
-                }))
+                })
 
             for resp in self.mget(params=_params, **kw):
                 if resp.json()['count'] == 0:
