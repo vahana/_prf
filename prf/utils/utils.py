@@ -274,19 +274,20 @@ def extract_domain(url):
     return tldextract.extract(url).registered_domain
 
 
-def format_phone(number, country_code='US'):
+def format_phone(number, country_code='US', _raise=True):
     import phonenumbers as pn
 
     try:
         phone = pn.parse(number, country_code)
-        if not pn.is_valid_number(phone):
+        if not pn.is_valid_number(phone) and _raise:
             raise ValueError('Invalid phone number')
 
         return pn.format_number(phone,
                 pn.PhoneNumberFormat.INTERNATIONAL)
 
     except pn.NumberParseException as e:
-        raise ValueError(e)
+        if _raise:
+            raise ValueError(e)
 
 
 def normalize_phone(number, country_code='US', _raise=True):
