@@ -83,7 +83,7 @@ class Request(object):
     def from_cache(self, resp):
         return hasattr(resp, 'from_cache') and resp.from_cache
 
-    def prepare_url(self, path='', params={}):
+    def prepare_url(self, path='', params={}, doseq=False):
         path = path.strip('/')
         path_ps = urlparse(path)
         url_ps = urlparse(self.base_url)
@@ -99,7 +99,7 @@ class Request(object):
                 url_ps = path_ps
 
         if params:
-            new_query = urlencode(params)
+            new_query = urlencode(params, doseq)
 
             if path_ps.query:
                 new_query = '%s&%s' % (new_query, path_ps.query)
@@ -136,7 +136,7 @@ class Request(object):
                 self.raise_or_log(req.response)
             yield req.response
 
-    def mget(self, urls=[], params=[], **kw):
+    def mget(self, urls=[], params=[], doseq=False, **kw):
         log.debug('%s', urls)
 
         reqs = []
@@ -145,13 +145,14 @@ class Request(object):
 
         if urls:
             reqs = [requests.Request(method='GET',
-                                     url=self.prepare_url(url), **kw)\
-                    for url in urls]
+                                     url=self.prepare_url(url, doseq=doseq),
+                                     **kw) for url in urls]
         elif params:
             reqs = [requests.Request(method='GET',
                                      url=self.prepare_url(
-                                        param.pop('path', ''), param), **kw)\
-                    for param in params]
+                                        param.pop('path', ''), param,
+                                        doseq=doseq), **kw
+                            ) for param in params]
 
         return self.multi_submit(reqs)
 

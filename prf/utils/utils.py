@@ -243,6 +243,10 @@ def encoded_dict(in_dict):
 
         if isinstance(v, dict):
             out_dict[k] = encoded_dict(v)
+        elif isinstance(v, list):
+            for ix in range(len(v)):
+                v[ix] = unicode(v[ix]).encode('utf-8')
+            out_dict[k] = v
         else:
             out_dict[k] = unicode(v).encode('utf-8')
 
