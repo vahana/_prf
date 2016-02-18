@@ -99,7 +99,7 @@ class BaseView(object):
         self.show_returns_many = False
 
         self.process_params()
-        self.process_variables()
+        # self.process_variables()
         self.set_renderer()
         self.init()
 

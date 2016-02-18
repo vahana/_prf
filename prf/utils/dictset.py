@@ -409,8 +409,8 @@ class dictset(dict):
             self._ordered_dict.pop(*arg, **kw)
         return super(dictset, self).pop(*arg, **kw)
 
-    def flat(self):
-        _flat = dict_to_args(self)
+    def flat(self, keep_lists=False):
+        _flat = dict_to_args(self, keep_lists=keep_lists)
         _d = dictset(_flat)
         _d._ordered_dict = _flat
         return _d
@@ -496,14 +496,14 @@ def list_to_args(l):
     return args
 
 
-def dict_to_args(d):
+def dict_to_args(d, keep_lists=False):
     args = OrderedDict()
     for k, v in d.items():
         if isinstance(v, dict):
-            sub = dict_to_args(v)
+            sub = dict_to_args(v, keep_lists=keep_lists)
             for s, nv in sub.items():
                 args["%s.%s" % (k,s)] = nv
-        elif isinstance(v, list):
+        elif isinstance(v, list) and not keep_lists:
             sub = list_to_args(v)
             for s, nv in sub.items():
                 args["%s.%s" % (k,s)] = nv
