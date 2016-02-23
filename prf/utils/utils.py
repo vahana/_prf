@@ -181,8 +181,16 @@ def normalize_domain(url):
 def resolve_host_to(url, newhost):
     elements = urlparse(url)
     _, _, port = elements.netloc.partition(':')
-    if port:
-        newhost = '%s:%s' % (newhost, port)
+    newhost,newcol,newport=newhost.partition(':')
+
+    if newcol:
+        if not newport:
+            newport = port
+    else:
+        newport = ''
+
+    if newport:
+        newhost = '%s:%s' % (newhost, newport)
     return elements._replace(netloc=newhost).geturl()
 
 
