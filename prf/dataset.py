@@ -28,7 +28,7 @@ def get_uniques(index_meta):
     return uniques
 
 
-def get_dataset_names(match=""):
+def get_collection_names(match=""):
     db = mongo.connection.get_db()
     match = match.lower()
     return [[name, name[len(DS_COLL_PREFIX):]] for name in db.collection_names()
