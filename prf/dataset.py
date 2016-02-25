@@ -216,7 +216,7 @@ class DatasetDoc(DynamicBase):
             raise prf.exc.HTTPBadRequest(e)
 
     @classmethod
-    def fix_verions(cls, **q):
+    def fix_versions(cls, **q):
         keys = [e for e in cls._pk if e != 'v']
 
         latest_objects = [dictset(each).extract(keys+['max__as__v']).flat() for each in
@@ -228,7 +228,7 @@ class DatasetDoc(DynamicBase):
 
         log.debug('Set latest to False for all')
 
-        cls.objects.update(set__latest=False)
+        cls.objects(**q).update(set__latest=False)
 
         for each in latest_objects:
             log.debug('Processing %s: %s' % (total, each))
