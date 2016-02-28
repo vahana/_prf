@@ -180,19 +180,15 @@ class dictset(dict):
         nested_keys = nested.keys()
         _d = self.subset(only + ['-'+e for e in exclude])
 
-
-        def process_list(flat_d):
+        def process_lists(flat_d):
             for nkey, nval in nested.items():
                 if '..' in nkey:
                     pref, suf = nkey.split('..', 1)
-                    ix=0
                     _lst = []
 
-                    while True:
+                    for ix in range(len(_d.get(nval, []))):
                         kk = '%s.%s.%s'%(pref,ix,suf)
-                        if kk not in flat_d:
-                            break
-                        _lst.append(flat_d.pop(kk))
+                        _lst.append(flat_d.pop(kk, None))
                         ix+=1
 
                     new_key = '%s.%s'%(pref,suf)
@@ -202,10 +198,9 @@ class dictset(dict):
                     if nkey in show_as:
                         show_as[new_key] = show_as.pop(nkey)
 
-
         if nested:
             flat_d = _d.flat()
-            process_list(flat_d)
+            process_lists(flat_d)
 
             flat_d = flat_d.subset(nested_keys)
             _d.remove(nested.values())
