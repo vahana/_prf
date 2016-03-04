@@ -1,7 +1,6 @@
 import logging
 import requests
 from urlparse import urlparse, urljoin
-from functools import partial
 
 from prf.utils.utils import json_dumps, urlencode, pager
 from prf.utils import dictset
@@ -212,7 +211,8 @@ class PRFRequest(Request):
         params = kw.pop('params', {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
-        pagr = partial(pager, _start, page_size, _limit)
+
+        pagr = pager(_start, page_size, _limit)
 
         if _limit == -1:
             for start, count in pagr():

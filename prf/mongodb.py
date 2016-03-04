@@ -6,7 +6,7 @@ from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
 import pymongo
 
 import prf.exc
-from prf.utils import dictset, split_strip,\
+from prf.utils import dictset, split_strip, pager,\
                       to_dunders, process_fields, qs2dict
 from prf.utils.qs import prep_params
 from prf.renderers import _JSONEncoder
@@ -502,6 +502,21 @@ class BaseMixin(object):
             return self.save()
         except Exception as e:
             log.error('%s: %s' % (e, self.to_dict()))
+
+    @classmethod
+    def get_collection_paginated(cls, page_size, params=None):
+        params = dictset(params or {})
+        _start = int(params.pop('_start', 0))
+        _limit = int(params.pop('_limit', -1))
+
+        if _limit == -1:
+            _limit = cls.get_collection(_limit=_limit, **params).count()
+
+        pgr = pager(_start, page_size, _limit)
+
+        for start, count in pgr():
+            _params = params.copy().update({'_start':start, '_limit': count})
+            yield cls.get_collection(**_params)
 
 
 class Base(BaseMixin, mongo.Document):

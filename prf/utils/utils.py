@@ -6,6 +6,7 @@ import logging
 from urlparse import urlparse, parse_qs
 from datetime import date, datetime
 import requests
+from functools import partial
 
 log = logging.getLogger(__name__)
 
@@ -270,15 +271,18 @@ def urlencode(query, doseq=False):
 
 
 def pager(start, page, total):
-    if total != -1:
-        for each in chunks(range(0, total), page):
-            _page = len(each)
-            yield (start, _page)
-            start += _page
-    else:
-        while 1:
-            yield (start, page)
-            start += page
+    def _pager(start,page,total):
+        if total != -1:
+            for each in chunks(range(0, total), page):
+                _page = len(each)
+                yield (start, _page)
+                start += _page
+        else:
+            while 1:
+                yield (start, page)
+                start += page
+
+    return partial(_pager, start, page, total)
 
 
 def extract_domain(url):
