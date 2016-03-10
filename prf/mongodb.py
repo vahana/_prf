@@ -328,13 +328,13 @@ class BaseMixin(object):
         specials._limit = 1
 
     @classmethod
-    def get_collection(cls, **params):
+    def get_collection(cls, _q=None, **params):
         params = dictset(params)
         log.debug('cls: %s, params: %s', cls.__name__, params)
 
         params, specials = prep_params(params)
 
-        query_set = cls.objects
+        query_set = cls.objects(_q)
         query_set = query_set(**params)
         _total = query_set.count()
 
