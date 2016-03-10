@@ -334,7 +334,11 @@ class BaseMixin(object):
 
         params, specials = prep_params(params)
 
-        query_set = cls.objects(_q)
+        if isinstance(_q, basestring):
+            query_set = cls.objects
+        elif _q: # needs better way to check if its a proper query object
+            query_set = cls.objects(_q)
+
         query_set = query_set(**params)
         _total = query_set.count()
 
