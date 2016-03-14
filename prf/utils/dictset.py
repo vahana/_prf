@@ -436,7 +436,10 @@ class dictset(dict):
     def deep_update(self, _dict):
         return self.flat().update(_dict.flat()).unflat()
 
-    def update_with(self, _dict, overwrite=True, flatten_first=False, reverse=False):
+    def update_with(self, _dict, overwrite=True, flatten_first=False,
+                    append_to=None, reverse=False):
+
+        append_to = append_to or []
         if not reverse:
             self_dict = self
         else:
@@ -449,7 +452,16 @@ class dictset(dict):
 
         for key, val in _dict.items():
             if overwrite or key not in self_dict:
-                self_dict[key] = val
+                if append_to and key in append_to:
+                    if isinstance(self_dict[key], list):
+                        if isinstance(val, list):
+                            self_dict[key].extend(val)
+                        else:
+                            self_dict[key] += val
+                    else:
+                        raise DValueError('`%s` is not a list' % key)
+                else:
+                    self_dict[key] = val
 
         return self_dict
 
