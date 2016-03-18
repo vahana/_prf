@@ -436,19 +436,13 @@ class dictset(dict):
     def deep_update(self, _dict):
         return self.flat().update(_dict.flat()).unflat()
 
-    def update_with(self, _dict, overwrite=True, flatten_first=False,
-                    append_to=None, reverse=False):
-
+    def update_with(self, _dict, overwrite=True, append_to=None, reverse=False):
         append_to = append_to or []
         if not reverse:
-            self_dict = self
+            self_dict = self.copy()
         else:
-            self_dict = _dict
+            self_dict = _dict.copy()
             _dict = self
-
-        if flatten_first:
-            self_dict = self_dict.flat()
-            _dict = dictset(_dict).flat()
 
         for key, val in _dict.items():
             if overwrite or key not in self_dict:
@@ -465,10 +459,9 @@ class dictset(dict):
 
         return self_dict
 
-    def merge_with(self, _dict, flatten_first=False, reverse=False):
+    def merge_with(self, _dict, reverse=False):
         return self.update_with(_dict, overwrite=False,
-                            flatten_first=flatten_first,
-                            reverse=reverse)
+                                reverse=reverse)
 
     def contains(self, other, exclude=None):
         other_ = other.subset(exclude)
