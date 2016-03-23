@@ -550,10 +550,11 @@ def args_to_dict(_args):
                     ctx = ctx[bit]
             elif isinstance(ctx, list):
                 if not last:
-                    if int(bit) > len(ctx) - 1:
+                    int_bit = int(bit)
+                    if int_bit > len(ctx) - 1:
                         ctx.append(dictset() if next_is_dict else [])
                     try:
-                        ctx = ctx[int(bit)]
+                        ctx = ctx[int_bit]
                     except IndexError as e:
                         pass
                 else:

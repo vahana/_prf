@@ -289,6 +289,8 @@ def extract_domain(url):
     import tldextract
     return tldextract.extract(url).registered_domain
 
+def clean_postal_code(code):
+    return code.partition('-')[0]
 
 def format_phone(number, country_code='US', _raise=True):
     import phonenumbers as pn
@@ -296,7 +298,8 @@ def format_phone(number, country_code='US', _raise=True):
     try:
         phone = pn.parse(number, country_code)
         if not pn.is_valid_number(phone) and _raise:
-            raise ValueError('Invalid phone number')
+            raise ValueError('Invalid phone number `%s` for country `%s`'
+                                 % (number, country_code))
 
         return pn.format_number(phone,
                 pn.PhoneNumberFormat.INTERNATIONAL)
@@ -313,7 +316,8 @@ def normalize_phone(number, country_code='US', _raise=True):
         phone = pn.parse(number, country_code)
         if not pn.is_valid_number(phone):
             if _raise:
-                raise ValueError('Invalid phone number')
+                raise ValueError('Invalid phone number `%s` for country `%s`'
+                                    % (number, country_code))
             else:
                 return None
 
