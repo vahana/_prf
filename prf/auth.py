@@ -39,7 +39,7 @@ class BaseACL(object):
                 self.item_acl(item)
 
     def item_acl(self, item):
-        return []
+        return self.acl()
 
     def get_item(self, key):
         if not self._model:
