@@ -428,9 +428,8 @@ class BaseMixin(object):
     def id_str(self):
         return str(self.id)
 
-    def update_with(self, _dict, overwrite=True, reverse=False):
-        self_dict = self.to_dict().update_with(_dict, overwrite=overwrite,
-                                                reverse=reverse)
+    def update_with(self, _dict, **kw):
+        self_dict = self.to_dict().update_with(_dict, **kw)
 
         for key, val in self_dict.unflat().items():
             setattr(self, key, val)
