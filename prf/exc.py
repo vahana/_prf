@@ -19,19 +19,7 @@ def is_error(status_code):
 
 
 def log_exception(resp, params):
-    params['timestamp'] = datetime.utcnow()
-
-    request = params.pop('request', None)
-    if request:
-        params['request'] = dict(
-                url = request.url,
-                remote_user = request.remote_user,
-                client_addr = request.client_addr,
-                remote_addr = request.remote_addr,
-            )
-
     msg = '%s: %s' % (resp.status.upper(), json_dumps(params))
-
     if resp.status_code in [400, 500]:
         msg += '\nSTACK BEGIN>>\n%s\nSTACK END<<' % add_stack()
 
@@ -40,33 +28,42 @@ def log_exception(resp, params):
 
 def create_response(resp, params):
     resp.content_type = 'application/json'
-
-    extra = params.get('extra', {})
     resp.headers.extend(params.pop('headers', []))
 
-    body = dict(
-        code = resp.code,
-        title = resp.title,
-        explanation = resp.explanation,
-        detail = resp.detail or params.get('detail', ''),
-    )
-    body.update(extra)
+    request = params.pop('request', None)
+    if request and not isinstance(request, dict):
+        request = dict(
+                url = request.url,
+                remote_user = request.remote_user,
+                client_addr = request.client_addr,
+                remote_addr = request.remote_addr,
+            )
+
+    params.update(
+        dict(
+            code = resp.code,
+            title = resp.title,
+            explanation = resp.explanation,
+            detail = resp.detail or params.get('detail', ''),
+            timestamp = datetime.utcnow()
+    ))
 
     if is_error(resp.status_code):
-        body['error_id'] = uuid.uuid4()
-        params.update(body)
+        params['request'] = request
+        params['error_id'] = uuid.uuid4()
         log_exception(resp, params)
 
-    resp.body = json_dumps(body)
+    resp.body = json_dumps(params)
     return resp
+
 
 def _raise(response):
     try:
         error = response.json()
     except:
         error = {'message': response.text}
-
     raise exception_response(status_code=response.status_code, **error)
+
 
 def exception_response(status_code, **kw):
     # for some reason 400 is mapped to HTTPClientError in pyramid instead of HTTPBadRequest

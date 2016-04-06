@@ -561,3 +561,36 @@ def args_to_dict(_args):
                     ctx.append(type_cast(value))
                     ctx = None
     return _d
+
+#TODO: replace dict_to_args with this
+import collections
+def flat(_dict, parent_key='', sep='.', keep_lists=False, depth=-1):
+    items = []
+
+    if depth != -1:
+        if depth == 0:
+            return _dict
+        depth -= 1
+
+    for k, v in _dict.items():
+        new_key = parent_key + sep + k if parent_key else k
+
+        if isinstance(v, collections.MutableMapping):
+            items.extend(flat(v, new_key, sep=sep,
+                         keep_lists=keep_lists,
+                         depth=depth).items())
+
+        elif isinstance(v, collections.MutableSequence) and not keep_lists:
+            for ix in range(len(v)):
+                new_lkey = new_key + sep + str(ix)
+                if isinstance(v[ix],
+                        (collections.MutableSequence, collections.MutableMapping)):
+                    items.extend(flat(v[ix], new_lkey, sep=sep, depth=depth).items())
+                else:
+                    items.append((new_lkey, v[ix]))
+        else:
+            items.append((new_key, v))
+
+    return OrderedDict(items)
+
+

@@ -218,10 +218,7 @@ class PRFRequest(Request):
             for start, count in pagr():
                 _params = params.copy().update({'_start':start, '_limit': count})
                 resp = self.get(params=_params, **kw)
-                if not resp.ok:
-                    raise prf.exc._raise(resp)
-
-                if resp.json()['count'] == 0:
+                if resp.ok and resp.json()['count'] == 0:
                     break
                 yield resp
         else:
