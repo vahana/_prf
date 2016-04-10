@@ -162,7 +162,7 @@ class Aggregator(object):
         self.add_group()
 
         if self.specials.asbool('_count', False):
-            return len(list(self.aggregate(collection)))
+            return self.aggregate_count(collection)
 
         self.add_project()
         self.add_sort()
@@ -190,7 +190,7 @@ class Aggregator(object):
             self.data.append({'$match': self.after_match})
 
         if self.specials.asbool('_count', False):
-            return len(list(self.aggregate(collection)))
+            return self.aggregate_count(collection)
 
         self.add_sort()
         self.add_limit()
@@ -246,7 +246,6 @@ class Aggregator(object):
                     op = '$%s'%sfx
 
                 if val == '$ROOT':
-                    import ipdb;ipdb.set_trace()
                     _d[sfx] = {op:'$$ROOT'}
                     continue
 
@@ -334,9 +333,15 @@ class Aggregator(object):
 
     def aggregate(self, collection):
         log.debug(self.data)
-        return [e for e in collection.aggregate(self.data, cursor={},
-                                         allowDiskUse=True)]
+        return [e for e in collection.aggregate(self.data, cursor={}, allowDiskUse=True)]
 
+    def aggregate_count(self, collection):
+        self.data.append({'$group': { '_id': None, 'count': {'$sum': 1}}})
+        result = self.aggregate(collection)
+        if result:
+            return result[0]['count']
+        else:
+            return 0
 
 class BaseMixin(object):
 
