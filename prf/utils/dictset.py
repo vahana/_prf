@@ -110,7 +110,11 @@ class dictset(dict):
     DValueError = DValueError
 
     def __init__(self, *arg, **kw):
-        super(dictset, self).__init__(*arg, **kw)
+        try:
+            super(dictset, self).__init__(*arg, **kw)
+        except ValueError as e:
+            raise DValueError(e.message)
+
         self.to_dictset()
 
     def __getattr__(self, key):

@@ -9,7 +9,6 @@ from prf.mongodb import get_document_cls, DynamicBase,\
                         TopLevelDocumentMetaclass
 from prf.utils import dictset, split_strip
 
-
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = 'ds_'
 
@@ -84,6 +83,15 @@ class Log(mongo.DynamicEmbeddedDocument):
     tag = mongo.ListField(mongo.StringField())
     importer = mongo.DictField()
 
+class DSMeta(mongo.DynamicEmbeddedDocument):
+    meta = {
+        'indexes':[
+            'domain',
+            'name',
+        ]
+    }
+    domain = mongo.StringField()
+    name = mongo.StringField()
 
 class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
 
@@ -101,12 +109,19 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
         pk_ = []
         current_meta = get_document_meta(name)
         if current_meta:
+            new_indexes = []
             for each in current_meta['indexes']:
+
+                if each['name'] == '_id_': # skip this
+                    continue
+
+                new_indexes.append(each)
                 if each['unique']:
                     pk_ = [e[1:] if e[0]=='-' else e for e in each['fields']]
                     if each['name'].startswith('pk_'):
                         break
 
+            current_meta['indexes'] = new_indexes
             attrs_meta.update(current_meta)
         else:
             attrs_meta['indexes'].append('latest')
@@ -140,7 +155,7 @@ class DatasetDoc(DynamicBase):
     }
 
     log = mongo.EmbeddedDocumentField(Log)
-    ds_meta = mongo.DictField()
+    ds_meta = mongo.EmbeddedDocumentField(DSMeta)
 
     @classmethod
     def set_collection_name(cls):
@@ -156,6 +171,12 @@ class DatasetDoc(DynamicBase):
                 self.log = Log(**self.log)
         else:
             self.log = Log()
+
+        if self.ds_meta:
+            if isinstance(self.ds_meta, dict):
+                self.ds_meta = DSMeta(**self.ds_meta)
+        else:
+            self.ds_meta = DSMeta()
 
     def get_params_from_pk(self):
         return self.to_dict(self._pk).subset('-v').flat()

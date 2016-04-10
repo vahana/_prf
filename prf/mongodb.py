@@ -8,18 +8,16 @@ import pymongo
 import prf.exc
 from prf.utils import dictset, split_strip, pager,\
                       to_dunders, process_fields, qs2dict
-from prf.utils.qs import prep_params
+from prf.utils.qs import prep_params, typecast
 from prf.renderers import _JSONEncoder
 
 log = logging.getLogger(__name__)
-
 
 class TopLevelDocumentMetaclass(TLDMetaclass):
 
     def __new__(cls, name, bases, attrs):
         super_new = super(TopLevelDocumentMetaclass, cls)
         attrs_meta = dictset(attrs.get('meta', {}))
-
         new_klass = super_new.__new__(cls, name, bases, attrs)
 
         if attrs_meta.pop('enable_signals', False):
@@ -112,6 +110,234 @@ class MongoJSONEncoder(_JSONEncoder):
         return super(MongoJSONEncoder, self).default(obj)
 
 
+class Aggregator(object):
+
+    def __init__(self, query, specials):
+        self.data = []
+        self.specials = specials
+        self.match_query = query
+        self.accumulators = {}
+
+        if specials.get('_group'):
+            self.setup_group()
+
+        elif specials.get('_join'):
+            self.setup_join()
+
+    @staticmethod
+    def undot(name):
+        return name.replace('.', '__')
+
+    def setup_group(self):
+        self.specials.aslist('_group')
+        self.accumulators = dictset([[e[7:], self.specials[e]] \
+            for e in self.specials if e.startswith('_group_')])
+
+    def setup_join(self):
+        _join,_,_join_on = self.specials._join.partition('.')
+
+        self.after_match = dictset()
+        for key,val in self.match_query.items():
+            if key == _join or key.startswith('%s.' % _join):
+                self.after_match[key]=val
+                self.match_query.pop(key)
+
+        _join_filter = typecast(dictset([e.split(':') for e in
+            self.specials.aslist('_join_filter', default=[])]))
+
+        true_case = []
+        for item in _join_filter.items():
+            true_case.append({'$eq': ['$%s'%item[0], item[1]]})
+
+        self._join_filter = true_case
+
+        self.specials._join = _join
+        self.specials.asstr('_join_on', default=_join_on)
+
+    def group(self, collection):
+        if self.match_query:
+            self.data.append({'$match':self.match_query})
+
+        self.add_unwind()
+        self.add_group()
+
+        if self.specials.asbool('_count', False):
+            return len(list(self.aggregate(collection)))
+
+        self.add_project()
+        self.add_sort()
+        self.add_limit()
+        return self.aggregate(collection)
+
+    def join(self, collection):
+        if self.match_query:
+            self.data.append({'$match':self.match_query})
+
+        self.add_lookup()
+        self.data.append({'$unwind': '$%s'%self.specials._join_as})
+
+        if self._join_filter:
+            self.data.append({'$project': {
+                self.specials._join_as:
+                    {'$cond': {
+                        'if': {'$and': self._join_filter},
+                        'then': '$%s'%self.specials._join_as,
+                        'else': None }},
+                     'ds_meta': 1
+                }})
+
+        if self.after_match:
+            self.data.append({'$match': self.after_match})
+
+        if self.specials.asbool('_count', False):
+            return len(list(self.aggregate(collection)))
+
+        self.add_sort()
+        self.add_limit()
+
+        return self.aggregate(collection)
+
+    def add_unwind(self):
+        _prj = {"_id": "$_id"}
+        unwinds = []
+
+        for op, name in self.accumulators.items():
+            if op != 'unwind':
+                continue
+
+            self.accumulators.pop(op)
+            num_dots = name.count('.')
+            if num_dots:
+                new_name = undot(name)
+                # accumulators[op] = new_name
+                _prj[new_name]='$%s' % name
+                for x in range(num_dots):
+                    unwinds.append({'$unwind': '$%s' % new_name})
+            else:
+                _prj[name]='$%s' % name
+                unwinds.append({'$unwind': '$%s' % name})
+
+        if unwinds:
+            self.data.append({'$project':_prj})
+            self.data.extend(unwinds)
+
+        return self
+
+    def add_group(self):
+        group_dict = {}
+
+        for each in self.specials._group:
+            group_dict[self.undot(each)] = '$%s' % each
+
+        if group_dict:
+            _d = {'_id': group_dict,
+                  'count': {'$sum':1}}
+
+            for op, val in self.accumulators.items():
+                _op = op.lower()
+                if _op in ['addtoset', 'set']:
+                    sfx = 'set'
+                    op = '$addToSet'
+                elif _op in ['push', 'list']:
+                    sfx = 'list'
+                    op = '$push'
+                else:
+                    sfx = op
+                    op = '$%s'%sfx
+
+                if val == '$ROOT':
+                    import ipdb;ipdb.set_trace()
+                    _d[sfx] = {op:'$$ROOT'}
+                    continue
+
+                _dd = {}
+
+                if sfx in ['set', 'list']:
+                    for _v in split_strip(val):
+                        _dd[self.undot(_v)] = '$%s' % _v
+                else:
+                    _dd = '$%s' % val
+
+                _d[sfx] = {op:_dd}
+
+            self.data.append({'$group':_d})
+
+        return self
+
+    def add_lookup(self):
+        join_on = self.specials.aslist('_join_on')
+        self.specials._join_as = self.specials.get('_join_as') or self.specials._join
+
+        if len(join_on) == 1:
+            left = right = join_on[0]
+        elif len(join_on) == 2:
+            left,right = join_on
+        else:
+            raise prf.exc.HTTPBadRequest(
+                'Use `_join_on` or dotted `_join` to pass the field to join on')
+
+        self.data.append(
+            {'$lookup': {
+                    'from': self.specials._join,
+                    'localField': left,
+                    'foreignField': right,
+                    'as': self.specials._join_as
+                }
+            }
+        )
+
+        return self
+
+    def add_project(self):
+        _prj = {'_id':0, 'count':1}
+
+        for each in self.specials._group:
+            _prj[each] = '$_id.%s' % self.undot(each)
+
+        _gkeys = {}
+        for each in self.data:
+            if '$group' in each:
+                _gkeys = each['$group'].keys()
+
+        for each in _gkeys:
+            if each == '_id':
+                continue
+            for _v in split_strip(each):
+                _prj[_v] = '$%s' % self.undot(_v)
+
+        self.data.append(
+            {'$project': _prj}
+        )
+
+        return self
+
+    def add_sort(self):
+        sort_dict = {}
+
+        for each in self.specials._sort:
+            if each[0] == '-':
+                sort_dict[each[1:]] = -1
+            else:
+                sort_dict[each] = 1
+
+        sort_dict = sort_dict or {'count': -1}
+        self.data.append({'$sort':sort_dict})
+
+        return self
+
+    def add_limit(self):
+        self.data.append({'$skip':self.specials._start})
+        if self.specials._end is not None:
+            self.data.append({'$limit':self.specials._end})
+
+        return self
+
+    def aggregate(self, collection):
+        log.debug(self.data)
+        return [e for e in collection.aggregate(self.data, cursor={},
+                                         allowDiskUse=True)]
+
+
 class BaseMixin(object):
 
     Q = mongo.Q
@@ -129,7 +355,6 @@ class BaseMixin(object):
             return {'%s__ne' % name: _default}
         else:
             return {name: _default}
-
 
     @classmethod
     def get_frequencies(cls, queryset, specials):
@@ -173,148 +398,11 @@ class BaseMixin(object):
 
     @classmethod
     def get_group(cls, queryset, specials):
-        aggr = []
-        specials.aslist('_group', allow_missing=True)
-        match_query = queryset._query
+        return Aggregator(queryset._query, specials).group(cls._collection)
 
-        accumulators = dictset([[e[7:],specials[e]] \
-            for e in specials if e.startswith('_group_')])
-
-        def undot(name):
-            return name.replace('.', '__')
-
-        def match(aggr):
-            if match_query:
-                aggr.append({'$match':match_query})
-            return aggr
-
-        def unwind(aggr):
-            _prj = {"_id": "$_id"}
-            unwinds = []
-
-            for op, name in accumulators.copy().items():
-                if op != 'unwind':
-                    continue
-
-                accumulators.pop(op)
-                num_dots = name.count('.')
-                if num_dots:
-                    new_name = undot(name)
-                    # accumulators[op] = new_name
-                    _prj[new_name]='$%s' % name
-                    for x in range(num_dots):
-                        unwinds.append({'$unwind': '$%s' % new_name})
-                else:
-                    _prj[name]='$%s' % name
-                    unwinds.append({'$unwind': '$%s' % name})
-
-            if unwinds:
-                aggr.append({'$project':_prj})
-                aggr.extend(unwinds)
-
-            return aggr
-
-        def group(aggr):
-            group_dict = {}
-
-            for each in specials._group:
-                group_dict[undot(each)] = '$%s' % each
-
-            if group_dict:
-                _d = {'_id': group_dict,
-                      'count': {'$sum':1}}
-
-                for op, val in accumulators.items():
-                    _op = op.lower()
-                    if _op in ['addtoset', 'set']:
-                        sfx = 'set'
-                        op = '$addToSet'
-                    elif _op in ['push', 'list']:
-                        sfx = 'list'
-                        op = '$push'
-                    else:
-                        sfx = op
-                        op = '$%s'%sfx
-
-
-                    if val == '$ROOT':
-                        _d[sfx] = {op:'$$ROOT'}
-                        continue
-
-                    _dd = {}
-
-                    if sfx in ['set', 'list']:
-                        for _v in split_strip(val):
-                            _dd[undot(_v)] = '$%s' % _v
-                    else:
-                        _dd = '$%s' % val
-
-                    _d[sfx] = {op:_dd}
-
-                aggr.append({'$group':_d})
-
-            return aggr
-
-        def project(aggr):
-            _prj = {'_id':0, 'count':1}
-            for each in specials._group:
-                _prj[each] = '$_id.%s' % undot(each)
-
-            _gkeys = {}
-            for each in aggr:
-                if '$group' in each:
-                    _gkeys = each['$group'].keys()
-
-            for each in _gkeys:
-                if each == '_id':
-                    continue
-                for _v in split_strip(each):
-                    _prj[_v] = '$%s' % undot(_v)
-
-            aggr.append(
-                {'$project': _prj}
-            )
-            return aggr
-
-        def sort(aggr):
-            sort_dict = {}
-
-            for each in specials._sort:
-                if each[0] == '-':
-                    sort_dict[each[1:]] = -1
-                else:
-                    sort_dict[each] = 1
-
-            sort_dict = sort_dict or {'count': -1}
-            aggr.append({'$sort':sort_dict})
-
-            return aggr
-
-        def limit(aggr):
-            aggr.append({'$skip':specials._start})
-            if specials._end is not None:
-                aggr.append({'$limit':specials._end})
-
-            return aggr
-
-        def aggregate(aggr):
-            log.debug(aggr)
-            return cls._collection.aggregate(aggr, cursor={},
-                                             allowDiskUse=True)
-
-        if specials.asbool('_count', False):
-            aggr = group(unwind(match(aggr)))
-            return len(list(aggregate(aggr)))
-
-        aggr = limit(sort(project(group(unwind(match(aggr))))))
-
-        if specials.asbool('_asdict', False):
-            return dict([
-                         [e[specials._group[0]],
-                          e.get('list', e.get('set', [{}]))[0]]
-                        for e in aggregate(aggr)])
-        else:
-            return [e for e in aggregate(aggr)]
+    @classmethod
+    def get_join(cls, queryset, specials):
+        return Aggregator(queryset._query, specials).join(cls._collection)
 
     @classmethod
     def _ix(cls, specials, total):
@@ -347,6 +435,9 @@ class BaseMixin(object):
 
         elif specials._group:
             return cls.get_group(query_set, specials)
+
+        elif specials._join:
+            return cls.get_join(query_set, specials)
 
         elif specials._distinct:
             return cls.get_distinct(query_set, specials)
