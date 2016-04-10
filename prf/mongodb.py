@@ -328,7 +328,7 @@ class Aggregator(object):
     def add_limit(self):
         self.data.append({'$skip':self.specials._start})
         if self.specials._end is not None:
-            self.data.append({'$limit':self.specials._end})
+            self.data.append({'$limit':self.specials._limit})
 
         return self
 
