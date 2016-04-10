@@ -83,6 +83,7 @@ class Log(mongo.DynamicEmbeddedDocument):
     tag = mongo.ListField(mongo.StringField())
     importer = mongo.DictField()
 
+
 class DSMeta(mongo.DynamicEmbeddedDocument):
     meta = {
         'indexes':[

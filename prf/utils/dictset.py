@@ -440,7 +440,8 @@ class dictset(dict):
     def deep_update(self, _dict):
         return self.flat().update(_dict.flat()).unflat()
 
-    def update_with(self, _dict, overwrite=True, append_to=None, reverse=False):
+    def update_with(self, _dict, overwrite=True, append_to=None,
+                    reverse=False, exclude=[]):
         append_to = append_to or []
         if not reverse:
             self_dict = self.copy()
@@ -449,6 +450,8 @@ class dictset(dict):
             _dict = self
 
         for key, val in _dict.items():
+            if key in exclude:
+                continue
             if overwrite or key not in self_dict:
                 if append_to and key in append_to:
                     if isinstance(self_dict[key], list):
@@ -470,6 +473,10 @@ class dictset(dict):
     def contains(self, other, exclude=None):
         other_ = other.subset(exclude)
         return not other_ or self.subset(other_.keys()) == other_
+
+    def pop_many(self, keys):
+        [self.pop(key, None) for key in keys]
+        return self
 
 
 #based on jsonurl
