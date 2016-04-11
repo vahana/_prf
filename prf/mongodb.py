@@ -171,9 +171,9 @@ class Aggregator(object):
         self.add_lookup()
         _join_as = self.specials._join_as
 
-        self.data.append({'$unwind': '$%s'%_join_as})
-
         if self._join_filter:
+            self.data.append({'$unwind': '$%s'%_join_as})
+
             true_case = []
             for field, value in self._join_filter.items():
                 if not field.startswith(_join_as):
@@ -184,7 +184,7 @@ class Aggregator(object):
                             {'$cond': {
                                 'if': {'$and': true_case},
                                 'then': '$'+_join_as,
-                                'else': None }},
+                                'else': [] }},
                         '_id': 0,
                         self.specials._join_on[0]: 1
                         }
@@ -196,7 +196,6 @@ class Aggregator(object):
                 _project[each] = 1
 
             self.data.append({'$project': _project})
-
 
 
         if self.after_match:
@@ -436,7 +435,8 @@ class BaseMixin(object):
     @classmethod
     def get_collection(cls, _q=None, **params):
         params = dictset(params)
-        log.debug('cls: %s, params: %s', cls.__name__, params)
+
+        log.debug('IN: cls: %s, params: %.512s', cls.__name__, params)
 
         params, specials = prep_params(params)
 
@@ -446,7 +446,6 @@ class BaseMixin(object):
             query_set = cls.objects(_q)
 
         query_set = query_set(**params)
-        _total = query_set.count()
 
         if specials._frequencies:
             return cls.get_frequencies(query_set, specials)
@@ -459,6 +458,8 @@ class BaseMixin(object):
 
         elif specials._distinct:
             return cls.get_distinct(query_set, specials)
+
+        _total = query_set.count()
 
         if specials._count:
             return _total
@@ -486,7 +487,7 @@ class BaseMixin(object):
                 query_set = query_set.exclude(*exclude)
 
         query_set._total = _total
-        log.debug('_query: %s', query_set._query)
+        log.debug('OUT: collection: %s, query: %.512s', cls._collection.name, query_set._query)
 
         if specials._explain and isinstance(query_set, mongo.QuerySet):
             return query_set.explain()

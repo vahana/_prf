@@ -6,7 +6,7 @@ from datetime import datetime
 
 import prf
 from prf.mongodb import get_document_cls, DynamicBase,\
-                        TopLevelDocumentMetaclass
+                        TopLevelDocumentMetaclass, Aggregator
 from prf.utils import dictset, split_strip
 
 log = logging.getLogger(__name__)
@@ -157,6 +157,36 @@ class DatasetDoc(DynamicBase):
 
     log = mongo.EmbeddedDocumentField(Log)
     ds_meta = mongo.EmbeddedDocumentField(DSMeta)
+
+    @classmethod
+    def do_set(cls, params):
+        format_error = '`_set` value must be in `<op>__<dataset_name>.<join_key>` format'
+
+        _set = params.pop('_set')
+        op, __, ds = _set.partition('__')
+        other_query = {}
+
+        if not op:
+            raise prf.exc.HTTPBadRequest(format_error)
+
+        if op not in ['in', 'nin']:
+            raise prf.exc.HTTPBadRequest(
+                    'operator must be `in` or `nin`]')
+
+        ds_name, _, join_key = ds.partition('.')
+        if not join_key:
+            raise prf.exc.HTTPBadRequest(format_error)
+
+        for key,val in params.items():
+            if key.startswith('%s.'%ds_name):
+                other_query[key.partition('.')[2]] = params.pop(key)
+
+        other_cls = get_document_cls(ds_name)
+
+        params['%s__%s'% (join_key, op)] = other_cls.get_collection(
+                                _distinct=join_key, _limit=-1, **other_query)
+
+        return cls.get_collection(**params)
 
     @classmethod
     def set_collection_name(cls):
