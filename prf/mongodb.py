@@ -135,24 +135,19 @@ class Aggregator(object):
 
     def setup_join(self):
         _join,_,_join_on = self.specials._join.partition('.')
+        _join_as = self.specials.asstr('_join_as', default=_join)
 
         self.after_match = dictset()
         for key,val in self.match_query.items():
-            if key == _join or key.startswith('%s.' % _join):
+            if key == _join_as or key.startswith('%s.' % _join_as):
                 self.after_match[key]=val
                 self.match_query.pop(key)
 
-        _join_filter = typecast(dictset([e.split(':') for e in
+        self._join_filter = typecast(dictset([e.split(':') for e in
             self.specials.aslist('_join_filter', default=[])]))
 
-        true_case = []
-        for item in _join_filter.items():
-            true_case.append({'$eq': ['$%s'%item[0], item[1]]})
-
-        self._join_filter = true_case
-
         self.specials._join = _join
-        self.specials.asstr('_join_on', default=_join_on)
+        self.specials.aslist('_join_on', default=[_join_on, _join_on])
 
     def group(self, collection):
         if self.match_query:
@@ -165,7 +160,7 @@ class Aggregator(object):
             return self.aggregate_count(collection)
 
         self.add_project()
-        self.add_sort()
+        self.add_sort({'count': -1})
         self.add_limit()
         return self.aggregate(collection)
 
@@ -174,17 +169,35 @@ class Aggregator(object):
             self.data.append({'$match':self.match_query})
 
         self.add_lookup()
-        self.data.append({'$unwind': '$%s'%self.specials._join_as})
+        _join_as = self.specials._join_as
+
+        self.data.append({'$unwind': '$%s'%_join_as})
 
         if self._join_filter:
-            self.data.append({'$project': {
-                self.specials._join_as:
-                    {'$cond': {
-                        'if': {'$and': self._join_filter},
-                        'then': '$%s'%self.specials._join_as,
-                        'else': None }},
-                     'ds_meta': 1
-                }})
+            true_case = []
+            for field, value in self._join_filter.items():
+                if not field.startswith(_join_as):
+                    field = '.'.join([_join_as, field])
+                true_case.append({'$eq': ['$%s'%field, value]})
+
+            _project = {_join_as:
+                            {'$cond': {
+                                'if': {'$and': true_case},
+                                'then': '$'+_join_as,
+                                'else': None }},
+                        '_id': 0,
+                        self.specials._join_on[0]: 1
+                        }
+
+
+            for each in self.specials._fields:
+                if each == _join_as:
+                    continue
+                _project[each] = 1
+
+            self.data.append({'$project': _project})
+
+
 
         if self.after_match:
             self.data.append({'$match': self.after_match})
@@ -264,8 +277,7 @@ class Aggregator(object):
         return self
 
     def add_lookup(self):
-        join_on = self.specials.aslist('_join_on')
-        self.specials._join_as = self.specials.get('_join_as') or self.specials._join
+        join_on = self.specials._join_on
 
         if len(join_on) == 1:
             left = right = join_on[0]
@@ -310,7 +322,7 @@ class Aggregator(object):
 
         return self
 
-    def add_sort(self):
+    def add_sort(self, default={}):
         sort_dict = {}
 
         for each in self.specials._sort:
@@ -319,8 +331,9 @@ class Aggregator(object):
             else:
                 sort_dict[each] = 1
 
-        sort_dict = sort_dict or {'count': -1}
-        self.data.append({'$sort':sort_dict})
+        sort_dict = sort_dict or default
+        if sort_dict:
+            self.data.append({'$sort':sort_dict})
 
         return self
 
