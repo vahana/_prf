@@ -136,6 +136,7 @@ class Aggregator(object):
     def setup_join(self):
         _join,_,_join_on = self.specials._join.partition('.')
         _join_as = self.specials.asstr('_join_as', default=_join)
+        self.specials.aslist('_join_fields', default=[])
 
         self.after_match = dictset()
         for key,val in self.match_query.items():
@@ -143,8 +144,8 @@ class Aggregator(object):
                 self.after_match[key]=val
                 self.match_query.pop(key)
 
-        self._join_filter = typecast(dictset([e.split(':') for e in
-            self.specials.aslist('_join_filter', default=[])]))
+        self._join_cond = typecast(dictset([e.split(':') for e in
+            self.specials.aslist('_join_cond', default=[])]))
 
         self.specials._join = _join
         self.specials.aslist('_join_on', default=[_join_on, _join_on])
@@ -169,13 +170,15 @@ class Aggregator(object):
             self.data.append({'$match':self.match_query})
 
         self.add_lookup()
-        _join_as = self.specials._join_as
 
-        if self._join_filter:
+        _join_as = self.specials._join_as
+        _join_on = self.specials._join_on
+
+        if self._join_cond:
             self.data.append({'$unwind': '$%s'%_join_as})
 
             true_case = []
-            for field, value in self._join_filter.items():
+            for field, value in self._join_cond.items():
                 if not field.startswith(_join_as):
                     field = '.'.join([_join_as, field])
                 true_case.append({'$eq': ['$%s'%field, value]})
@@ -183,19 +186,30 @@ class Aggregator(object):
             _project = {_join_as:
                             {'$cond': {
                                 'if': {'$and': true_case},
-                                'then': '$'+_join_as,
-                                'else': [] }},
+                                'then': '$%s'%(_join_as),
+                                'else': None }},
                         '_id': 0,
-                        self.specials._join_on[0]: 1
+                        _join_on[0]: 1
                         }
 
-
-            for each in self.specials._fields:
-                if each == _join_as:
-                    continue
-                _project[each] = 1
-
             self.data.append({'$project': _project})
+
+            self.data.append(
+                { '$group' : {
+                    '_id' : "$%s"%_join_on[0],
+                    _join_as: {'$push': '$%s.%s' % (_join_as, _join_on[1])},
+                    }
+                }
+            )
+
+            _project = {
+                    _join_on[0]: '$_id',
+                    _join_as: '$%s'% (_join_as),
+                    '_id': 0,
+                }
+            self.data.append(
+                {'$project': _project}
+            )
 
 
         if self.after_match:

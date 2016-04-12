@@ -8,6 +8,7 @@ import prf
 from prf.mongodb import get_document_cls, DynamicBase,\
                         TopLevelDocumentMetaclass, Aggregator
 from prf.utils import dictset, split_strip
+from prf.utils.qs import prep_params
 
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = 'ds_'
@@ -160,9 +161,11 @@ class DatasetDoc(DynamicBase):
 
     @classmethod
     def do_set(cls, params):
+        params = dictset(params)
         format_error = '`_set` value must be in `<op>__<dataset_name>.<join_key>` format'
+        params, specials = prep_params(params)
 
-        _set = params.pop('_set')
+        _set = specials._set
         op, __, ds = _set.partition('__')
         other_query = {}
 
@@ -171,7 +174,7 @@ class DatasetDoc(DynamicBase):
 
         if op not in ['in', 'nin']:
             raise prf.exc.HTTPBadRequest(
-                    'operator must be `in` or `nin`]')
+                    'operator must be `in` or `nin`')
 
         ds_name, _, join_key = ds.partition('.')
         if not join_key:
@@ -181,12 +184,21 @@ class DatasetDoc(DynamicBase):
             if key.startswith('%s.'%ds_name):
                 other_query[key.partition('.')[2]] = params.pop(key)
 
-        other_cls = get_document_cls(ds_name)
+        if op == 'in':
+            params['%s__0__exists'%ds_name] = 1
+        elif op == 'nin':
+            params['%s__0__exists'%ds_name] = 0
 
-        params['%s__%s'% (join_key, op)] = other_cls.get_collection(
-                                _distinct=join_key, _limit=-1, **other_query)
+        specials.update(dict(
+            _join = '%s.%s' % (cls2collection(ds_name), join_key),
+            _join_as = ds_name,
+        ))
 
-        return cls.get_collection(**params)
+        aggr = Aggregator(cls.objects(**params)._query, specials)
+        aggr._join_cond = other_query
+
+        return aggr.join(cls._collection)
+
 
     @classmethod
     def set_collection_name(cls):
