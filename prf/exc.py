@@ -30,6 +30,8 @@ def create_response(resp, params):
     resp.content_type = 'application/json'
     resp.headers.extend(params.pop('headers', []))
 
+    extra = params.pop('extra', {})
+
     request = params.pop('request', None)
     if request and not isinstance(request, dict):
         request = dict(
@@ -47,6 +49,8 @@ def create_response(resp, params):
             detail = resp.detail or params.get('detail', ''),
             timestamp = datetime.utcnow()
     ))
+
+    params.update(extra)
 
     if is_error(resp.status_code):
         params['request'] = request
