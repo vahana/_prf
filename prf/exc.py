@@ -35,6 +35,7 @@ def create_response(resp, params):
     request = params.pop('request', None)
     if request and not isinstance(request, dict):
         request = dict(
+                method = request.method,
                 url = request.url,
                 remote_user = request.remote_user,
                 client_addr = request.client_addr,
