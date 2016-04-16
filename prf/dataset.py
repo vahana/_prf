@@ -5,8 +5,9 @@ import mongoengine as mongo
 from datetime import datetime
 
 import prf
-from prf.mongodb import get_document_cls, DynamicBase,\
-                        TopLevelDocumentMetaclass, Aggregator
+from prf.mongodb import (get_document_cls, DynamicBase,
+                        TopLevelDocumentMetaclass, Aggregator,
+                        BaseMixin)
 from prf.utils import dictset, split_strip
 from prf.utils.qs import prep_params
 
@@ -78,14 +79,14 @@ def define_document(name, meta={}, redefine=False):
         return type(name, (DatasetDoc,), {'meta': meta})
 
 
-class Log(mongo.DynamicEmbeddedDocument):
+class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
     created_at = mongo.DateTimeField(default=datetime.utcnow)
     updated_at = mongo.DateTimeField()
     tag = mongo.ListField(mongo.StringField())
     importer = mongo.DictField()
 
 
-class DSMeta(mongo.DynamicEmbeddedDocument):
+class DSMeta(BaseMixin, mongo.DynamicEmbeddedDocument):
     meta = {
         'indexes':[
             'domain',
@@ -94,6 +95,7 @@ class DSMeta(mongo.DynamicEmbeddedDocument):
     }
     domain = mongo.StringField()
     name = mongo.StringField()
+
 
 class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
 
