@@ -1,4 +1,6 @@
 import logging
+from bson import ObjectId
+
 from prf.utils import dictset, process_limit, split_strip
 
 log = logging.getLogger(__name__)
@@ -53,7 +55,7 @@ def typecast(params):
 
     list_ops = ('in', 'nin', 'all')
     int_ops = ('exists', 'size')
-    types = ('asbool', 'asint', 'asstr', 'aslist', 'asset', 'asdt')
+    types = ('asbool', 'asint', 'asstr', 'aslist', 'asset', 'asdt', 'asobj')
 
     for key in params.keys():
         if params[key] == 'null':
@@ -87,6 +89,10 @@ def typecast(params):
             op = 'asint'
 
         if not op.startswith('as') and not op in types:
+            continue
+
+        if op == 'asobj':
+            params[new_key]=ObjectId(params.pop(key))
             continue
 
         try:
