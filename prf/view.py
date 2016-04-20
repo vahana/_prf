@@ -190,39 +190,49 @@ class BaseView(object):
 
         return serializer.dump(obj).data
 
-    def process_builtins(self, obj):
+    def process_builtins(self, obj, many):
         if not isinstance(obj, (list, dict)):
-            return obj
+            return obj, len(obj)
 
         fields = self._params.get('_fields')
+
         def process_dict(d_):
-            if not fields:
-                return d_
-            else:
-                return dictset(d_).extract(fields)
+            _total = len(d_)
+
+            #ugly hack
+            if many and 'data' in d_:
+                if 'total' in d_:
+                    _total = d_['total']
+                else:
+                    _total = len(d_['data'])
+                d_ = d_['data']
+
+            if fields:
+                d_ = dictset(d_).extract(fields)
+
+            return d_, _total
 
         if isinstance(obj, dict):
             return process_dict(obj)
 
         elif isinstance(obj, list):
-            if not fields:
-                return obj
-            else:
+            if fields:
                 data = []
                 for each in obj:
                     if isinstance(each, dict):
                         each = process_dict(each)
 
                     data.append(each)
-                return data
+                obj = data
+            return obj, len(obj)
+
 
     def _process(self, data, many):
         if '_count' in self._params:
             return data
 
         if isinstance(data, (list, dict)):
-            serialized = self.process_builtins(data)
-            _total = len(serialized)
+            serialized, _total = self.process_builtins(data, many=many)
         else:
             serialized = self.serialize(data, many=many)
             _total = getattr(data, '_total', len(serialized))
