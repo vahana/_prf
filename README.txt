@@ -78,4 +78,5 @@ Above we declared `index`, `show`, `create` and `delete` actions which correspon
 
 Comment out the `index` action and try.
 
+Happy RESTing !
 
