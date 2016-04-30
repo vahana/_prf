@@ -7,6 +7,14 @@ README = open(os.path.join(here, 'README.txt')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 
+install_requires = [
+    'pyramid',
+    'marshmallow',
+    'requests',
+    'mongoengine',
+    'waitress',
+]
+
 setup(
     name='prf',
     version=VERSION,
@@ -25,5 +33,5 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-    # install_requires=install_requires,
+    install_requires=install_requires,
 )
