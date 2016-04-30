@@ -1,5 +1,10 @@
 Pyramid RESTful Framework is designed to help coding REST CRUD endpoints with couple of lines of code.
 
+Install from git directly:
+
+`pip install git+https://github.com/vahana/prf`
+
+
 In the "main" function of your pyramid app declare your resources:
 
 def main():
