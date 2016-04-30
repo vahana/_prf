@@ -1,6 +1,6 @@
 Pyramid RESTful Framework is designed to help coding REST CRUD endpoints with couple of lines of code.
 
-In the "main" declare your resources:
+In the "main" function of your pyramid app declare your resources:
 
 def main():
   ...
