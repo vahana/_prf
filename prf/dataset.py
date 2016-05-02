@@ -86,17 +86,6 @@ class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
     importer = mongo.DictField()
 
 
-class DSMeta(BaseMixin, mongo.DynamicEmbeddedDocument):
-    meta = {
-        'indexes':[
-            'domain',
-            'name',
-        ]
-    }
-    domain = mongo.StringField()
-    name = mongo.StringField()
-
-
 class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
 
     def __new__(cls, name, bases, attrs):
@@ -159,7 +148,7 @@ class DatasetDoc(DynamicBase):
     }
 
     log = mongo.EmbeddedDocumentField(Log)
-    ds_meta = mongo.EmbeddedDocumentField(DSMeta)
+    ds_meta = mongo.DictField()
 
     @classmethod
     def do_set(cls, params):
@@ -217,11 +206,11 @@ class DatasetDoc(DynamicBase):
         else:
             self.log = Log()
 
-        if self.ds_meta:
-            if isinstance(self.ds_meta, dict):
-                self.ds_meta = DSMeta(**self.ds_meta)
-        else:
-            self.ds_meta = DSMeta()
+        # if self.ds_meta:
+        #     if isinstance(self.ds_meta, dict):
+        #         self.ds_meta = DSMeta(**self.ds_meta)
+        # else:
+        #     self.ds_meta = DSMeta()
 
     def get_params_from_pk(self):
         return self.to_dict(self._pk).subset('-v').flat()
