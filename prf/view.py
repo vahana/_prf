@@ -91,6 +91,7 @@ class BaseView(object):
     _serializer = DynamicSchema
     _acl = None
     _id_name = None
+    _model = None
 
     def __init__(self, context, request):
         self.context = context
@@ -110,7 +111,7 @@ class BaseView(object):
     @property
     def resource(self):
         rname = self.request.matched_route.name
-        return self.request.registry['prf.resources_map'][rname]
+        return self.request.resource_map[rname]
 
     def set_renderer(self):
         # no accept headers, use default

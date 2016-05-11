@@ -76,13 +76,10 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path_prefix = kwargs.pop('path_prefix', '')
     name_prefix = kwargs.pop('name_prefix', '')
 
-    id_name = kwargs.pop('id_name', view._id_name) or DEFAULT_ID_NAME
+    view._id_name = kwargs.pop('id_name', view._id_name) or DEFAULT_ID_NAME
+    view._acl = kwargs.pop('acl', view._acl)
 
-    _acl = kwargs.pop('acl', view._acl)
-    if _acl:
-        _acl._id_name = id_name
-
-    id_slug = ('/{%s}' % id_name if collection_name else '')
+    id_slug = ('/{%s}' % view._id_name if collection_name else '')
     path = os.path.join(path_prefix, (collection_name or member_name))
 
     _auth = config.registry.get('prf.auth', False)
@@ -91,8 +88,8 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
 
     def add_route_and_view(config, action, route_name, path, request_method,
                            **route_kwargs):
-        if _acl:
-            route_kwargs['factory'] = _acl
+        if view._acl:
+            route_kwargs['factory'] = view._acl
 
         if route_name not in added_routes:
             config.add_route(route_name, path, **route_kwargs)
@@ -217,6 +214,8 @@ class Resource(object):
                                   prefix=prefix)
 
         child_view = get_view_class(kwargs.pop('view', None), child_resource)
+        child_resource.view = child_view
+
         child_resource.id_name = kwargs.get('id_name', child_view._id_name)
 
         child_view._serializer = maybe_dotted(

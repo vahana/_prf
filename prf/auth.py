@@ -15,14 +15,21 @@ log = logging.getLogger(__name__)
 
 
 class BaseACL(object):
-    _model = None
-    _id_name = 'id'
     _admin_group_name = 'g:admin'
 
     def __init__(self, request):
         self.request = request
         self.__acl__ = self._acl()
         self.init()
+
+    @property
+    def view(self):
+        if not self.request.matched_route:
+            raise DKeyError('no matched route for request')
+
+        rname = self.request.matched_route.name
+        resource = self.request.resource_map[rname]
+        return resource.view
 
     def init(self):
         pass
@@ -42,10 +49,10 @@ class BaseACL(object):
         return self.acl()
 
     def get_item(self, key):
-        if not self._model:
+        if not self.view._model:
             raise DValueError('`%s._model` can not be None'\
-                              % self.__class__.__name__)
-        return self._model.get_resource(**{self._id_name:key})
+                              % self.view)
+        return self.view._model.get_resource(**{self.view._id_name:key})
 
     def __getitem__(self, key):
         item = self.get_item(key)
