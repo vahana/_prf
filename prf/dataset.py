@@ -83,7 +83,7 @@ class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
     created_at = mongo.DateTimeField(default=datetime.utcnow)
     updated_at = mongo.DateTimeField()
     tag = mongo.ListField(mongo.StringField())
-    importer = mongo.DictField()
+    job = mongo.DictField()
 
 
 class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
