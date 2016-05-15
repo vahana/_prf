@@ -644,6 +644,9 @@ class BaseMixin(object):
             _params = params.copy().update({'_start':start, '_limit': count})
             yield cls.get_collection(**_params)
 
+    @classmethod
+    def unregister(cls):
+        mongo.base._document_registry.pop(cls.__name__, None)
 
 class Base(BaseMixin, mongo.Document):
     __metaclass__ = TopLevelDocumentMetaclass
