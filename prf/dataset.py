@@ -62,9 +62,6 @@ def get_document_meta(doc_name):
 
     return meta
 
-def get_pk(doc_name):
-    meta = get_document_meta(doc_name)
-    get_uniques()
 
 def define_document(name, meta={}, redefine=False):
     if not name:
@@ -146,6 +143,7 @@ class DSDocumentMetaclass(TopLevelDocumentMetaclass):
         new_class.set_collection_name()
         new_class.create_indexes()
         new_class._pk = pk_
+        new_class._versioned = bool(pk_)
         return new_class
 
 
@@ -299,5 +297,12 @@ class DatasetDoc(DynamicBase):
 
             cls.objects(**each).update(set__latest=True)
 
+    @classmethod
+    def get_collection(cls, _q=None, **params):
+        if cls._versioned:
+            params.setdefault('latest', True)
+            if params['latest'] is None:
+                params.pop('latest')
 
+        return super(DatasetDoc, cls).get_collection(_q, **params)
 

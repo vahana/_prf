@@ -338,6 +338,11 @@ def dl2ld(dl):
     return [{key:value[index] for key, value in dl.items()}
             for index in range(len(dl.values()[0]))]
 
+def ld2dd(ld, key):
+    'list of dicts to dict of dicts'
+    return {each[key]:each for each in ld}
+
+
 def qs2dict(qs):
     from urlparse import parse_qsl
     from prf.utils import dictset
