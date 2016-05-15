@@ -285,9 +285,13 @@ def pager(start, page, total):
     return partial(_pager, start, page, total)
 
 
-def extract_domain(url):
+def extract_domain(url, _raise=True):
     import tldextract
-    return tldextract.extract(url).registered_domain
+    try:
+        return tldextract.extract(url).registered_domain
+    except TypeError as e:
+        if _raise:
+            raise DValueError(e)
 
 def clean_postal_code(code):
     return code.partition('-')[0]

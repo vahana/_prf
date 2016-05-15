@@ -1,4 +1,4 @@
-from prf.utils.utils import DKeyError, DValueError, split_strip, str2dt
+from prf.utils.utils import DKeyError, DValueError, split_strip, str2dt, qs2dict
 
 def parametrize(func):
 
@@ -160,3 +160,7 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
 @parametrize
 def asdt(dset, value):
     return str2dt(value)
+
+@parametrize
+def asqs(dset, value):
+    return qs2dict(value)

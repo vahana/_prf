@@ -266,6 +266,9 @@ class dictset(dict):
     def asrange(self, *arg, **kw):
         return asrange(self, *arg, **kw)
 
+    def asqs(self, *arg, **kw):
+        return asqs(self, *arg, **kw)
+
     def remove(self, keys):
         for k in keys:
             self.pop(k, None)

@@ -61,10 +61,10 @@ class Request(object):
 
     def json(self, resp, err=''):
         try:
-            return resp.json()
+            return dictset(resp.json())
         except Exception as e:
             log.error('Failed to convert to json: %s - %s' % (e, err))
-            return {}
+            return dictset()
 
     def is_json(self, data):
         return isinstance(data, (tuple, list, dict)) \

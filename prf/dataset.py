@@ -39,7 +39,7 @@ def get_dataset_names(match=""):
 def get_document_meta(doc_name):
     db = mongo.connection.get_db()
 
-    name = DS_COLL_PREFIX + doc_name
+    name = cls2collection(doc_name)
 
     if name not in db.collection_names():
         return dictset()
@@ -62,6 +62,9 @@ def get_document_meta(doc_name):
 
     return meta
 
+def get_pk(doc_name):
+    meta = get_document_meta(doc_name)
+    get_uniques()
 
 def define_document(name, meta={}, redefine=False):
     if not name:
@@ -86,21 +89,20 @@ class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
     job = mongo.DictField()
 
 
-class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
+class DSDocumentMetaclass(TopLevelDocumentMetaclass):
 
     def __new__(cls, name, bases, attrs):
-        super_new = super(VersionedDocumentMetaclass, cls)
+        super_new = super(DSDocumentMetaclass, cls)
         attrs_meta = dictset(attrs.get('meta', {}))
         attrs_meta.setdefault('indexes', [])
+        versioned = attrs_meta.pop('versioned', False)
 
         if attrs_meta.asbool('abstract', default=False):
             return super_new.__new__(cls, name, bases, attrs)
 
-        attrs['v'] = mongo.IntField(default=1)
-        attrs['latest'] = mongo.BooleanField(default=True)
-
         pk_ = []
         current_meta = get_document_meta(name)
+
         if current_meta:
             new_indexes = []
             for each in current_meta['indexes']:
@@ -111,26 +113,33 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
                 new_indexes.append(each)
                 if each['unique']:
                     pk_ = [e[1:] if e[0]=='-' else e for e in each['fields']]
-                    if each['name'].startswith('pk_'):
+                    if each['name'] == 'pk':
                         break
 
             current_meta['indexes'] = new_indexes
             attrs_meta.update(current_meta)
-        else:
+
+        elif versioned:
+            attrs['v'] = mongo.IntField(default=1)
+            attrs['latest'] = mongo.BooleanField(default=True)
+
             attrs_meta['indexes'].append('latest')
             attrs_meta['indexes'].append('v')
 
             pk_ = attrs_meta.aslist('pk', pop=True, default=[])
+            if not pk_:
+                raise prf.exc.HTTPBadRequest(
+                    'must provide `target.pk` for versioned dataset `%s`'
+                    ' or set `target.versioned=False`' % name)
 
             for each in pk_:
                 attrs_meta['indexes'].append(each)
 
-            if pk_:
-                pk_.append('v')
-                attrs_meta['indexes'].append({
-                    'name': 'pk_%s' % '_'.join(pk_),
-                    'fields': pk_,
-                    'unique': True})
+            pk_.append('v')
+            attrs_meta['indexes'].append({
+                'name': 'pk',
+                'fields': pk_,
+                'unique': True})
 
         attrs['meta'] = attrs_meta
         new_class = super_new.__new__(cls, name, bases, attrs)
@@ -141,14 +150,13 @@ class VersionedDocumentMetaclass(TopLevelDocumentMetaclass):
 
 
 class DatasetDoc(DynamicBase):
-    __metaclass__ = VersionedDocumentMetaclass
+    __metaclass__ = DSDocumentMetaclass
 
     meta = {
         'abstract': True,
     }
 
     log = mongo.EmbeddedDocumentField(Log)
-    ds_meta = mongo.DictField()
 
     @classmethod
     def do_set(cls, params):
@@ -206,19 +214,13 @@ class DatasetDoc(DynamicBase):
         else:
             self.log = Log()
 
-        # if self.ds_meta:
-        #     if isinstance(self.ds_meta, dict):
-        #         self.ds_meta = DSMeta(**self.ds_meta)
-        # else:
-        #     self.ds_meta = DSMeta()
-
     def get_params_from_pk(self):
         return self.to_dict(self._pk).subset('-v').flat()
 
     def get_latest(self):
         params = self.get_params_from_pk()
         if not params:
-            log.warning('pk params empty for %s', self.ds_meta)
+            log.warning('pk params empty for %s', params)
             return
 
         return self.get(latest=True, **params)
@@ -227,7 +229,7 @@ class DatasetDoc(DynamicBase):
         cls = self.__class__
         params = self.get_params_from_pk()
         if not params:
-            log.warning('pk params empty for %s', self.ds_meta)
+            log.warning('pk params empty for %s', params)
             return
 
         cls.objects(v__lt=self.v, **params)\
