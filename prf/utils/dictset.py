@@ -182,7 +182,12 @@ class dictset(dict):
                                ['only','exclude', 'nested', 'show_as'])
 
         nested_keys = nested.keys()
-        _d = self.subset(only + ['-'+e for e in exclude])
+
+        if '*' in only:
+            _d = self
+        else:
+            _d = self.subset(only + ['-'+e for e in exclude])
+
 
         def process_lists(flat_d):
             for nkey, nval in nested.items():
