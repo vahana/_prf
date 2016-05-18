@@ -318,12 +318,11 @@ def normalize_phone(number, country_code='US', _raise=True):
 
     try:
         phone = pn.parse(number, country_code)
-        if not pn.is_valid_number(phone):
-            if _raise:
+        if not pn.is_valid_number(phone) and _raise:
                 raise ValueError('Invalid phone number `%s` for country `%s`'
                                     % (number, country_code))
-            else:
-                return None
+        else:
+            return None
 
         return str(phone.national_number)
 

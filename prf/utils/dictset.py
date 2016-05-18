@@ -58,6 +58,7 @@ def process_fields(fields, parse=True):
     fields_exclude = []
     nested = {}
     show_as = {}
+    transforms = {}
 
     if isinstance(fields, basestring):
         fields = split_strip(fields)
@@ -69,6 +70,9 @@ def process_fields(fields, parse=True):
         if not field:
             continue
 
+        field,_,trans = field.partition(':')
+        trans = trans.split('|')
+
         if field[0] == '-':
             field = field[1:]
             negative = True
@@ -76,11 +80,13 @@ def process_fields(fields, parse=True):
         if parse and '__as__' in field:
             root,_,val = field.partition('__as__')
             show_as[root] = val or root.split('.')[-1]
+            transforms[show_as[root]] = trans
             field = root
 
         if parse and '.' in field:
             root = field.split('.')[0]
             nested[field] = root
+            transforms[field] = trans
             field = root
 
         if negative:
@@ -92,7 +98,8 @@ def process_fields(fields, parse=True):
              'only': fields_only,
              'exclude':fields_exclude,
              'nested': nested,
-             'show_as': show_as})
+             'show_as': show_as,
+             'transforms': transforms})
 
 
 class dictset(dict):
@@ -177,9 +184,9 @@ class dictset(dict):
         if fields is None:
             return self
 
-        only, exclude, nested, show_as =\
+        only, exclude, nested, show_as, trans =\
                 process_fields(fields).mget(
-                               ['only','exclude', 'nested', 'show_as'])
+                               ['only','exclude', 'nested', 'show_as', 'transforms'])
 
         nested_keys = nested.keys()
 
@@ -187,7 +194,6 @@ class dictset(dict):
             _d = self
         else:
             _d = self.subset(only + ['-'+e for e in exclude])
-
 
         def process_lists(flat_d):
             for nkey, nval in nested.items():
@@ -218,6 +224,11 @@ class dictset(dict):
         for key, new_key in show_as.items():
             if key in _d:
                 _d.merge(dictset({new_key:_d.pop(key)}))
+
+        for key, trs in trans.items():
+            if key in _d:
+                for tr in trs:
+                    _d[key] = getattr(type(_d[key]), tr, lambda x:x)(_d[key])
 
         return _d.unflat()
 
