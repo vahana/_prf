@@ -59,6 +59,7 @@ def process_fields(fields, parse=True):
     nested = {}
     show_as = {}
     transforms = {}
+    star = False
 
     if isinstance(fields, basestring):
         fields = split_strip(fields)
@@ -68,6 +69,10 @@ def process_fields(fields, parse=True):
         negative = False
 
         if not field:
+            continue
+
+        if '*' == field:
+            star = True
             continue
 
         field,_,trans = field.partition(':')
@@ -99,7 +104,8 @@ def process_fields(fields, parse=True):
              'exclude':fields_exclude,
              'nested': nested,
              'show_as': show_as,
-             'transforms': transforms})
+             'transforms': transforms,
+             'star': star})
 
 
 class dictset(dict):
@@ -184,13 +190,15 @@ class dictset(dict):
         if fields is None:
             return self
 
-        only, exclude, nested, show_as, trans =\
+        only, exclude, nested, show_as, trans, star =\
                 process_fields(fields).mget(
-                               ['only','exclude', 'nested', 'show_as', 'transforms'])
+                               ['only','exclude', 'nested',
+                                'show_as', 'transforms',
+                                'star'])
 
         nested_keys = nested.keys()
 
-        if '*' in only:
+        if star:
             _d = self
         else:
             _d = self.subset(only + ['-'+e for e in exclude])
