@@ -61,7 +61,12 @@ class Request(object):
 
     def json(self, resp, err=''):
         try:
-            return dictset(resp.json())
+            json = resp.json()
+            if isinstance(json, dict):
+                return dictset(resp.json())
+            else:
+                return dictset(data=json)
+
         except Exception as e:
             log.error('Failed to convert to json: %s - %s' % (e, err))
             return dictset()
@@ -167,13 +172,13 @@ class Request(object):
 
         return resp
 
-    def mpost(self, path='', dataset=[], **kw):
+    def mpost(self, path='', payloads=[], **kw):
         url = self.prepare_url(path)
         log.debug('%s', url)
         reqs = [requests.Request(method='POST',
                                 url=url,
                                 data=json_dumps(data) if self.is_json(data) else data,
-                                **kw) for data in dataset]
+                                **kw) for data in payloads]
         return self.multi_submit(reqs)
 
     def put(self, path='', data={}, **kw):
