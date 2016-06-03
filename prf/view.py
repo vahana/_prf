@@ -221,7 +221,7 @@ class BaseView(object):
                 data = []
                 for each in obj:
                     if isinstance(each, dict):
-                        each = process_dict(each)
+                        each,_ = process_dict(each)
 
                     data.append(each)
                 obj = data
