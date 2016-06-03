@@ -150,6 +150,22 @@ class Aggregator(object):
         self.specials._join = _join
         self.specials.aslist('_join_on', default=[_join_on, _join_on])
 
+    def unwind(self, collection):
+        if self.match_query:
+            self.data.append({'$match': self.match_query})
+
+        self.data.append({'$unwind': {
+                'path': '$%s' % self.specials._unwind
+            }})
+
+        if self.specials.asbool('_count', False):
+            return self.aggregate_count(collection)
+
+        self.add_sort()
+        self.add_limit()
+
+        return self.aggregate(collection)
+
     def group(self, collection):
         if self.match_query:
             self.data.append({'$match':self.match_query})
@@ -436,6 +452,10 @@ class BaseMixin(object):
         return Aggregator(queryset._query, specials).join(cls._collection)
 
     @classmethod
+    def get_unwind(cls, queryset, specials):
+        return Aggregator(queryset._query, specials).unwind(cls._collection)
+
+    @classmethod
     def _ix(cls, specials, total):
         if specials._ix < 0:
             _ix = max(total + specials._ix, 0)
@@ -472,6 +492,9 @@ class BaseMixin(object):
 
         elif specials._distinct:
             return cls.get_distinct(query_set, specials)
+
+        elif specials._unwind:
+            return cls.get_unwind(query_set, specials)
 
         _total = query_set.count()
 

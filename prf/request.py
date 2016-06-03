@@ -31,14 +31,14 @@ class Request(object):
                       cookies=None, headers=None):
 
         self.base_url = base_url.strip('/')
-        self.cache_options = cache_options or {}
+        cache_options = cache_options or {}
         self._raise = _raise
         self.delay = delay
         self.reqs_over_time = reqs_over_time or [] # [3,60] - 3 requests in 60 seconds
 
-        if self.cache_options:
+        if cache_options:
             import requests_cache
-            self.session = requests_cache.CachedSession(**self.cache_options)
+            self.session = requests_cache.CachedSession(**cache_options)
         else:
             self.session = requests.Session()
 
@@ -111,7 +111,6 @@ class Request(object):
             url_ps = url_ps._replace(query=new_query)
 
         return url_ps.geturl()
-
 
     def get(self, path='', params={}, **kw):
         url = self.prepare_url(path, params)

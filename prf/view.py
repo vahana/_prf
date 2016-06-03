@@ -227,7 +227,6 @@ class BaseView(object):
                 obj = data
             return obj, len(obj)
 
-
     def _process(self, data, many):
         if '_count' in self._params:
             return data
