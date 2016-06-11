@@ -69,7 +69,7 @@ def asbool(dset, value):
 
 
 @parametrize
-def aslist(dset, value, sep=',', remove_empty=True, unique=False):
+def aslist(dset, value, sep=',', remove_empty=False, unique=False):
     if isinstance(value, list):
         _lst = value
     elif isinstance(value, basestring):

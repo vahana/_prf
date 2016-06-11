@@ -13,4 +13,6 @@ marshmallow
 mongoengine
 pymongo
 python-dateutil
+WebTest
+mongomock
 -e .
