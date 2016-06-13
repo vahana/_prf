@@ -542,6 +542,11 @@ class BaseMixin(object):
     def get(cls, **params):
         return cls.get_collection(**params).first()
 
+    @classmethod
+    def search_text(cls, text, **params):
+        params.setdefault('_sort', '$text_score')
+        return cls.get_collection(**params).search_text(text)
+
     def unique_fields(self):
         return [e['fields'][0][0] for e in self._unique_with_indexes()] \
             + [self._meta['id_field']]
