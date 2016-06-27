@@ -5,35 +5,16 @@ from prf.utils.utils import DKeyError, DValueError, split_strip
 from prf.utils.convert import *
 
 
-def get_seg(d, path):
-    for seg in path:
-        d = d[seg]
-    # if not isinstance(d, dict):
-    #     raise ValueError(
-    #         '`%s` must be (derived from) dict. Got `%s` instead' % (d, type(d)))
+def merge(d1, d2, path=None):
+    if path is None: path = []
 
-    return d
-
-
-def merge(d1, d2, prefix_keys=None):
-    """
-    from prf.utils import dictset, merge
-    d1 = dictset({'a':{'b':{'c':1}}})
-    d2 = dictset({'a':{'b':{'d':1}}})
-    merge(d1, d2)
-
-    """
-    prefix_keys = prefix_keys or []
-    d1_ = get_seg(d1, prefix_keys)
-    d2_ = get_seg(d2, prefix_keys)
-
-    for key, val in d2_.items():
-        if key not in d1_:
-            d1_.update(d2_)
-            return
-
-        prefix_keys.append(key)
-        merge(d1, d2, prefix_keys)
+    for key in d2:
+        if key in d1:
+            if isinstance(d1[key], dict) and isinstance(d2[key], dict):
+                merge(d1[key], d2[key], path + [str(key)])
+        else:
+            d1[key] = d2[key]
+    return d1
 
 
 def expand_list(param):
