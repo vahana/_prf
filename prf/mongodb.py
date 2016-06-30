@@ -439,9 +439,15 @@ class BaseMixin(object):
         dset = sorted(queryset.distinct(specials._distinct), reverse=reverse)
 
         if specials._end is None:
-            return dset[specials._start:]
+            if specials._start != 0:
+                dset = dset[specials._start:]
         else:
-            return dset[specials._start: specials._end]
+            dset = dset[specials._start: specials._end]
+
+        if specials._fields:
+            dset = [dictset({specials._fields[0]: e}) for e in dset]
+
+        return dset
 
     @classmethod
     def get_group(cls, queryset, specials):
@@ -508,6 +514,8 @@ class BaseMixin(object):
             cls._ix(specials, _total)
 
         if specials._end is None:
+            if specials._start == 0:
+                return query_set
             query_set = query_set[specials._start:]
         else:
             query_set = query_set[specials._start:specials._end]
