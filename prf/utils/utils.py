@@ -180,6 +180,11 @@ def normalize_domain(url):
 
 
 def resolve_host_to(url, newhost):
+    '''
+    substitute the host in `url` with `newhost`
+    if newhost ends with `:` the original port will be preserved.
+    '''
+
     elements = urlparse(url)
     _, _, port = elements.netloc.partition(':')
     newhost,newcol,newport=newhost.partition(':')
