@@ -55,7 +55,8 @@ def typecast(params):
     params = dictset(params)
 
     list_ops = ('in', 'nin', 'all')
-    int_ops = ('exists', 'size')
+    int_ops = ('exists', 'size', 'max_distance', 'min_distance')
+    geo_ops = ('near',)
     types = ('asbool', 'asint', 'asstr', 'aslist', 'asset', 'asdt', 'asobj')
 
     for key in params.keys():
@@ -72,7 +73,7 @@ def typecast(params):
 
         for ix in xrange(len(parts)-1, -1, -1):
             part = parts[ix]
-            if part in list_ops+int_ops+types:
+            if part in list_ops+int_ops+geo_ops+types:
                 op = part
                 break
 
@@ -80,6 +81,21 @@ def typecast(params):
             continue
 
         new_key = '__'.join([e for e in parts if e != op])
+
+        if op in geo_ops:
+            coords = params.aslist(key)
+
+            try:
+                coords = [float(e) for e in coords]
+                if len(coords) != 2:
+                    raise ValueError
+
+            except ValueError:
+                raise dictset.DValueError('`near` operator takes pair of'
+                                ' numeric elements. Got `%s` instead' % coords)
+
+            params[key] = coords
+            continue
 
         if op in list_ops:
             new_key = key
