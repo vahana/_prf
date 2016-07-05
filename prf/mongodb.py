@@ -3,6 +3,7 @@ from datetime import datetime
 from bson import ObjectId, DBRef
 import mongoengine as mongo
 from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
+
 import pymongo
 
 import prf.exc
@@ -667,7 +668,7 @@ class BaseMixin(object):
             log.error('%s: %s' % (e, self.to_dict()))
 
     @classmethod
-    def get_collection_paged(cls, page_size, params=None):
+    def get_collection_paged(cls, page_size, **params):
         params = dictset(params or {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
