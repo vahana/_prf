@@ -66,14 +66,18 @@ def process_fields(fields, parse=True):
         if parse and '__as__' in field:
             root,_,val = field.partition('__as__')
             show_as[root] = val or root.split('.')[-1]
-            transforms[show_as[root]] = trans
             field = root
 
         if parse and '.' in field:
             root = field.split('.')[0]
             nested[field] = root
-            transforms[field] = trans
             field = root
+
+        if trans:
+            if field in show_as:
+                transforms[show_as[field]] = trans
+            else:
+                transforms[field] = trans
 
         if negative:
             fields_exclude.append(field)
@@ -217,7 +221,16 @@ class dictset(dict):
         for key, trs in trans.items():
             if key in _d:
                 for tr in trs:
-                    _d[key] = getattr(type(_d[key]), tr, lambda x:x)(_d[key])
+                    _type = type(_d[key])
+                    try:
+                        method = getattr(_type, tr)
+                        if not callable(method):
+                            raise dictset.DValueError('`%s` is not a callable for type `%s`'
+                                                        % (tr, _type))
+                        _d[key] = method(_d[key])
+                    except AttributeError as e:
+                        raise dictset.DValueError('type `%s` does not have a method `%s`'
+                                                     % (_type, tr))
 
         return _d.unflat()
 

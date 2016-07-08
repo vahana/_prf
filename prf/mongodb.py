@@ -171,7 +171,7 @@ class Aggregator(object):
         if self.match_query:
             self.data.append({'$match':self.match_query})
 
-        self.add_unwind()
+        self.add_group_unwind()
         self.add_group()
 
         if self.specials.asbool('_count', False):
@@ -240,7 +240,7 @@ class Aggregator(object):
 
         return self.aggregate(collection)
 
-    def add_unwind(self):
+    def add_group_unwind(self):
         _prj = {"_id": "$_id"}
         unwinds = []
 
