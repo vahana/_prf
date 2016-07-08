@@ -1,4 +1,5 @@
 import logging
+from pymongo.errors import PyMongoError
 from datetime import datetime
 from bson import ObjectId, DBRef
 import mongoengine as mongo
@@ -114,7 +115,7 @@ class MongoJSONEncoder(_JSONEncoder):
 class Aggregator(object):
 
     def __init__(self, query, specials):
-        self.data = []
+        self._agg = []
         self.specials = specials
         self.match_query = query
         self.accumulators = {}
@@ -153,9 +154,9 @@ class Aggregator(object):
 
     def unwind(self, collection):
         if self.match_query:
-            self.data.append({'$match': self.match_query})
+            self._agg.append({'$match': self.match_query})
 
-        self.data.append({'$unwind': {
+        self._agg.append({'$unwind': {
                 'path': '$%s' % self.specials._unwind
             }})
 
@@ -169,7 +170,7 @@ class Aggregator(object):
 
     def group(self, collection):
         if self.match_query:
-            self.data.append({'$match':self.match_query})
+            self._agg.append({'$match':self.match_query})
 
         self.add_group_unwind()
         self.add_group()
@@ -177,14 +178,14 @@ class Aggregator(object):
         if self.specials.asbool('_count', False):
             return self.aggregate_count(collection)
 
-        self.add_project()
+        self.add_group_project()
         self.add_sort({'count': -1})
         self.add_limit()
         return self.aggregate(collection)
 
     def join(self, collection):
         if self.match_query:
-            self.data.append({'$match':self.match_query})
+            self._agg.append({'$match':self.match_query})
 
         self.add_lookup()
 
@@ -192,7 +193,7 @@ class Aggregator(object):
         _join_on = self.specials._join_on
 
         if self._join_cond:
-            self.data.append({'$unwind': '$%s'%_join_as})
+            self._agg.append({'$unwind': '$%s'%_join_as})
 
             true_case = []
             for field, value in self._join_cond.items():
@@ -209,9 +210,9 @@ class Aggregator(object):
                         _join_on[0]: 1
                         }
 
-            self.data.append({'$project': _project})
+            self._agg.append({'$project': _project})
 
-            self.data.append(
+            self._agg.append(
                 { '$group' : {
                     '_id' : "$%s"%_join_on[0],
                     _join_as: {'$push': '$%s.%s' % (_join_as, _join_on[1])},
@@ -224,13 +225,13 @@ class Aggregator(object):
                     _join_as: '$%s'% (_join_as),
                     '_id': 0,
                 }
-            self.data.append(
+            self._agg.append(
                 {'$project': _project}
             )
 
 
         if self.after_match:
-            self.data.append({'$match': self.after_match})
+            self._agg.append({'$match': self.after_match})
 
         if self.specials.asbool('_count', False):
             return self.aggregate_count(collection)
@@ -261,8 +262,8 @@ class Aggregator(object):
                 unwinds.append({'$unwind': '$%s' % name})
 
         if unwinds:
-            self.data.append({'$project':_prj})
-            self.data.extend(unwinds)
+            self._agg.append({'$project':_prj})
+            self._agg.extend(unwinds)
 
         return self
 
@@ -302,7 +303,7 @@ class Aggregator(object):
 
                 _d[sfx] = {op:_dd}
 
-            self.data.append({'$group':_d})
+            self._agg.append({'$group':_d})
 
         return self
 
@@ -317,7 +318,7 @@ class Aggregator(object):
             raise prf.exc.HTTPBadRequest(
                 'Use `_join_on` or dotted `_join` to pass the field to join on')
 
-        self.data.append(
+        self._agg.append(
             {'$lookup': {
                     'from': self.specials._join,
                     'localField': left,
@@ -329,24 +330,24 @@ class Aggregator(object):
 
         return self
 
-    def add_project(self):
+    def add_group_project(self):
         _prj = {'_id':0, 'count':1}
 
         for each in self.specials._group:
             _prj[each] = '$_id.%s' % self.undot(each)
 
-        _gkeys = {}
-        for each in self.data:
+        proj_keys = {}
+        for each in self._agg:
             if '$group' in each:
-                _gkeys = each['$group'].keys()
+                proj_keys = each['$group'].keys()
 
-        for each in _gkeys:
+        for each in proj_keys:
             if each == '_id':
                 continue
             for _v in split_strip(each):
                 _prj[_v] = '$%s' % self.undot(_v)
 
-        self.data.append(
+        self._agg.append(
             {'$project': _prj}
         )
 
@@ -363,23 +364,27 @@ class Aggregator(object):
 
         sort_dict = sort_dict or default
         if sort_dict:
-            self.data.append({'$sort':sort_dict})
+            self._agg.append({'$sort':sort_dict})
 
         return self
 
     def add_limit(self):
-        self.data.append({'$skip':self.specials._start})
+        self._agg.append({'$skip':self.specials._start})
         if self.specials._end is not None:
-            self.data.append({'$limit':self.specials._limit})
+            self._agg.append({'$limit':self.specials._limit})
 
         return self
 
     def aggregate(self, collection):
-        log.debug(self.data)
-        return [e for e in collection.aggregate(self.data, cursor={}, allowDiskUse=True)]
+        log.debug(self._agg)
+        try:
+            return [e for e in
+                    collection.aggregate(self._agg, cursor={}, allowDiskUse=True)]
+        except PyMongoError as e:
+            raise prf.exc.HTTPBadRequest(e)
 
     def aggregate_count(self, collection):
-        self.data.append({'$group': { '_id': None, 'count': {'$sum': 1}}})
+        self._agg.append({'$group': { '_id': None, 'count': {'$sum': 1}}})
         result = self.aggregate(collection)
         if result:
             return result[0]['count']
