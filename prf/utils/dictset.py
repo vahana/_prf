@@ -57,7 +57,7 @@ def process_fields(fields, parse=True):
             continue
 
         field,_,trans = field.partition(':')
-        trans = trans.split('|')
+        trans = trans.split('|') if trans else []
 
         if field[0] == '-':
             field = field[1:]
