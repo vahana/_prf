@@ -259,7 +259,7 @@ class DatasetDoc(DynamicBase):
             else:
                 cls.ensure_index(name)
         except Exception as e:
-            raise prf.exc.HTTPBadRequest(e)
+            raise prf.exc.HTTPBadRequest(str(e))
 
     @classmethod
     def drop_index(cls, name=None):

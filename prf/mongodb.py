@@ -132,8 +132,14 @@ class Aggregator(object):
 
     def setup_group(self):
         self.specials.aslist('_group')
-        self.accumulators = dictset([[e[7:], self.specials[e]] \
-            for e in self.specials if e.startswith('_group_')])
+        self.accumulators = dictset()
+
+        for name,val in self.specials.items():
+            if name.startswith('_group_count'):
+                self.specials.asint(name)
+                continue
+            elif name.startswith('_group_'):
+                self.accumulators[name[7:]] = val
 
     def setup_join(self):
         _join,_,_join_on = self.specials._join.partition('.')
@@ -169,10 +175,15 @@ class Aggregator(object):
         return self.aggregate(collection)
 
     def group(self, collection):
+
         if self.match_query:
             self._agg.append({'$match':self.match_query})
 
-        self.add_group_unwind()
+        if self.specials._unwind:
+            self._agg.append({'$unwind': {
+                            'path': '$%s' % self.specials._unwind
+                        }})
+
         self.add_group()
 
         if self.specials.asbool('_count', False):
@@ -240,32 +251,6 @@ class Aggregator(object):
         self.add_limit()
 
         return self.aggregate(collection)
-
-    def add_group_unwind(self):
-        _prj = {"_id": "$_id"}
-        unwinds = []
-
-        for op, name in self.accumulators.items():
-            if op != 'unwind':
-                continue
-
-            self.accumulators.pop(op)
-            num_dots = name.count('.')
-            if num_dots:
-                new_name = undot(name)
-                # accumulators[op] = new_name
-                _prj[new_name]='$%s' % name
-                for x in range(num_dots):
-                    unwinds.append({'$unwind': '$%s' % new_name})
-            else:
-                _prj[name]='$%s' % name
-                unwinds.append({'$unwind': '$%s' % name})
-
-        if unwinds:
-            self._agg.append({'$project':_prj})
-            self._agg.extend(unwinds)
-
-        return self
 
     def add_group(self):
         group_dict = {}
