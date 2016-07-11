@@ -82,7 +82,7 @@ def define_document(name, meta={}, redefine=False):
 class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
     created_at = mongo.DateTimeField(default=datetime.utcnow)
     updated_at = mongo.DateTimeField()
-    tag = mongo.ListField(mongo.StringField())
+    tags = mongo.ListField(mongo.StringField())
     job = mongo.DictField()
 
 
