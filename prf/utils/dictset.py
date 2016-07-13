@@ -342,7 +342,7 @@ class dictset(dict):
         else:
             return cls({key: cls.from_dotted(sufix, val)})
 
-    def has(self, keys, check_type=basestring, allow_empty=False,
+    def has(self, keys, check_type=basestring,
                         err='', _all=True, allow_missing=False,
                         allowed_values=[]):
         errors = []
