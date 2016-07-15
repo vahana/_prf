@@ -306,9 +306,14 @@ def format_phone(number, country_code='US', _raise=True):
 
     try:
         phone = pn.parse(number, country_code)
-        if not pn.is_valid_number(phone) and _raise:
-            raise ValueError('Invalid phone number `%s` for country `%s`'
-                                 % (number, country_code))
+        if not pn.is_valid_number(phone):
+            msg = 'Invalid phone number `%s` for country `%s`'\
+                                 % (number, country_code)
+            if _raise:
+                raise ValueError(msg)
+            else:
+                log.warn(msg)
+                return
 
         return pn.format_number(phone,
                 pn.PhoneNumberFormat.INTERNATIONAL)

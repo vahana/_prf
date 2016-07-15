@@ -183,11 +183,6 @@ class dictset(dict):
 
         nested_keys = nested.keys()
 
-        if star:
-            _d = self
-        else:
-            _d = self.subset(only + ['-'+e for e in exclude])
-
         def process_lists(flat_d):
             for nkey, nval in nested.items():
                 if '..' in nkey:
@@ -205,6 +200,11 @@ class dictset(dict):
 
                     if nkey in show_as:
                         show_as[new_key] = show_as.pop(nkey)
+
+        if star:
+            _d = self
+        else:
+            _d = self.subset(only + ['-'+e for e in exclude])
 
         if nested:
             flat_d = _d.flat()
@@ -225,12 +225,14 @@ class dictset(dict):
                     try:
                         method = getattr(_type, tr)
                         if not callable(method):
-                            raise dictset.DValueError('`%s` is not a callable for type `%s`'
-                                                        % (tr, _type))
+                            raise dictset.DValueError(
+                                '`%s` is not a callable for type `%s`'
+                                    % (tr, _type))
                         _d[key] = method(_d[key])
                     except AttributeError as e:
-                        raise dictset.DValueError('type `%s` does not have a method `%s`'
-                                                     % (_type, tr))
+                        raise dictset.DValueError(
+                                'type `%s` does not have a method `%s`'
+                                    % (_type, tr))
 
         return _d.unflat()
 
@@ -238,19 +240,22 @@ class dictset(dict):
         if keys is None:
             return self
 
-        only, exclude = process_fields(keys, parse=False).mget(['only','exclude'])
+        only, exclude = process_fields(
+                keys, parse=False).mget(['only','exclude'])
 
         _d = dictset()
 
         if only and exclude:
-            raise DValueError('Can only supply either positive or negative keys,'
-                              ' but not both')
+            raise DValueError(
+                    'Can only supply either positive or negative keys,'
+                    ' but not both')
 
         if only:
-            _d = dictset([[k, v] for (k, v) in self.items() if k in only])
+            _d = dictset([[k, v] for (k, v)
+                                in self.items() if k in only])
         elif exclude:
-            _d = dictset([[k, v] for (k, v) in self.items() if k
-                           not in exclude])
+            _d = dictset([[k, v] for (k, v) in self.items()
+                                if k not in exclude])
 
         return _d
 
