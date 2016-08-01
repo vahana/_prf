@@ -475,16 +475,17 @@ class BaseMixin(object):
 
     @classmethod
     def get_collection(cls, _q=None, **params):
+
         params = dictset(params)
-
         log.debug('IN: cls: %s, params: %.512s', cls.__name__, params)
-
         params, specials = prep_params(params)
 
         if isinstance(_q, basestring) or not _q:
             query_set = cls.objects
         else: # needs better way to check if its a proper query object
             query_set = cls.objects(_q)
+
+        cls.check_indexes_exist(params.keys())
 
         query_set = query_set(**params)
 
@@ -533,7 +534,8 @@ class BaseMixin(object):
                 query_set = query_set.exclude(*exclude)
 
         query_set._total = _total
-        log.debug('OUT: collection: %s, query: %.512s', cls._collection.name, query_set._query)
+        log.debug('OUT: collection: %s, query: %.512s',
+                                    cls._collection.name, query_set._query)
 
         if specials._explain and isinstance(query_set, mongo.QuerySet):
             return query_set.explain()
@@ -684,6 +686,57 @@ class BaseMixin(object):
     @classmethod
     def unregister(cls):
         mongo.base._document_registry.pop(cls.__name__, None)
+
+    @classmethod
+    def rename(cls, fields, **params):
+        update = {}
+        renames = {}
+
+        for current, new in fields.items():
+            if not new:
+                update['unset__%s' % current] = 1
+            else:
+                renames[current] = new
+
+        if renames:
+            update['__raw__'] = {'$rename': renames}
+
+        if update:
+            cls.objects(**params).update(**update)
+
+    @classmethod
+    def _get_indexes(cls):
+        _indexes = []
+        try:
+            for each in cls._collection.index_information().values():
+                key = each['key'][0][0]
+                if key == '_id':
+                    key = 'id'
+                _indexes.append(key)
+        except pymongo.errors.OperationFailure:
+            return None
+
+        return _indexes
+
+    @classmethod
+    def check_indexes_exist(cls, keys):
+        existing_indexes = cls._get_indexes()
+        if existing_indexes is None:
+            return
+
+        new_keys = []
+        for kk in keys:
+            parts = kk.split('__')
+            if parts[-1] in ['exists', 'in', 'ne', 'size',
+                             'asbool', 'asint', 'aslist', 'asdt']:
+                parts.pop(-1)
+
+            new_keys.append('.'.join(parts))
+
+        missing = set(new_keys) - set(existing_indexes)
+        if missing:
+            log.warning('Missing indexes for the query on `%s`: %s',
+                        cls.__name__, new_keys)
 
 class Base(BaseMixin, mongo.Document):
     __metaclass__ = TopLevelDocumentMetaclass

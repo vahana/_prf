@@ -101,6 +101,10 @@ def asfloat(dset, value):
 
 @parametrize
 def asstr(dset, value):
+    return str(value)
+
+@parametrize
+def asunicode(dset, value):
     return unicode(value)
 
 

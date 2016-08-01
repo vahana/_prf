@@ -222,7 +222,7 @@ def to_dunders(d, only=None):
         if only and key not in only:
             continue
         if '__' not in key:
-            new_d['set__%s'%key] = d[key]
+            new_d['set__%s'%key.replace('.', '__')] = d[key]
         else:
             new_d[key] = d[key]
 
