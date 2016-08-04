@@ -708,7 +708,7 @@ class BaseMixin(object):
     def _get_indexes(cls):
         _indexes = []
         try:
-            for each in cls._collection.index_information().values():
+            for each in cls._get_collection().index_information().values():
                 key = each['key'][0][0]
                 if key == '_id':
                     key = 'id'

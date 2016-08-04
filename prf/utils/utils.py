@@ -301,27 +301,29 @@ def extract_domain(url, _raise=True):
 def clean_postal_code(code):
     return code.partition('-')[0]
 
-def format_phone(number, country_code='US', _raise=True):
+def format_phone(number, country_code, _raise=True):
     import phonenumbers as pn
 
     try:
         phone = pn.parse(number, country_code)
-        if not pn.is_valid_number(phone):
-            msg = 'Invalid phone number `%s` for country `%s`'\
+        ok = True
+        if not pn.is_possible_number(phone):
+            msg = 'Phone number `%s` for country `%s` might might be invalid'\
                                  % (number, country_code)
             if _raise:
                 raise ValueError(msg)
             else:
                 log.warn(msg)
-                return
+                ok = False
 
-        return pn.format_number(phone,
+        return ok, pn.format_number(phone,
                 pn.PhoneNumberFormat.INTERNATIONAL)
 
     except pn.NumberParseException as e:
         if _raise:
             raise ValueError(e)
 
+    return False, None
 
 def normalize_phone(number, country_code='US', _raise=True):
     import phonenumbers as pn
