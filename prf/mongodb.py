@@ -117,7 +117,7 @@ class Aggregator(object):
     def __init__(self, query, specials):
         self._agg = []
         self.specials = specials
-        self.match_query = query
+        self.match_query = dictset(query)
         self.accumulators = {}
 
         if specials.get('_group'):
@@ -126,6 +126,9 @@ class Aggregator(object):
         elif specials.get('_join'):
             self.setup_join()
 
+        elif specials.get('_unwind'):
+            self.setup_unwind()
+
     @staticmethod
     def undot(name):
         return name.replace('.', '__')
@@ -133,6 +136,8 @@ class Aggregator(object):
     def setup_group(self):
         self.specials.aslist('_group')
         self.accumulators = dictset()
+
+        self.count_cond = self.group_count_cond()
 
         for name,val in self.specials.items():
             if name.startswith('_group_count'):
@@ -158,13 +163,26 @@ class Aggregator(object):
         self.specials._join = _join
         self.specials.aslist('_join_on', default=[_join_on, _join_on])
 
+    def setup_unwind(self):
+        self.post_match = dictset()
+
+        for name, val in self.match_query.items():
+            if name.startswith(self.specials._unwind):
+                self.post_match[name] = val
+
+        self.match_query.pop_many(self.post_match.keys())
+
     def unwind(self, collection):
+
         if self.match_query:
             self._agg.append({'$match': self.match_query})
 
         self._agg.append({'$unwind': {
                 'path': '$%s' % self.specials._unwind
             }})
+
+        if self.post_match:
+            self._agg.append({'$match': self.post_match})
 
         if self.specials._fields:
             _prj = {'_id':0}
@@ -184,6 +202,18 @@ class Aggregator(object):
 
         return self.aggregate(collection)
 
+    def group_count_cond(self):
+        count_cond = self.match_query.pop('count', None)
+
+        if count_cond:
+            if isinstance(count_cond, dict):
+                count_cond = dict(
+                    [[k,int(v)] for k,v in count_cond.items()])
+            else:
+                count_cond = int(count_cond)
+
+            return {"$match": {"count": count_cond}}
+
     def group(self, collection):
 
         if self.match_query:
@@ -195,6 +225,9 @@ class Aggregator(object):
                         }})
 
         self.add_group()
+
+        if self.count_cond:
+            self._agg.append(self.count_cond)
 
         if self.specials.asbool('_count', False):
             return self.aggregate_count(collection)
@@ -485,7 +518,8 @@ class BaseMixin(object):
         else: # needs better way to check if its a proper query object
             query_set = cls.objects(_q)
 
-        cls.check_indexes_exist(params.keys())
+        cls.check_indexes_exist(params.keys()+
+                [e[1:] if e.startswith('-') else e for e in specials._sort])
 
         query_set = query_set(**params)
 
@@ -678,6 +712,8 @@ class BaseMixin(object):
         if _limit == -1:
             _limit = cls.get_collection(_limit=_limit, _count=1, **params)
 
+        log.debug('page_size=%s, _limit=%s', page_size, _limit)
+
         pgr = pager(_start, page_size, _limit)
         for start, count in pgr():
             _params = params.copy().update({'_start':start, '_limit': count})
@@ -737,6 +773,33 @@ class BaseMixin(object):
         if missing:
             log.warning('Missing indexes for the query on `%s`: %s',
                         cls.__name__, new_keys)
+
+    @classmethod
+    def mark_dups(cls, keys, page_size=100):
+        total_marked = 0
+
+        for batch in cls.get_collection_paged(
+                        page_size,
+                        dups_by__exists=0,
+                        count__gt=1,
+                        _group=keys,
+                        _group_list='_id'):
+
+            dup_ids = []
+
+            for each in batch:
+                ids = [e['_id'] for e in each['list']]
+                dup_ids.extend(sorted(ids, reverse=True)[1:])
+
+            total_marked += cls.objects(id__in=dup_ids)\
+                               .update(set__dups_by=keys,
+                                       write_concern={"w": 1})
+
+            log.debug('%s marked as dups by %s', total_marked, keys)
+
+    def get_density(self, fields=[]):
+        return len(self.to_dict(fields).flat(keep_lists=1))
+
 
 class Base(BaseMixin, mongo.Document):
     __metaclass__ = TopLevelDocumentMetaclass

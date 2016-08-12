@@ -295,7 +295,7 @@ class BaseView(object):
         return self.request.invoke_subrequest(req)
 
     def needs_confirmation(self):
-        return '__confirmation' not in self._params
+        return self._params.pop('__CONFIRMATION', True)
 
     def delete_many(self, **kw):
         if not self._model_class:

@@ -84,6 +84,7 @@ class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
     updated_at = mongo.DateTimeField()
     tags = mongo.ListField(mongo.StringField())
     job = mongo.DictField()
+    density = mongo.IntField()
 
 
 class DSDocumentMetaclass(TopLevelDocumentMetaclass):
@@ -109,8 +110,8 @@ class DSDocumentMetaclass(TopLevelDocumentMetaclass):
 
                 new_indexes.append(each)
                 if each['unique']:
-                    pk_ = [e[1:] if e[0]=='-' else e for e in each['fields']]
                     if each['name'] == 'pk':
+                        pk_ = [e[1:] if e[0]=='-' else e for e in each['fields']]
                         break
 
             current_meta['indexes'] = new_indexes
@@ -212,6 +213,8 @@ class DatasetDoc(DynamicBase):
         else:
             self.log = Log()
 
+        self.log['density'] = self.get_density()
+
     def get_params_from_pk(self):
         return self.to_dict(self._pk).subset('-v').flat()
 
@@ -249,7 +252,6 @@ class DatasetDoc(DynamicBase):
             return obj
         except mongo.NotUniqueError as e:
             return self.save_version(v=self.v+1, **kw)
-
 
     @classmethod
     def create_indexes(cls, name=None):
