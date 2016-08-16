@@ -317,7 +317,7 @@ def format_phone(number, country_code, _raise=True):
                 ok = False
 
         return ok, pn.format_number(phone,
-                pn.PhoneNumberFormat.INTERNATIONAL)
+                        pn.PhoneNumberFormat.INTERNATIONAL)
 
     except pn.NumberParseException as e:
         if _raise:

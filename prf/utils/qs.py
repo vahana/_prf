@@ -45,7 +45,6 @@ def prep_params(params):
         if each.startswith('_'):
             specials[each] = params.pop(each)
 
-
     params = typecast(params)
 
     return params, specials

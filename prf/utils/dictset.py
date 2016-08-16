@@ -172,7 +172,7 @@ class dictset(dict):
         return dictset(super(dictset, self).copy())
 
     def extract(self, fields):
-        if fields is None:
+        if not fields:
             return self
 
         only, exclude, nested, show_as, trans, star =\
@@ -221,6 +221,13 @@ class dictset(dict):
         for key, trs in trans.items():
             if key in _d:
                 for tr in trs:
+                    if tr == 'str':
+                        _d[key] = str(_d[key])
+                        continue
+                    elif tr == 'unicode':
+                        _d[key] = unicode(_d[key])
+                        continue
+
                     _type = type(_d[key])
                     try:
                         method = getattr(_type, tr)
@@ -434,7 +441,7 @@ class dictset(dict):
             self._ordered_dict.pop(*arg, **kw)
         return super(dictset, self).pop(*arg, **kw)
 
-    def flat(self, keep_lists=False):
+    def flat(self, keep_lists=True):
         _flat = dict_to_args(self, keep_lists=keep_lists)
         _d = dictset(_flat)
         _d._ordered_dict = _flat

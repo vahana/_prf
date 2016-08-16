@@ -198,34 +198,31 @@ class BaseView(object):
         fields = self._params.get('_fields')
 
         def process_dict(d_):
-            _total = len(d_)
+            return dictset(d_).extract(fields)
 
-            #ugly hack
-            if many and 'data' in d_:
-                if 'total' in d_:
-                    _total = d_['total']
-                else:
-                    _total = len(d_['data'])
-                d_ = d_['data']
+        _total = None
 
-            if fields:
-                d_ = dictset(d_).extract(fields)
-
-            return d_, _total
+        if many and 'data' in obj:
+            if 'total' in obj:
+                _total = obj['total']
+            else:
+                _total = len(obj['data'])
+            obj = obj['data']
 
         if isinstance(obj, dict):
-            return process_dict(obj)
+            _d = process_dict(obj)
+            return _d, _total or len(_d)
 
         elif isinstance(obj, list):
             if fields:
                 data = []
                 for each in obj:
                     if isinstance(each, dict):
-                        each,_ = process_dict(each)
+                        each = process_dict(each)
 
                     data.append(each)
                 obj = data
-            return obj, len(obj)
+            return obj, _total or len(obj)
 
     def _process(self, data, many):
         if '_count' in self._params:
