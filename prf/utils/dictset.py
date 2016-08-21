@@ -68,16 +68,16 @@ def process_fields(fields, parse=True):
             show_as[root] = val or root.split('.')[-1]
             field = root
 
-        if parse and '.' in field:
-            root = field.split('.')[0]
-            nested[field] = root
-            field = root
-
         if trans:
             if field in show_as:
                 transforms[show_as[field]] = trans
             else:
                 transforms[field] = trans
+
+        if parse and '.' in field:
+            root = field.split('.')[0]
+            nested[field] = root
+            field = root
 
         if negative:
             fields_exclude.append(field)
