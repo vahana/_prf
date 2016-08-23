@@ -1,7 +1,7 @@
 import urllib, re
 from collections import OrderedDict
 
-from prf.utils.utils import DKeyError, DValueError, split_strip
+from prf.utils.utils import DKeyError, DValueError, split_strip, json_dumps
 from prf.utils.convert import *
 
 
@@ -511,6 +511,17 @@ class dictset(dict):
         [self.pop(key, None) for key in keys]
         return self
 
+    def sensor(self, patterns):
+        self_f = self.flat()
+        for key in self_f:
+            for each in patterns:
+                if key.endswith(each):
+                    self_f[key] = '******'
+
+        return self_f.unflat()
+
+    def json(self):
+        return json_dumps(self)
 
 #based on jsonurl
 

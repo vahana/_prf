@@ -5,9 +5,18 @@ import uuid
 from pyramid import httpexceptions as http_exc
 
 from prf.utils import dictset, json_dumps
+import prf.exc
 
 logger = logging.getLogger(__name__)
 
+SENSORS = [
+    'password',
+    'key',
+    'token'
+]
+
+def sensor(_d):
+    return dictset(_d).sensor(prf.exc.SENSORS)
 
 def add_stack():
     return ''.join(traceback.format_stack())
@@ -19,7 +28,7 @@ def is_error(status_code):
 
 
 def log_exception(resp, params):
-    msg = '%s: %s' % (resp.status.upper(), json_dumps(params))
+    msg = '%s: %s' % (resp.status.upper(), json_dumps(sensor(params)))
     if resp.status_code in [400, 500]:
         msg += '\nSTACK BEGIN>>\n%s\nSTACK END<<' % add_stack()
 
@@ -58,7 +67,7 @@ def create_response(resp, params):
         params['error_id'] = uuid.uuid4()
         log_exception(resp, params)
 
-    resp.body = json_dumps(params)
+    resp.body = json_dumps(sensor(params))
     return resp
 
 

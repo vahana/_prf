@@ -5,7 +5,7 @@ from pyramid import httpexceptions
 from pyramid.security import  NO_PERMISSION_REQUIRED
 
 import prf.exc
-from prf.utils import maybe_dotted, aslist, dictset
+from prf.utils import maybe_dotted, dictset
 from prf.utils.utils import DKeyError, DValueError
 from prf.utility_views import AccountView, APIView
 
@@ -79,7 +79,7 @@ def set_default_acl(config, acl_model):
 
 def process_tweens(config):
     import pyramid
-    for tween in aslist(config.registry.settings, 'tweens', sep='\n', default=''):
+    for tween in dictset(config.registry.settings).aslist('tweens', sep='\n', default=''):
         config.add_tween(tween)
 
 

@@ -33,7 +33,6 @@ class JSONEncoder(json.JSONEncoder):
 def json_dumps(body):
     return json.dumps(body, cls=JSONEncoder)
 
-
 def split_strip(_str, on=','):
     lst = (_str if isinstance(_str, list) else _str.split(on))
     return filter(bool, [e.strip() for e in lst])
