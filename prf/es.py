@@ -2,6 +2,7 @@ import logging
 import urllib2
 
 from elasticsearch import Elasticsearch
+from elasticsearch_dsl import Search, Q, A
 
 import prf
 from prf.utils import dictset, process_fields, split_strip
@@ -41,15 +42,76 @@ class ES(object):
     def __init__(self, name):
         self.name = name
 
-    def get_collection(self, **params):
-        from elasticsearch_dsl import Search, Q
+    def aggregation(self, params, specials, s_):
 
+        if specials._limit == -1:
+            size = 0
+        else:
+            size = specials._limit or 20
+
+        term_params = {
+            'size': size,
+        }
+
+        if specials._group:
+            field = '%s.raw'%specials._group
+        elif specials._distinct:
+            field = '%s.raw'%specials._distinct
+
+            if specials._sort and specials._sort[0].startswith('-'):
+                order = { "_term" : "desc" }
+            else:
+                order = {"_term": 'asc'}
+
+            term_params['order'] = order
+
+        term_params['field'] = field
+
+        terms = A('terms', **term_params)
+        cardinality = A('cardinality',
+                         field = field,
+                         precision_threshold=40000)
+
+        s_.aggs.bucket('total', cardinality)
+        s_.aggs.bucket('list', terms)
+        s_ = s_[0:0]
+
+        try:
+            resp = s_.execute()
+            data = []
+
+            if specials._group:
+                for each in resp.aggregations.list.buckets:
+                    datum = dictset({
+                            specials._group:each.key,
+                            'count': each.doc_count
+                        }).unflat()
+                    data.append(datum)
+            elif specials._distinct:
+                for each in resp.aggregations.list.buckets:
+                    data.append(each.key)
+
+            return {
+                'data': data,
+                'total': resp.aggregations.total.value,
+                'start': specials._start,
+                'count': specials._limit,
+                'fields': specials._fields,
+                'took': resp.took
+            }
+
+        except Exception as e:
+            raise prf.exc.HTTPBadRequest(e)
+
+        return {}
+
+    def get_collection(self, **params):
         params = dictset(params)
         log.debug('IN: cls: (ES) %s, params: %.512s', self.name, params)
 
-        s_ = Search(using=self.api, index=self.name)
-
         _params, specials = prep_params(params)
+
+        s_ = Search(using=self.api, index=self.name)
         _filter = None
 
         if 'q' in params:
@@ -118,7 +180,7 @@ class ES(object):
         if specials._sort:
             s_ = s_.sort(*specials._sort)
 
-        if specials._end:
+        if specials._end is not None:
             s_ = s_[specials._start:specials._end]
         else:
             s_ = s_[specials._start:]
@@ -128,6 +190,8 @@ class ES(object):
             s_ = s_.source(include=['%s'%e for e in only],
                            exclude = ['%s'%e for e in exclude])
 
+        if specials._group or specials._distinct:
+            return self.aggregation(_params, specials, s_)
 
         try:
             resp = s_.execute()
