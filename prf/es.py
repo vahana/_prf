@@ -73,6 +73,11 @@ class ES(object):
                          precision_threshold=40000)
 
         s_.aggs.bucket('total', cardinality)
+
+        if specials._count:
+            resp = s_.execute()
+            return resp.aggregations.total.value
+
         s_.aggs.bucket('list', terms)
         s_ = s_[0:0]
 
@@ -196,6 +201,9 @@ class ES(object):
 
         if specials._group or specials._distinct:
             return self.aggregation(_params, specials, s_)
+
+        if specials._count:
+            return s_.count()
 
         try:
             resp = s_.execute()
