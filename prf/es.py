@@ -87,9 +87,13 @@ class ES(object):
                             'count': each.doc_count
                         }).unflat()
                     data.append(datum)
+
             elif specials._distinct:
                 for each in resp.aggregations.list.buckets:
-                    data.append(each.key)
+                    if specials._fields:
+                        data.append({specials._fields[0]: each.key})
+                    else:
+                        data.append(each.key)
 
             return {
                 'data': data,
