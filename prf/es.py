@@ -148,7 +148,7 @@ class ES(object):
             if isinstance(val, basestring) and ',' in val:
                 val = _params.aslist(key)
 
-            _key, div, op = key.partition('__')
+            _key, div, op = key.rpartition('__')
             if div and op in OPERATORS:
                 key = _key.replace(div, '.')
 
