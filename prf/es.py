@@ -10,11 +10,16 @@ from prf.utils.qs import prep_params
 
 log = logging.getLogger(__name__)
 
+OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in',
+             'startswith']
+
+
 def includeme(config):
     Settings = dictset(config.registry.settings)
     ES.setup(Settings)
 
 class ES(object):
+    RAW_FIELD = '.raw'
 
     @classmethod
     def setup(cls, settings):
@@ -41,6 +46,9 @@ class ES(object):
 
     def __init__(self, name):
         self.name = name
+
+    def prefix_query(self, params, specials, _s):
+        pass
 
     def aggregation(self, params, specials, s_):
 
@@ -136,34 +144,30 @@ class ES(object):
             s_ = s_.query('simple_query_string', **q_params)
 
         for key, val in _params.items():
-            negate = False
 
             if isinstance(val, basestring) and ',' in val:
                 val = _params.aslist(key)
 
-            keys = key.split('__')
-            op = keys[-1]
+            _key, div, op = key.partition('__')
+            if div and op in OPERATORS:
+                key = _key.replace(div, '.')
 
-            key, div, op = key.rpartition('__')
-            key = key.replace(div, '.')
+            # match with non-analyzed version
+            key = '%s%s'%(key, self.RAW_FIELD)
 
-            if op == 'ne':
-                key = '.'.join(keys[:-1])
-                negate = True
-            elif op == 'in':
-                #the val is a list and will be handled as OR downstream
-                pass
-            elif op in ['lt', 'lte', 'gt', 'gte']:
-                key = '.'.join(keys[:-1])
+            if op in ['lt', 'lte', 'gt', 'gte']:
                 rangeQ = Q('range', **{key: {op: val}})
                 _filter = _filter & rangeQ if _filter else rangeQ
                 continue
-            else:
-                key = '.'.join(keys)
+
+            elif op in ['startswith']:
+                prefixQ = Q('prefix', **{key:val})
+                _filter = _filter & prefixQ if _filter else prefixQ
+                continue
 
             if val is None:
                 missingQ = Q('missing', field=key)
-                if negate:
+                if op == 'ne':
                     missingQ = ~missingQ
                 _filter = _filter & missingQ if _filter else missingQ
                 continue
@@ -171,17 +175,20 @@ class ES(object):
             if isinstance(val, list):
                 _orQ = None
                 for each in val:
-                    _orQ = _orQ | Q("match", **{key:each}) if _orQ else Q("match", **{key:each})
+                    _orQ = _orQ | Q("match", **{key:each}) \
+                                if _orQ else Q("match", **{key:each})
 
                 if _orQ:
-                    if negate:
+                    if op == 'ne':
                         _orQ = ~_orQ
                     _filter = _filter & _orQ if _filter else _orQ
 
             else:
-                _filter = _filter & Q("match", **{key:val}) if _filter else Q("match", **{key:val})
-                if negate:
-                    _filter = ~_filter
+                matchQ = Q("match", **{key:val})
+                if op == 'ne':
+                    matchQ = ~matchQ
+
+                _filter = _filter & matchQ if _filter else matchQ
 
         if _filter:
             s_ = s_.query('bool', filter = _filter)
