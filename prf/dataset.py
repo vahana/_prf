@@ -213,7 +213,7 @@ class DatasetDoc(DynamicBase):
         else:
             self.log = Log()
 
-        self.log['density'] = self.get_density()
+        self.log.density = self.get_density()
 
     def get_params_from_pk(self):
         return self.to_dict(self._pk).subset('-v').flat()

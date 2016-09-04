@@ -13,6 +13,8 @@ log = logging.getLogger(__name__)
 OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in',
              'startswith']
 
+PRECISION_THRESHOLD = 40000
+DEFAULT_AGGS_LIMIT = 20
 
 def includeme(config):
     Settings = dictset(config.registry.settings)
@@ -55,16 +57,19 @@ class ES(object):
         if specials._limit == -1:
             size = 0
         else:
-            size = specials._limit or 20
+            size = specials._limit or DEFAULT_AGGS_LIMIT
 
         term_params = {
             'size': size,
         }
 
+        specials.aslist('_group_list', default=[])
+
         if specials._group:
-            field = '%s.raw'%specials._group
+            field = '%s%s'%(specials._group, self.RAW_FIELD)
+
         elif specials._distinct:
-            field = '%s.raw'%specials._distinct
+            field = '%s%s'%(specials._distinct, self.RAW_FIELD)
 
             if specials._sort and specials._sort[0].startswith('-'):
                 order = { "_term" : "desc" }
@@ -75,10 +80,9 @@ class ES(object):
 
         term_params['field'] = field
 
-        terms = A('terms', **term_params)
         cardinality = A('cardinality',
                          field = field,
-                         precision_threshold=40000)
+                         precision_threshold=PRECISION_THRESHOLD)
 
         s_.aggs.bucket('total', cardinality)
 
@@ -86,27 +90,37 @@ class ES(object):
             resp = s_.execute()
             return resp.aggregations.total.value
 
-        s_.aggs.bucket('list', terms)
-        s_ = s_[0:0]
+        terms = A('terms', **term_params)
+        if specials._group_list:
+            top_hits = A('top_hits', _source={'include':specials._group_list},
+                                     size=10000)
+            terms.bucket('list', top_hits)
+        # else:
+        #     s_ = s_[0:0]
+
+        s_.aggs.bucket('grouped', terms)
 
         try:
             resp = s_.execute()
             data = []
-
             if specials._group:
-                for each in resp.aggregations.list.buckets:
+                for bucket in resp.aggregations.grouped.buckets:
                     datum = dictset({
-                            specials._group:each.key,
-                            'count': each.doc_count
-                        }).unflat()
-                    data.append(datum)
+                            specials._group:bucket.key,
+                            'count': bucket.doc_count,
+                        })
+
+                    if specials._group_list:
+                        datum['list'] = [e['_source']._d_ for e in bucket.list.hits.hits]
+
+                    data.append(datum.unflat())
 
             elif specials._distinct:
-                for each in resp.aggregations.list.buckets:
+                for bucket in resp.aggregations.grouped.buckets:
                     if specials._fields:
-                        data.append({specials._fields[0]: each.key})
+                        data.append({specials._fields[0]: bucket.key})
                     else:
-                        data.append(each.key)
+                        data.append(bucket.key)
 
             return {
                 'data': data,
@@ -201,8 +215,9 @@ class ES(object):
         else:
             s_ = s_[specials._start:]
 
-        if specials._fields:
-            only, exclude = process_fields(specials._fields).mget(['only', 'exclude'])
+        _fields = specials._fields
+        if _fields:
+            only, exclude = process_fields(_fields).mget(['only', 'exclude'])
             s_ = s_.source(include=['%s'%e for e in only],
                            exclude = ['%s'%e for e in exclude])
 

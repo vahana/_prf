@@ -719,6 +719,7 @@ class BaseMixin(object):
             _params = params.copy().update({'_start':start, '_limit': count})
             yield cls.get_collection(**_params)
 
+
     @classmethod
     def unregister(cls):
         mongo.base._document_registry.pop(cls.__name__, None)
@@ -798,7 +799,7 @@ class BaseMixin(object):
             log.debug('%s marked as dups by %s', total_marked, keys)
 
     def get_density(self, fields=[]):
-        return len(self.to_dict(fields).flat())
+        return len(self.to_dict(fields).flat(keep_lists=0))
 
 
 class Base(BaseMixin, mongo.Document):
