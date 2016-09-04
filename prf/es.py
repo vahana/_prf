@@ -180,10 +180,10 @@ class ES(object):
                 continue
 
             if val is None:
-                missingQ = Q('missing', field=key)
-                if op == 'ne':
-                    missingQ = ~missingQ
-                _filter = _filter & missingQ if _filter else missingQ
+                existsQ = Q('exists', field=key)
+                if op != 'ne':
+                    existsQ = ~existsQ
+                _filter = _filter & existsQ if _filter else existsQ
                 continue
 
             if isinstance(val, list):
