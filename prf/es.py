@@ -1,6 +1,9 @@
 import logging
 import urllib2
+from bson import ObjectId, DBRef
 
+from elasticsearch.exceptions import ElasticsearchException
+from elasticsearch.serializer import JSONSerializer
 from elasticsearch_dsl import Search, Q, A
 from elasticsearch_dsl.connections import connections
 
@@ -19,6 +22,14 @@ DEFAULT_AGGS_LIMIT = 20
 def includeme(config):
     Settings = dictset(config.registry.settings)
     ES.setup(Settings)
+    config.add_error_view(ElasticsearchException, error='%128s', error_attr='args')
+
+class Serializer(JSONSerializer):
+    def default(self, obj):
+        if isinstance(obj, (ObjectId, DBRef)):
+            return str(obj)
+
+        return super(Serializer, self).default(obj)
 
 class ES(object):
     RAW_FIELD = '.raw'
@@ -40,7 +51,10 @@ class ES(object):
                     sniff_on_connection_fail = True
                 )
 
-            connections.create_connection(hosts=hosts, timeout=20, **params)
+            cls.api = connections.create_connection(hosts=hosts,
+                                                timeout=20,
+                                                serializer=Serializer(),
+                                                **params)
             log.info('Including ElasticSearch. %s' % cls.settings)
 
         except KeyError as e:
