@@ -1,8 +1,8 @@
 import logging
 import urllib2
 
-from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, Q, A
+from elasticsearch_dsl.connections import connections
 
 import prf
 from prf.utils import dictset, process_fields, split_strip
@@ -40,7 +40,7 @@ class ES(object):
                     sniff_on_connection_fail = True
                 )
 
-            cls.api = Elasticsearch(hosts=hosts, *params)
+            connections.create_connection(hosts=hosts, timeout=20, **params)
             log.info('Including ElasticSearch. %s' % cls.settings)
 
         except KeyError as e:
@@ -86,17 +86,25 @@ class ES(object):
 
         s_.aggs.bucket('total', cardinality)
 
+        if '_group_list' in specials:
+            #check the total to prevent top_hits running on big results
+            ss = Search(index=self.name).from_dict(s_.to_dict())
+            resp = ss.execute()
+            total = resp.aggregations.total.value
+            if total > 10000:
+                raise prf.exc.HTTPBadRequest('To many results for _group_list')
+
+
         if specials._count:
             resp = s_.execute()
             return resp.aggregations.total.value
 
         terms = A('terms', **term_params)
+
         if specials._group_list:
             top_hits = A('top_hits', _source={'include':specials._group_list},
                                      size=10000)
             terms.bucket('list', top_hits)
-        # else:
-        #     s_ = s_[0:0]
 
         s_.aggs.bucket('grouped', terms)
 
@@ -142,7 +150,7 @@ class ES(object):
 
         _params, specials = prep_params(params)
 
-        s_ = Search(using=self.api, index=self.name)
+        s_ = Search(index=self.name)
         _filter = None
 
         if 'q' in params:
