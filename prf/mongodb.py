@@ -739,7 +739,7 @@ class BaseMixin(object):
             update['__raw__'] = {'$rename': renames}
 
         if update:
-            cls.objects(**params).update(**update)
+            return cls.objects(**params).update(**update)
 
     @classmethod
     def _get_indexes(cls):

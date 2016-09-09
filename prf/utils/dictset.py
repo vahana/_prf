@@ -373,21 +373,32 @@ class dictset(dict):
             return 'Missing key or invalid values for `%s`. Allowed values are: `%s`'\
                                           % (key, missing)
 
+        def error_msg(msg):
+            if "%s" in err:
+                error = err % msg
+            elif err:
+                error = err
+            else:
+                error = msg
+
+            errors.append(error)
+            return error
+
         for key in keys:
             if key in self_flat:
                 if check_type and not isinstance(self_flat[key], check_type):
-                    errors.append(err or u'`%s` must be type `%s`, got `%s` instead'\
+                    error_msg(u'`%s` must be type `%s`, got `%s` instead'\
                                           % (key, check_type.__name__,
                                              type(self_flat[key]).__name__))
 
                 if allowed_values and self_flat[key] not in allowed_values:
-                    errors.append(err or missing_key_error(check_type, key))
+                    error_msg(missing_key_error(check_type, key))
 
             elif not allow_missing:
                 if allowed_values:
-                    err = missing_key_error(check_type, key)
-
-                errors.append(err or 'Missing key: `%s`' % key)
+                    error_msg(missing_key_error(check_type, key))
+                else:
+                    error_msg('Missing key: `%s`' % key)
 
         if (errors and _all) or (not _all and len(errors) >= len(keys)):
             raise DValueError('.'.join(errors))

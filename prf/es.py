@@ -18,6 +18,7 @@ OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in',
 
 PRECISION_THRESHOLD = 40000
 DEFAULT_AGGS_LIMIT = 20
+TOP_HITS_MAX_SIZE = 1000
 
 def includeme(config):
     Settings = dictset(config.registry.settings)
@@ -31,8 +32,188 @@ class Serializer(JSONSerializer):
 
         return super(Serializer, self).default(obj)
 
+
+class Aggregator(object):
+
+    def __init__(self, specials, search_obj, index):
+        self.specials = specials
+        self.specials.aslist('_group', default=[])
+        self.specials.aslist('_group_list', default=[])
+
+        self.search_obj = search_obj
+        self.index=index
+
+    def get_size(self):
+        if self.specials._limit == -1:
+            size = 0
+        else:
+            size = self.specials._limit or DEFAULT_AGGS_LIMIT
+
+        return size
+
+    def do_count(self):
+        try:
+            resp = self.search_obj.execute()
+            return resp.aggregations.total.value
+        except Exception as e:
+            raise prf.exc.HTTPBadRequest(e)
+
+    def do_distinct(self):
+
+        term_params = {
+            'size': self.get_size(),
+        }
+
+        field = ES._raw_field(self.specials._distinct)
+
+        if self.specials._sort and self.specials._sort[0].startswith('-'):
+            order = { "_term" : "desc" }
+        else:
+            order = {"_term": 'asc'}
+
+        term_params['order'] = order
+        term_params['field'] = field
+
+        cardinality = A('cardinality',
+                         field = field,
+                         precision_threshold=PRECISION_THRESHOLD)
+
+        self.search_obj.aggs.bucket('total', cardinality)
+        terms = A('terms', **term_params)
+        self.search_obj.aggs.bucket('grouped', terms)
+
+        if self.specials._count:
+            return self.do_count(self.search_obj)
+
+        try:
+            resp = self.search_obj.execute()
+            data = []
+            for bucket in resp.aggregations.grouped.buckets:
+                if self.specials._fields:
+                    data.append({self.specials._fields[0]: bucket.key})
+                else:
+                    data.append(bucket.key)
+
+            return ES.wrap_results(self.specials, data,
+                                    resp.aggregations.total.value,
+                                    resp.took)
+
+        except Exception as e:
+            raise prf.exc.HTTPBadRequest(e)
+
+    def do_group(self):
+
+        top_field = self.specials._group[0]
+        nested_fields = self.specials._group[1:]
+
+        top_field_r = ES._raw_field(top_field)
+
+        cardinality = A('cardinality',
+                         field = top_field_r,
+                         precision_threshold=PRECISION_THRESHOLD)
+
+        self.search_obj.aggs.bucket('total', cardinality)
+
+        if self.specials._group_list:
+            #check the total to prevent top_hits running on big results
+            ss = Search(index=self.index).from_dict(self.search_obj.to_dict())
+            resp = ss.execute()
+            total = resp.aggregations.total.value
+            if total > TOP_HITS_MAX_SIZE:
+                raise prf.exc.HTTPBadRequest('To many results for _group_list')
+
+        if self.specials._count:
+            resp = self.search_obj.execute()
+            return resp.aggregations.total.value
+
+        top_terms = A('terms', size=self.get_size(), field=top_field_r)
+
+        # for field in nested_fields:
+        #     top_terms.bucket(field,
+        #             A('terms', size=0, field=ES._raw_field(field)))
+
+        # if self.specials._group_list:
+        #     top_hits = A('top_hits', _source={'include':self.specials._group_list},
+        #                              size=TOP_HITS_MAX_SIZE)
+        #     top_terms.bucket('list', top_hits)
+
+
+        aggs = top_terms
+        for field in nested_fields:
+            aggs = aggs.bucket(field,
+                    A('terms', size=0, field=ES._raw_field(field)))
+
+        self.search_obj.aggs.bucket(top_field, top_terms)
+
+        if self.specials._count:
+            return self.do_count(self.search_obj)
+
+        def process_buckets(parent_bucket, field):
+            data = []
+
+            for bucket in parent_bucket[field].buckets:
+                _d = dictset({
+                        field:bucket.key,
+                        'count': bucket.doc_count,
+                    })
+
+                yield bucket, _d
+
+        try:
+            resp = self.search_obj.execute()
+            data = []
+            aggs = dictset(resp.aggregations._d_)
+            return aggs
+
+            data.append(aggs)
+
+            for bucket, datum in process_buckets(aggs, top_field):
+
+                # if self.specials._group_list:
+                #     datum['list'] = [e['_source'] for e in bucket.list.hits.hits]
+
+                for field in nested_fields:
+                    datum[field] = [n_datum for _, n_datum
+                                     in process_buckets(bucket, field)]
+
+                data.append(datum)
+
+            # for bucket in aggs.get(top_field).buckets:
+            #     datum = dictset({
+            #             top_field:bucket.key,
+            #             'count': bucket.doc_count,
+            #         })
+
+            #     if self.specials._group_list:
+            #         datum['list'] = [e['_source']._d_ for e in bucket.list.hits.hits]
+
+            #     data.append(datum.unflat())
+
+            return ES.wrap_results(self.specials, data,
+                                    aggs.total.value,
+                                    resp.took)
+
+        except Exception as e:
+            raise prf.exc.HTTPBadRequest(e)
+
+
 class ES(object):
     RAW_FIELD = '.raw'
+
+    @classmethod
+    def _raw_field(cls, name):
+        return '%s%s' % (name, cls.RAW_FIELD)
+
+    @classmethod
+    def wrap_results(cls, specials, data, total, took):
+        return {
+            'data': data,
+            'total': total,
+            'start': specials._start,
+            'count': specials._limit,
+            'fields': specials._fields,
+            'took': took
+        }
 
     @classmethod
     def setup(cls, settings):
@@ -62,101 +243,6 @@ class ES(object):
 
     def __init__(self, name):
         self.name = name
-
-    def prefix_query(self, params, specials, _s):
-        pass
-
-    def aggregation(self, params, specials, s_):
-
-        if specials._limit == -1:
-            size = 0
-        else:
-            size = specials._limit or DEFAULT_AGGS_LIMIT
-
-        term_params = {
-            'size': size,
-        }
-
-        specials.aslist('_group_list', default=[])
-
-        if specials._group:
-            field = '%s%s'%(specials._group, self.RAW_FIELD)
-
-        elif specials._distinct:
-            field = '%s%s'%(specials._distinct, self.RAW_FIELD)
-
-            if specials._sort and specials._sort[0].startswith('-'):
-                order = { "_term" : "desc" }
-            else:
-                order = {"_term": 'asc'}
-
-            term_params['order'] = order
-
-        term_params['field'] = field
-
-        cardinality = A('cardinality',
-                         field = field,
-                         precision_threshold=PRECISION_THRESHOLD)
-
-        s_.aggs.bucket('total', cardinality)
-
-        if '_group_list' in specials:
-            #check the total to prevent top_hits running on big results
-            ss = Search(index=self.name).from_dict(s_.to_dict())
-            resp = ss.execute()
-            total = resp.aggregations.total.value
-            if total > 10000:
-                raise prf.exc.HTTPBadRequest('To many results for _group_list')
-
-
-        if specials._count:
-            resp = s_.execute()
-            return resp.aggregations.total.value
-
-        terms = A('terms', **term_params)
-
-        if specials._group_list:
-            top_hits = A('top_hits', _source={'include':specials._group_list},
-                                     size=10000)
-            terms.bucket('list', top_hits)
-
-        s_.aggs.bucket('grouped', terms)
-
-        try:
-            resp = s_.execute()
-            data = []
-            if specials._group:
-                for bucket in resp.aggregations.grouped.buckets:
-                    datum = dictset({
-                            specials._group:bucket.key,
-                            'count': bucket.doc_count,
-                        })
-
-                    if specials._group_list:
-                        datum['list'] = [e['_source']._d_ for e in bucket.list.hits.hits]
-
-                    data.append(datum.unflat())
-
-            elif specials._distinct:
-                for bucket in resp.aggregations.grouped.buckets:
-                    if specials._fields:
-                        data.append({specials._fields[0]: bucket.key})
-                    else:
-                        data.append(bucket.key)
-
-            return {
-                'data': data,
-                'total': resp.aggregations.total.value,
-                'start': specials._start,
-                'count': specials._limit,
-                'fields': specials._fields,
-                'took': resp.took
-            }
-
-        except Exception as e:
-            raise prf.exc.HTTPBadRequest(e)
-
-        return {}
 
     def get_collection(self, **params):
         params = dictset(params)
@@ -189,7 +275,7 @@ class ES(object):
                 key = _key.replace(div, '.')
 
             # match with non-analyzed version
-            key = '%s%s'%(key, self.RAW_FIELD)
+            key = self._raw_field(key)
 
             if op in ['lt', 'lte', 'gt', 'gte']:
                 rangeQ = Q('range', **{key: {op: val}})
@@ -243,8 +329,11 @@ class ES(object):
             s_ = s_.source(include=['%s'%e for e in only],
                            exclude = ['%s'%e for e in exclude])
 
-        if specials._group or specials._distinct:
-            return self.aggregation(_params, specials, s_)
+        if specials._group:
+            return Aggregator(specials, s_, self.name).do_group()
+
+        elif specials._distinct:
+            return Aggregator(specials, s_, self.name).do_distinct()
 
         if specials._count:
             return s_.count()
@@ -258,14 +347,7 @@ class ES(object):
                 _d = _d.update({'_score':each['_score'], '_type':each['_type']})
                 data.append(_d)
 
-            return {
-                'data': data,
-                'total': resp.hits.total,
-                'start': specials._start,
-                'count': specials._limit,
-                'fields': specials._fields,
-                'took': resp.took
-            }
+            return self.wrap_results(specials, data, resp.hits.total, resp.took)
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
