@@ -18,7 +18,8 @@ OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in',
 
 PRECISION_THRESHOLD = 40000
 DEFAULT_AGGS_LIMIT = 20
-TOP_HITS_MAX_SIZE = 1000
+DEFAULT_AGGS_NESTED_LIMIT = 1000
+TOP_HITS_MAX_SIZE = 100000
 
 def includeme(config):
     Settings = dictset(config.registry.settings)
@@ -101,7 +102,16 @@ class Aggregator(object):
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
 
+    def check_total(self, msg):
+        ss = Search(index=self.index).from_dict(self.search_obj.to_dict())
+        resp = ss.execute()
+        total = resp.aggregations.total.value
+        if total > TOP_HITS_MAX_SIZE:
+            raise prf.exc.HTTPBadRequest('`%s` results: %s' % (total, msg))
+
     def do_group(self):
+        if not self.specials.asbool('_group_show_hits', default=False):
+            self.search_obj = self.search_obj[0:0]
 
         top_field = self.specials._group[0]
         nested_fields = self.specials._group[1:]
@@ -114,82 +124,45 @@ class Aggregator(object):
 
         self.search_obj.aggs.bucket('total', cardinality)
 
+        #check the total to prevent top_hits running on big results
+        # self.check_total('To many results for _group')
+
         if self.specials._group_list:
             #check the total to prevent top_hits running on big results
-            ss = Search(index=self.index).from_dict(self.search_obj.to_dict())
-            resp = ss.execute()
-            total = resp.aggregations.total.value
-            if total > TOP_HITS_MAX_SIZE:
-                raise prf.exc.HTTPBadRequest('To many results for _group_list')
+            self.check_total('To many results for _group_list')
 
         if self.specials._count:
             resp = self.search_obj.execute()
             return resp.aggregations.total.value
 
-        top_terms = A('terms', size=self.get_size(), field=top_field_r)
-
-        # for field in nested_fields:
-        #     top_terms.bucket(field,
-        #             A('terms', size=0, field=ES._raw_field(field)))
-
-        # if self.specials._group_list:
-        #     top_hits = A('top_hits', _source={'include':self.specials._group_list},
-        #                              size=TOP_HITS_MAX_SIZE)
-        #     top_terms.bucket('list', top_hits)
-
+        top_terms = A('terms',
+                        size=self.get_size(),
+                        field=top_field_r)
 
         aggs = top_terms
         for field in nested_fields:
             aggs = aggs.bucket(field,
-                    A('terms', size=0, field=ES._raw_field(field)))
+                    A('terms',
+                       size=DEFAULT_AGGS_NESTED_LIMIT,
+                       field=ES._raw_field(field)))
 
         self.search_obj.aggs.bucket(top_field, top_terms)
 
         if self.specials._count:
             return self.do_count(self.search_obj)
 
-        def process_buckets(parent_bucket, field):
-            data = []
-
-            for bucket in parent_bucket[field].buckets:
-                _d = dictset({
-                        field:bucket.key,
-                        'count': bucket.doc_count,
-                    })
-
-                yield bucket, _d
-
         try:
             resp = self.search_obj.execute()
-            data = []
             aggs = dictset(resp.aggregations._d_)
-            return aggs
+            hits = ES.process_hits(resp.hits.hits)
 
-            data.append(aggs)
+            data = dictset(
+                    aggs = dictset(resp.aggregations._d_),
+                    hits = hits
+                )
 
-            for bucket, datum in process_buckets(aggs, top_field):
-
-                # if self.specials._group_list:
-                #     datum['list'] = [e['_source'] for e in bucket.list.hits.hits]
-
-                for field in nested_fields:
-                    datum[field] = [n_datum for _, n_datum
-                                     in process_buckets(bucket, field)]
-
-                data.append(datum)
-
-            # for bucket in aggs.get(top_field).buckets:
-            #     datum = dictset({
-            #             top_field:bucket.key,
-            #             'count': bucket.doc_count,
-            #         })
-
-            #     if self.specials._group_list:
-            #         datum['list'] = [e['_source']._d_ for e in bucket.list.hits.hits]
-
-            #     data.append(datum.unflat())
-
-            return ES.wrap_results(self.specials, data,
+            return ES.wrap_results(self.specials,
+                                    data,
                                     aggs.total.value,
                                     resp.took)
 
@@ -216,6 +189,16 @@ class ES(object):
         }
 
     @classmethod
+    def process_hits(cls, hits):
+        data = []
+        for each in hits:
+            _d = dictset(each['_source'])
+            _d = _d.update({'_score':each['_score'], '_type':each['_type']})
+            data.append(_d)
+
+        return data
+
+    @classmethod
     def setup(cls, settings):
         cls.settings = settings.unflat().es
 
@@ -233,9 +216,9 @@ class ES(object):
                 )
 
             cls.api = connections.create_connection(hosts=hosts,
-                                                timeout=20,
-                                                serializer=Serializer(),
-                                                **params)
+                                        timeout=cls.settings.asint('timeout', 30),
+                                        serializer=Serializer(),
+                                        **params)
             log.info('Including ElasticSearch. %s' % cls.settings)
 
         except KeyError as e:
@@ -340,13 +323,7 @@ class ES(object):
 
         try:
             resp = s_.execute()
-            data = []
-
-            for each in resp.hits.hits:
-                _d = dictset(each['_source'])
-                _d = _d.update({'_score':each['_score'], '_type':each['_type']})
-                data.append(_d)
-
+            data = self.process_hits(resp.hits.hits)
             return self.wrap_results(specials, data, resp.hits.total, resp.took)
 
         except Exception as e:
