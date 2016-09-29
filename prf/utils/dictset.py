@@ -241,6 +241,12 @@ class dictset(dict):
                                 'type `%s` does not have a method `%s`'
                                     % (_type, tr))
 
+            else:
+                for tr in trs:
+                    if tr.startswith('='):
+                        _d[key] = tr.partition('=')[2]
+                        continue
+
         return _d.unflat()
 
     def subset(self, keys):
