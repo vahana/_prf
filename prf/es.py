@@ -103,50 +103,62 @@ class Aggregator(object):
             raise prf.exc.HTTPBadRequest(e)
 
     def check_total(self, msg):
-        ss = Search(index=self.index).from_dict(self.search_obj.to_dict())
+        ss = Search.from_dict(self.search_obj.to_dict())
+        ss._index = self.index
         resp = ss.execute()
         total = resp.aggregations.total.value
         if total > TOP_HITS_MAX_SIZE:
             raise prf.exc.HTTPBadRequest('`%s` results: %s' % (total, msg))
 
+    def process_field(self, field):
+        retval = dictset()
+        retval.params = dictset()
+
+        retval.params.size = self.get_size()
+        retval.bucket_name = field
+        retval.field = ES._raw_field(field)
+        retval.op_type = 'terms'
+
+        if '__as__' in field:
+            field, _, op_type = field.partition('__as__')
+            if op_type == 'geo':
+                retval.op_type = 'geohash_grid'
+                retval.params.precision = self.specials.asint('_geo_precision', default=5)
+                retval.bucket_name = retval.field = field
+
+        return retval
+
     def do_group(self):
         if not self.specials.asbool('_group_show_hits', default=False):
             self.search_obj = self.search_obj[0:0]
 
-        top_field = self.specials._group[0]
-        nested_fields = self.specials._group[1:]
-
-        top_field_r = ES._raw_field(top_field)
+        top_field = self.process_field(self.specials._group[0])
 
         cardinality = A('cardinality',
-                         field = top_field_r,
-                         precision_threshold=PRECISION_THRESHOLD)
+                         field = top_field.field,
+                         precision_threshold=PRECISION_THRESHOLD,
+                         )
 
         self.search_obj.aggs.bucket('total', cardinality)
-
-        #check the total to prevent top_hits running on big results
-        # self.check_total('To many results for _group')
-
-        if self.specials._group_list:
-            #check the total to prevent top_hits running on big results
-            self.check_total('To many results for _group_list')
 
         if self.specials._count:
             resp = self.search_obj.execute()
             return resp.aggregations.total.value
 
-        top_terms = A('terms',
-                        size=self.get_size(),
-                        field=top_field_r)
+        top_terms = A(top_field.op_type,
+                      field = top_field.field,
+                      **top_field.params)
 
         aggs = top_terms
-        for field in nested_fields:
-            aggs = aggs.bucket(field,
-                    A('terms',
-                       size=DEFAULT_AGGS_NESTED_LIMIT,
-                       field=ES._raw_field(field)))
+        for each in self.specials._group[1:]:
+            field = self.process_field(each)
+            field.params.size = DEFAULT_AGGS_NESTED_LIMIT
+            aggs = aggs.bucket(field.bucket_name,
+                    A(field.op_type,
+                      field = field.field,
+                      **field.params))
 
-        self.search_obj.aggs.bucket(top_field, top_terms)
+        self.search_obj.aggs.bucket(top_field.bucket_name, top_terms)
 
         if self.specials._count:
             return self.do_count(self.search_obj)
