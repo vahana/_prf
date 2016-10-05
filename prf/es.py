@@ -8,7 +8,7 @@ from elasticsearch_dsl import Search, Q, A
 from elasticsearch_dsl.connections import connections
 
 import prf
-from prf.utils import dictset, process_fields, split_strip
+from prf.utils import dictset, process_fields, split_strip, pager
 from prf.utils.qs import prep_params
 
 log = logging.getLogger(__name__)
@@ -324,6 +324,15 @@ class ES(object):
             s_ = s_.source(include=['%s'%e for e in only],
                            exclude = ['%s'%e for e in exclude])
 
+        if '_scan' in specials:
+            data = []
+            for hit in s_.scan():
+                data.append(hit._d_)
+                if len(data) == specials._limit:
+                    break
+
+            return self.wrap_results(specials, data, s_.count(), 0)
+
         if specials._group:
             return Aggregator(specials, s_, self.name).do_group()
 
@@ -340,6 +349,21 @@ class ES(object):
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
+
+    def get_collection_paged(self, page_size, **params):
+        params = dictset(params or {})
+        _start = int(params.pop('_start', 0))
+        _limit = int(params.pop('_limit', -1))
+
+        if _limit == -1:
+            _limit = self.get_collection(_limit=_limit, _count=1, **params)
+
+        log.debug('page_size=%s, _limit=%s', page_size, _limit)
+
+        pgr = pager(_start, page_size, _limit)
+        for start, count in pgr():
+            _params = params.copy().update({'_start':start, '_limit': count})
+            yield self.get_collection(**_params)['data']
 
     def get_resource(self, **params):
         results = self.get_collection(**params)
