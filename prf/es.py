@@ -129,7 +129,7 @@ class Aggregator(object):
         return retval
 
     def do_group(self):
-        if not self.specials.asbool('_group_show_hits', default=False):
+        if '_show_hits' not in self.specials:
             self.search_obj = self.search_obj[0:0]
 
         top_field = self.process_field(self.specials._group[0])
@@ -147,6 +147,7 @@ class Aggregator(object):
 
         top_terms = A(top_field.op_type,
                       field = top_field.field,
+                      collect_mode = self.specials.asstr('_collect_mode', default="breadth_first"),
                       **top_field.params)
 
         aggs = top_terms
