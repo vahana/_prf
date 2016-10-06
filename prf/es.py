@@ -291,15 +291,12 @@ class ES(object):
                 continue
 
             if isinstance(val, list):
-                _orQ = None
-                for each in val:
-                    _orQ = _orQ | Q("match", **{key:each}) \
-                                if _orQ else Q("match", **{key:each})
-
-                if _orQ:
-                    if op == 'ne':
-                        _orQ = ~_orQ
-                    _filter = _filter & _orQ if _filter else _orQ
+                _orQ = Q('bool',
+                    should=[Q("match", **{key:each}) for each in val]
+                )
+                if op == 'ne':
+                    _orQ = ~_orQ
+                _filter = _filter & _orQ if _filter else _orQ
 
             else:
                 matchQ = Q("match", **{key:val})
