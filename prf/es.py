@@ -316,11 +316,15 @@ class ES(object):
         else:
             s_ = s_[specials._start:]
 
+        if specials._count:
+            return s_.count()
+
         _fields = specials._fields
         if _fields:
             only, exclude = process_fields(_fields).mget(['only', 'exclude'])
             s_ = s_.source(include=['%s'%e for e in only],
                            exclude = ['%s'%e for e in exclude])
+
 
         if '_scan' in specials or specials._limit == -1:
             data = []
@@ -336,9 +340,6 @@ class ES(object):
 
         elif specials._distinct:
             return Aggregator(specials, s_, self.name).do_distinct()
-
-        if specials._count:
-            return s_.count()
 
         try:
             resp = s_.execute()
