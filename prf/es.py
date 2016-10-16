@@ -114,7 +114,7 @@ class Aggregator(object):
         retval = dictset()
         retval.params = dictset()
 
-        retval.params.size = self.get_size()
+        retval.params['size'] = self.get_size()
         retval.bucket_name = field
         retval.field = ES._raw_field(field)
         retval.op_type = 'terms'

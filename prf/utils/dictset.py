@@ -1,3 +1,4 @@
+import pprint
 import urllib, re
 from collections import OrderedDict
 
@@ -539,6 +540,9 @@ class dictset(dict):
 
     def json(self):
         return json_dumps(self)
+
+    def _pp(self):
+        pprint.pprint(self)
 
 #based on jsonurl
 

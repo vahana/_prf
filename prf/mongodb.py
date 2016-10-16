@@ -198,6 +198,7 @@ class Aggregator(object):
             return self.aggregate_count(collection)
 
         self.add_sort()
+        self.add_skip()
         self.add_limit()
 
         return self.aggregate(collection)
@@ -233,7 +234,8 @@ class Aggregator(object):
             return self.aggregate_count(collection)
 
         self.add_group_project()
-        self.add_sort({'count': -1})
+        self.add_sort(['-count', self.specials._group[0]])
+        self.add_skip()
         self.add_limit()
         return self.aggregate(collection)
 
@@ -291,6 +293,7 @@ class Aggregator(object):
             return self.aggregate_count(collection)
 
         self.add_sort()
+        self.add_skip()
         self.add_limit()
 
         return self.aggregate(collection)
@@ -381,23 +384,25 @@ class Aggregator(object):
 
         return self
 
-    def add_sort(self, default={}):
-        sort_dict = {}
+    def add_sort(self, default=[]):
+        from bson.son import SON
+        _sort = []
 
-        for each in self.specials._sort:
+        for each in self.specials._sort or default:
             if each[0] == '-':
-                sort_dict[each[1:]] = -1
+                _sort.append((each[1:], -1))
             else:
-                sort_dict[each] = 1
+                _sort.append((each, 1))
 
-        sort_dict = sort_dict or default
-        if sort_dict:
-            self._agg.append({'$sort':sort_dict})
+        if _sort:
+            self._agg.append({'$sort':SON(_sort)})
 
         return self
 
+    def add_skip(self):
+        return self._agg.append({'$skip':self.specials._start})
+
     def add_limit(self):
-        self._agg.append({'$skip':self.specials._start})
         if self.specials._end is not None:
             self._agg.append({'$limit':self.specials._limit})
 
@@ -731,6 +736,7 @@ class BaseMixin(object):
 
         for current, new in fields.items():
             if not new:
+                params['current__exists'] = 1
                 update['unset__%s' % current] = 1
             else:
                 renames[current] = new
@@ -773,10 +779,10 @@ class BaseMixin(object):
         missing = set(new_keys) - set(existing_indexes)
         if missing:
             log.warning('Missing indexes for the query on `%s`: %s',
-                        cls.__name__, new_keys)
+                        cls.__name__, missing)
 
     @classmethod
-    def mark_dups(cls, keys, page_size=100):
+    def mark_dups(cls, keys, page_size=100, **query):
         total_marked = 0
 
         for batch in cls.get_collection_paged(
@@ -784,7 +790,8 @@ class BaseMixin(object):
                         dups_by__exists=0,
                         count__gt=1,
                         _group=keys,
-                        _group_list='_id'):
+                        _group_list='_id',
+                        **query):
 
             dup_ids = []
 
