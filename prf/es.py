@@ -322,7 +322,7 @@ class ES(object):
             s_ = s_.source(include=['%s'%e for e in only],
                            exclude = ['%s'%e for e in exclude])
 
-        if '_scan' in specials:
+        if '_scan' in specials or specials._limit == -1:
             data = []
             for hit in s_.scan():
                 data.append(hit._d_)
