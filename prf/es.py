@@ -325,6 +325,11 @@ class ES(object):
             s_ = s_.source(include=['%s'%e for e in only],
                            exclude = ['%s'%e for e in exclude])
 
+        if specials._group:
+            return Aggregator(specials, s_, self.name).do_group()
+
+        elif specials._distinct:
+            return Aggregator(specials, s_, self.name).do_distinct()
 
         if '_scan' in specials or specials._limit == -1:
             data = []
@@ -334,12 +339,6 @@ class ES(object):
                     break
 
             return self.wrap_results(specials, data, s_.count(), 0)
-
-        if specials._group:
-            return Aggregator(specials, s_, self.name).do_group()
-
-        elif specials._distinct:
-            return Aggregator(specials, s_, self.name).do_distinct()
 
         try:
             resp = s_.execute()
