@@ -234,7 +234,7 @@ class Aggregator(object):
             return self.aggregate_count(collection)
 
         self.add_group_project()
-        self.add_sort(['-count', self.specials._group[0]])
+        self.add_sort(['-count'])
         self.add_skip()
         self.add_limit()
         return self.aggregate(collection)
@@ -362,7 +362,8 @@ class Aggregator(object):
         return self
 
     def add_group_project(self):
-        _prj = {'_id':0, 'count':1}
+        #_id_ field will be used in sort
+        _prj = {'_id':0, 'count':1, '_id_': '$_id'}
 
         for each in self.specials._group:
             _prj[each] = '$_id.%s' % self.undot(each)
@@ -395,6 +396,7 @@ class Aggregator(object):
                 _sort.append((each, 1))
 
         if _sort:
+            _sort.append(('_id_', -1))
             self._agg.append({'$sort':SON(_sort)})
 
         return self
