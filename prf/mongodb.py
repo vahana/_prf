@@ -396,6 +396,7 @@ class Aggregator(object):
                 _sort.append((each, 1))
 
         if _sort:
+            #add a tie-breaker sorting so pagination does not show the same group twice
             _sort.append(('_id_', -1))
             self._agg.append({'$sort':SON(_sort)})
 
