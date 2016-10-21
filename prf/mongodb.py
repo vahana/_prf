@@ -363,7 +363,7 @@ class Aggregator(object):
 
     def add_group_project(self):
         #_id_ field will be used in sort
-        _prj = {'_id':0, 'count':1, '_id_': '$_id'}
+        _prj = {'count':1}
 
         for each in self.specials._group:
             _prj[each] = '$_id.%s' % self.undot(each)
@@ -397,7 +397,7 @@ class Aggregator(object):
 
         if _sort:
             #add a tie-breaker sorting so pagination does not show the same group twice
-            _sort.append(('_id_', -1))
+            _sort.append(('_id', -1))
             self._agg.append({'$sort':SON(_sort)})
 
         return self
