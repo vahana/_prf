@@ -234,13 +234,12 @@ class BaseView(object):
             serialized = self.serialize(data, many=many)
             _total = getattr(data, '_total', len(serialized))
 
-        return dictset(
-            total = _total,
-            count = len(serialized),
-            start = self._params.asint('_start', default=0),
-            fields = self._params.aslist('_fields', default=[]),
-            data = self.add_meta(serialized)
-        )
+        return dictset({
+            'total': _total,
+            'count': len(serialized),
+            'data': self.add_meta(serialized),
+            'query': self._params,
+        })
 
     def _index(self, **kw):
         return self._process(self.index(**kw), many=True)

@@ -154,6 +154,9 @@ class dictset(dict):
         except KeyError as e:
             raise DKeyError(e.message)
 
+    def to_dict(self, fields):
+        return self.extract(fields)
+
     def to_dictset(self):
         for key, val in self.items():
             if isinstance(val, dict):

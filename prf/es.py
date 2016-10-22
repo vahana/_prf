@@ -14,7 +14,7 @@ from prf.utils.qs import prep_params
 log = logging.getLogger(__name__)
 
 OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in',
-             'startswith']
+             'startswith', 'exists']
 
 PRECISION_THRESHOLD = 40000
 DEFAULT_AGGS_LIMIT = 20
@@ -192,12 +192,14 @@ class ES(object):
 
     @classmethod
     def wrap_results(cls, specials, data, total, took):
+        data = [dictset(each) for each in data]
         return {
             'data': data,
             'total': total,
             'start': specials._start,
             'count': specials._limit,
             'fields': specials._fields,
+            'sort': specials._sort,
             'took': took
         }
 
@@ -242,7 +244,7 @@ class ES(object):
 
     def get_collection(self, **params):
         params = dictset(params)
-        log.debug('IN: cls: (ES) %s, params: %.512s', self.name, params)
+        log.debug('(ES) IN: %s, params: %.512s', self.name, params)
 
         _params, specials = prep_params(params)
 
@@ -283,6 +285,13 @@ class ES(object):
                 _filter = _filter & prefixQ if _filter else prefixQ
                 continue
 
+            elif op == 'exists':
+                existsQ = Q('exists', field=key)
+                if val == 0:
+                    existsQ = ~existsQ
+                _filter = _filter & existsQ if _filter else existsQ
+                continue
+
             if val is None:
                 existsQ = Q('exists', field=key)
                 if op != 'ne':
@@ -316,37 +325,40 @@ class ES(object):
         else:
             s_ = s_[specials._start:]
 
-        if specials._count:
-            return s_.count()
-
         _fields = specials._fields
         if _fields:
             only, exclude = process_fields(_fields).mget(['only', 'exclude'])
             s_ = s_.source(include=['%s'%e for e in only],
                            exclude = ['%s'%e for e in exclude])
 
-        if specials._group:
-            return Aggregator(specials, s_, self.name).do_group()
-
-        elif specials._distinct:
-            return Aggregator(specials, s_, self.name).do_distinct()
-
-        if '_scan' in specials or specials._limit == -1:
-            data = []
-            for hit in s_.scan():
-                data.append(hit._d_)
-                if len(data) == specials._limit:
-                    break
-
-            return self.wrap_results(specials, data, s_.count(), 0)
-
         try:
+            if specials._count:
+                return s_.count()
+
+            if specials._group:
+                return Aggregator(specials, s_, self.name).do_group()
+
+            if specials._distinct:
+                return Aggregator(specials, s_, self.name).do_distinct()
+
+            if '_scan' in specials or specials._limit == -1:
+                data = []
+                for hit in s_.scan():
+                    data.append(hit._d_)
+                    if len(data) == specials._limit:
+                        break
+
+                return self.wrap_results(specials, data, s_.count(), 0)
+
             resp = s_.execute()
             data = self.process_hits(resp.hits.hits)
             return self.wrap_results(specials, data, resp.hits.total, resp.took)
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
+
+        finally:
+            log.debug('(ES) OUT: %s, query: %.512s', self.name, s_.to_dict())
 
     def get_collection_paged(self, page_size, **params):
         params = dictset(params or {})

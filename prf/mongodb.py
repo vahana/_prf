@@ -414,7 +414,7 @@ class Aggregator(object):
     def aggregate(self, collection):
         log.debug(self._agg)
         try:
-            return [e for e in
+            return [dictset(e) for e in
                     collection.aggregate(self._agg, cursor={}, allowDiskUse=True)]
         except PyMongoError as e:
             raise prf.exc.HTTPBadRequest(e)
