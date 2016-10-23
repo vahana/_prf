@@ -120,13 +120,35 @@ class Aggregator(object):
         retval.op_type = 'terms'
 
         if '__as__' in field:
-            field, _, op_type = field.partition('__as__')
-            if op_type == 'geo':
+            field, _, _op = field.partition('__as__')
+            if _op == 'geo':
                 retval.op_type = 'geohash_grid'
                 retval.params.precision = self.specials.asint('_geo_precision', default=5)
-                retval.bucket_name = retval.field = field
+                retval.bucket_name = retval.field = field.replace(',', '_')
+
+            elif _op == 'date_range':
+                retval.bucket_name = field
+                retval.op_type = 'date_range'
+                retval.field = field
+                retval.params.format = "MM-YY"
+                _from, _to = self.specials.aslist('_ranges')
+                retval.params.ranges = [{'from':_from}, {'to':_to}]
+                retval.params.pop('size', None)
 
         return retval
+
+    def build_agg_item(self, field_name, **params):
+        field = self.process_field(field_name)
+        field.params.update(params)
+
+        if field.op_type in ['terms', 'geohash_grid']:
+            return A(field.op_type,
+                     field = field.field,
+                     **field.params)
+        elif field.op_type == 'date_range':
+            return A('date_range',
+                     field = field.field,
+                     **field.params)
 
     def do_group(self):
         if '_show_hits' not in self.specials:
@@ -136,8 +158,7 @@ class Aggregator(object):
 
         cardinality = A('cardinality',
                          field = top_field.field,
-                         precision_threshold=PRECISION_THRESHOLD,
-                         )
+                         precision_threshold=PRECISION_THRESHOLD)
 
         self.search_obj.aggs.bucket('total', cardinality)
 
@@ -145,10 +166,10 @@ class Aggregator(object):
             resp = self.search_obj.execute()
             return resp.aggregations.total.value
 
-        top_terms = A(top_field.op_type,
-                      field = top_field.field,
-                      collect_mode = self.specials.asstr('_collect_mode', default="breadth_first"),
-                      **top_field.params)
+        top_terms = self.build_agg_item(self.specials._group[0])
+        if top_field.op_type == 'terms':
+            top_terms._params['collect_mode']\
+                 = self.specials.asstr('_collect_mode', default="breadth_first")
 
         aggs = top_terms
         for each in self.specials._group[1:]:
@@ -182,6 +203,9 @@ class Aggregator(object):
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
 
+        finally:
+            log.debug('(ES) OUT: %s, query: %.512s', self.index, self.search_obj.to_dict())
+
 
 class ES(object):
     RAW_FIELD = '.raw'
@@ -192,7 +216,6 @@ class ES(object):
 
     @classmethod
     def wrap_results(cls, specials, data, total, took):
-        data = [dictset(each) for each in data]
         return {
             'data': data,
             'total': total,
