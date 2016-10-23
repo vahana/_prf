@@ -366,15 +366,24 @@ def str2dt(strdt):
     if isinstance(strdt, datetime):
         return datetime
 
-    matches = ('seconds', 'minutes', 'hours', 'days', 'weeks', 'months', 'years')
+    matches = dict(
+        s = 'seconds',
+        m = 'minutes',
+        h = 'hours',
+        d = 'days',
+        M = 'months',
+        y = 'years'
+    )
+
     # is it a relative date ?
-    rg = re.compile('([-+ ]\\d+)( +)((?:[a-z][a-z]+))',re.IGNORECASE|re.DOTALL)
+    rg = re.compile('(([-+]?)(\d+))([smhdMy])\\b', re.DOTALL)
     m = rg.search(strdt)
     if m:
         number = int(m.group(1))
-        word = m.group(3).lower()
+        word = m.group(4)
         if word in matches:
-            return datetime.utcnow()+dateutil.relativedelta.relativedelta(**{word:number})
+            return datetime.utcnow()\
+                +dateutil.relativedelta.relativedelta(**{matches[word]:number})
 
     try:
         return dateutil.parser.parse(strdt)
