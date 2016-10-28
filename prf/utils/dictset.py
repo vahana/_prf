@@ -195,7 +195,9 @@ class dictset(dict):
 
                     for ix in range(len(_d.get(nval, []))):
                         kk = '%s.%s.%s'%(pref,ix,suf)
-                        _lst.append(flat_d.pop(kk, None))
+                        _lst.append(flat_d.subset(kk))
+
+                        # _lst.append(flat_d.pop(kk, None))
                         ix+=1
 
                     new_key = '%s.%s'%(pref,suf)
@@ -211,9 +213,8 @@ class dictset(dict):
             _d = self.subset(only + ['-'+e for e in exclude])
 
         if nested:
-            flat_d = _d.flat()
+            flat_d = _d.flat(keep_lists=0)
             process_lists(flat_d)
-
             flat_d = flat_d.subset(nested_keys)
             _d.remove(nested.values())
             _d.update(flat_d)
@@ -253,7 +254,19 @@ class dictset(dict):
 
         return _d.unflat()
 
+    def get_by_prefix(self, prefix):
+        if not isinstance(prefix, list):
+            prefixes = [prefix]
+        else:
+            prefixes = prefix
+
+        keys = self.keys()
+        return dictset([[k,v] for k,v in self.items() if
+                            any(k.startswith(p) for p in prefixes)
+                    ])
+
     def subset(self, keys):
+
         if keys is None:
             return self
 
@@ -268,11 +281,11 @@ class dictset(dict):
                     ' but not both')
 
         if only:
-            _d = dictset([[k, v] for (k, v)
-                                in self.items() if k in only])
+            _d = self.get_by_prefix(only)
+
         elif exclude:
             _d = dictset([[k, v] for (k, v) in self.items()
-                                if k not in exclude])
+                                if not pref_in_list(k, exclude)])
 
         return _d
 
