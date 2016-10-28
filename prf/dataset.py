@@ -98,7 +98,8 @@ class DSDocumentMetaclass(TopLevelDocumentMetaclass):
         if attrs_meta.asbool('abstract', default=False):
             return super_new.__new__(cls, name, bases, attrs)
 
-        pk_ = []
+        pk_ = attrs_meta.aslist('pk', pop=True, default=[])
+
         current_meta = get_document_meta(name)
 
         if current_meta:
@@ -124,7 +125,6 @@ class DSDocumentMetaclass(TopLevelDocumentMetaclass):
             attrs_meta['indexes'].append('latest')
             attrs_meta['indexes'].append('v')
 
-            pk_ = attrs_meta.aslist('pk', pop=True, default=[])
             if not pk_:
                 raise prf.exc.HTTPBadRequest(
                     'must provide `target.pk` for versioned dataset `%s`'
@@ -138,6 +138,13 @@ class DSDocumentMetaclass(TopLevelDocumentMetaclass):
                 'name': 'pk',
                 'fields': pk_,
                 'unique': True})
+        else:
+            for each in pk_:
+                attrs_meta['indexes'].append({
+                    'fields': pk_,
+                    'unique': True
+                })
+
 
         attrs['meta'] = attrs_meta
         new_class = super_new.__new__(cls, name, bases, attrs)

@@ -196,8 +196,6 @@ class dictset(dict):
                     for ix in range(len(_d.get(nval, []))):
                         kk = '%s.%s.%s'%(pref,ix,suf)
                         _lst.append(flat_d.subset(kk))
-
-                        # _lst.append(flat_d.pop(kk, None))
                         ix+=1
 
                     new_key = '%s.%s'%(pref,suf)
@@ -260,10 +258,17 @@ class dictset(dict):
         else:
             prefixes = prefix
 
-        keys = self.keys()
-        return dictset([[k,v] for k,v in self.items() if
-                            any(k.startswith(p) for p in prefixes)
-                    ])
+        _d = dictset()
+        for k,v in self.items():
+            for pref in prefixes:
+                if pref.endswith('*'):
+                    if k.startswith(pref[:-1]):
+                        _d[k]=v
+                else:
+                    if k == pref:
+                        _d[k]=v
+
+        return _d
 
     def subset(self, keys):
 
