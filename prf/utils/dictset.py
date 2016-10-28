@@ -285,7 +285,7 @@ class dictset(dict):
 
         elif exclude:
             _d = dictset([[k, v] for (k, v) in self.items()
-                                if not pref_in_list(k, exclude)])
+                                            if k not in exclude])
 
         return _d
 
