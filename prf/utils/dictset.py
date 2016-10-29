@@ -262,13 +262,18 @@ class dictset(dict):
         for k,v in self.items():
             for pref in prefixes:
                 if pref.endswith('*'):
-                    if k.startswith(pref[:-1]):
+                    _pref = pref[:-1]
+                    if k.startswith(_pref):
+                        ix = _pref.rfind('.')
+                        if ix > 0:
+                            _pref = _pref[:ix]
+                            k = k[len(_pref)+1:]
                         _d[k]=v
                 else:
                     if k == pref:
                         _d[k]=v
 
-        return _d
+        return _d.unflat()
 
     def subset(self, keys):
 
