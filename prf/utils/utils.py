@@ -359,13 +359,7 @@ def qs2dict(qs):
     return dictset(parse_qsl(qs))
 
 
-def str2dt(strdt):
-    if not strdt:
-        raise DValueError('Datetime string can not be empty or None')
-
-    if isinstance(strdt, datetime):
-        return datetime
-
+def str2rdt(strdt):
     matches = dict(
         s = 'seconds',
         m = 'minutes',
@@ -382,8 +376,19 @@ def str2dt(strdt):
         number = int(m.group(1))
         word = m.group(4)
         if word in matches:
-            return datetime.utcnow()\
-                +dateutil.relativedelta.relativedelta(**{matches[word]:number})
+            return dateutil.relativedelta.relativedelta(**{matches[word]:number})
+
+
+def str2dt(strdt):
+    if not strdt:
+        raise DValueError('Datetime string can not be empty or None')
+
+    if isinstance(strdt, datetime):
+        return datetime
+
+    dt = str2rdt(strdt)
+    if dt:
+        return dt
 
     try:
         return dateutil.parser.parse(strdt)

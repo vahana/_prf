@@ -6,5 +6,5 @@ from prf.utils.utils import (DKeyError, DValueError, JSONEncoder, json_dumps,
                              sanitize_url, to_dunders, validate_url, is_url,
                              chunks, encoded_dict, urlencode, pager, extract_domain,
                              clean_postal_code, format_phone, normalize_phone, dl2ld,
-                             ld2dd, qs2dict, str2dt, TabRenderer
+                             ld2dd, qs2dict, str2dt, str2rdt, TabRenderer
                             )
