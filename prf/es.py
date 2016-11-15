@@ -231,8 +231,13 @@ class ES(object):
 
     @classmethod
     def wrap_results(cls, specials, data, total, took):
+        if isinstance(data, list):
+            data = [ESDoc(each) for each in data]
+        elif isinstance(data, dict):
+            data = [ESDoc(data)]
+
         return {
-            'data': [ESDoc(each) for each in data],
+            'data': data,
             'total': total,
             'start': specials._start,
             'count': specials._limit,
