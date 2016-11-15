@@ -36,6 +36,18 @@ class Serializer(JSONSerializer):
         return super(Serializer, self).default(obj)
 
 
+def wrap_results(specials, data, total, took):
+    return {
+        'data': data,
+        'total': total,
+        'start': specials._start,
+        'count': specials._limit,
+        'fields': specials._fields,
+        'sort': specials._sort,
+        'took': took
+    }
+
+
 class Aggregator(object):
 
     def __init__(self, specials, search_obj, index):
@@ -97,7 +109,7 @@ class Aggregator(object):
                 else:
                     data.append(bucket.key)
 
-            return ES.wrap_results(self.specials, data,
+            return wrap_results(self.specials, data,
                                     resp.aggregations.total.value,
                                     resp.took)
 
@@ -197,7 +209,7 @@ class Aggregator(object):
                     hits = hits
                 )
 
-            return ES.wrap_results(self.specials,
+            return wrap_results(self.specials,
                                     data,
                                     aggs.total.value,
                                     resp.took)
@@ -231,20 +243,8 @@ class ES(object):
 
     @classmethod
     def wrap_results(cls, specials, data, total, took):
-        if isinstance(data, list):
-            data = [ESDoc(each) for each in data]
-        elif isinstance(data, dict):
-            data = [ESDoc(data)]
-
-        return {
-            'data': data,
-            'total': total,
-            'start': specials._start,
-            'count': specials._limit,
-            'fields': specials._fields,
-            'sort': specials._sort,
-            'took': took
-        }
+        data = [ESDoc(each) for each in data]
+        return wrap_results(specials, data, total, took)
 
     @classmethod
     def process_hits(cls, hits):
