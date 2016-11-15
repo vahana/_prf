@@ -214,14 +214,15 @@ class BaseView(object):
             return _d, _total or len(_d)
 
         elif isinstance(obj, list):
-            if fields:
-                data = []
-                for each in obj:
-                    if isinstance(each, dict):
-                        each = process_dict(each)
+            data = []
+            for each in obj:
+                if isinstance(each, dict):
+                    each = process_dict(each)
+                elif hasattr(each, 'to_dict'):
+                    each = each.to_dict(fields)
 
-                    data.append(each)
-                obj = data
+                data.append(each)
+            obj = data
             return obj, _total or len(obj)
 
     def _process(self, data, many):

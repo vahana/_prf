@@ -118,12 +118,12 @@ class dictset(dict):
 
     def __getattr__(self, key):
         if key.startswith('__'): # dont touch the special attributes
-            return super(dictset, self).__getattr__(key) #pragma nocoverage
+            raise AttributeError('Attribute error %s' % key)
 
         try:
             return self[key]
         except KeyError as e:
-            raise DKeyError(e.message)
+            raise AttributeError(e.message)
 
     def __setattr__(self, key, val):
         if key == '_ordered_dict':
@@ -279,7 +279,7 @@ class dictset(dict):
 
                         _d[k]=v
 
-        return _d
+        return _d.unflat()
 
     def subset(self, keys):
 
@@ -297,7 +297,15 @@ class dictset(dict):
                     ' but not both')
 
         if only:
-            _d = self.get_by_prefix(only)
+            prefixed = [it for it in only if it.endswith('*')]
+            exact = [it for it in only if not it.endswith('*')]
+
+            if exact:
+                _d = dictset([[k, v] for (k, v)
+                        in self.items() if k in exact])
+
+            if prefixed:
+                _d = _d.update_with(self.get_by_prefix(prefixed))
 
         elif exclude:
             _d = dictset([[k, v] for (k, v) in self.items()
@@ -523,27 +531,35 @@ class dictset(dict):
     def deep_update(self, _dict):
         return self.flat().update(_dict.flat()).unflat()
 
-    def update_with(self, _dict, overwrite=True, append_to=None,
+    def update_with(self, _dict, overwrite=True, append_to=None, append_to_set=None,
                     reverse=False, exclude=[]):
         append_to = append_to or []
+        append_to_set = append_to_set or []
+
         if not reverse:
             self_dict = self.copy()
         else:
             self_dict = _dict.copy()
             _dict = self
 
+        def _append_to(key, val):
+            if isinstance(self_dict[key], list):
+                if isinstance(val, list):
+                    self_dict[key].extend(val)
+                else:
+                    self_dict[key] += val
+            else:
+                raise DValueError('`%s` is not a list' % key)
+
         for key, val in _dict.items():
             if key in exclude:
                 continue
             if overwrite or key not in self_dict:
-                if append_to and key in append_to:
-                    if isinstance(self_dict[key], list):
-                        if isinstance(val, list):
-                            self_dict[key].extend(val)
-                        else:
-                            self_dict[key] += val
-                    else:
-                        raise DValueError('`%s` is not a list' % key)
+                if key in append_to:
+                    _append_to(key, val)
+                elif key in append_to_set:
+                    _append_to(key, val)
+                    self_dict[key] = list(set(self_dict[key]))
                 else:
                     self_dict[key] = val
 

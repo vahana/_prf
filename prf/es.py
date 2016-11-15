@@ -21,10 +21,12 @@ DEFAULT_AGGS_LIMIT = 20
 DEFAULT_AGGS_NESTED_LIMIT = 1000
 TOP_HITS_MAX_SIZE = 100000
 
+
 def includeme(config):
     Settings = dictset(config.registry.settings)
     ES.setup(Settings)
     config.add_error_view(ElasticsearchException, error='%128s', error_attr='args')
+
 
 class Serializer(JSONSerializer):
     def default(self, obj):
@@ -207,6 +209,19 @@ class Aggregator(object):
             log.debug('(ES) OUT: %s, query: %.512s', self.index, self.search_obj.to_dict())
 
 
+class ESDoc(object):
+    def __init__(self, data):
+        self.data = dictset(data)
+
+    def to_dict(self, fields):
+        return self.data
+
+    def __getattr__(self, key):
+        if key in self.data:
+            return self.data[key]
+
+        raise AttributeError()
+
 class ES(object):
     RAW_FIELD = '.raw'
 
@@ -217,7 +232,7 @@ class ES(object):
     @classmethod
     def wrap_results(cls, specials, data, total, took):
         return {
-            'data': data,
+            'data': [ESDoc(each) for each in data],
             'total': total,
             'start': specials._start,
             'count': specials._limit,
@@ -400,7 +415,5 @@ class ES(object):
 
     def get_resource(self, **params):
         results = self.get_collection(**params)
-        if results['total']:
-            return dictset(results['data'][0])
-        else:
-            return dictset()
+        return results['data'][0]
+

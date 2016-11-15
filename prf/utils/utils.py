@@ -1,7 +1,6 @@
 import re
 import json
 import dateutil
-from datetime import datetime
 import logging
 from urlparse import urlparse, parse_qs
 from datetime import date, datetime
@@ -388,13 +387,13 @@ def str2dt(strdt):
 
     dt = str2rdt(strdt)
     if dt:
-        return dt
+        return datetime.utcnow()+dt
 
     try:
         return dateutil.parser.parse(strdt)
     except ValueError as e:
         raise DValueError(
-            'Datetime string `%s` not recognized. Did you miss +- signs for relative dates?' % strdt)
+            'Datetime string `%s` not recognized as datetime. Did you miss +- signs for relative dates?' % strdt)
 
 
 class TabRenderer(object):
