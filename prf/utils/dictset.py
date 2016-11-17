@@ -230,6 +230,12 @@ class dictset(dict):
                     elif tr == 'unicode':
                         _d[key] = unicode(_d[key])
                         continue
+                    elif tr == 'int':
+                        _d[key] = int(_d[key]) if _d[key] else _d[key]
+                        continue
+                    elif tr == 'float':
+                        _d[key] = float(_d[key]) if _d[key] else _d[key]
+                        continue
 
                     _type = type(_d[key])
                     try:
