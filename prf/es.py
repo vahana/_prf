@@ -294,10 +294,10 @@ class ES(object):
         s_ = Search(index=self.name)
         _filter = None
 
-        if '_q' in params:
-            q_fields = _params.aslist('_q_fields', default=[], pop=True)
+        if '_q' in specials:
+            q_fields = specials.aslist('_q_fields', default=[], pop=True)
             q_params = dict(
-                query=_params.pop('_q'),
+                query=specials._q,
                 default_operator = "and"
             )
 
