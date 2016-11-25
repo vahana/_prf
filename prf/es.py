@@ -294,10 +294,10 @@ class ES(object):
         s_ = Search(index=self.name)
         _filter = None
 
-        if 'q' in params:
-            q_fields = _params.aslist('q_fields', default=[], pop=True)
+        if '_q' in params:
+            q_fields = _params.aslist('_q_fields', default=[], pop=True)
             q_params = dict(
-                query=_params.pop('q'),
+                query=_params.pop('_q'),
                 default_operator = "and"
             )
 
@@ -420,5 +420,15 @@ class ES(object):
 
     def get_resource(self, **params):
         results = self.get_collection(**params)
-        return results['data'][0]
+        try:
+            return results['data'][0]
+        except IndexError:
+            raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.name, params))
+
+    # def delete(self, **params):
+    #     if 'id' in params:
+    #         self.api.delete(index=self.name, doc_type=self.name, id=id)
+    #     else:
+    #         self.api.delete_by_query(index=self.name, doc_type=self.name, q=params)
+
 
