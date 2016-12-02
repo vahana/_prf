@@ -226,7 +226,7 @@ class ESDoc(object):
         self.data = dictset(data)
 
     def to_dict(self, fields):
-        return self.data
+        return self.data.extract(fields)
 
     def __getattr__(self, key):
         if key in self.data:
