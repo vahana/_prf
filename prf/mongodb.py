@@ -738,8 +738,8 @@ class BaseMixin(object):
         renames = {}
 
         for current, new in fields.items():
+            params['%s__exists' % current] = 1
             if not new:
-                params['current__exists'] = 1
                 update['unset__%s' % current] = 1
             else:
                 renames[current] = new

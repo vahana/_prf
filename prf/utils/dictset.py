@@ -531,8 +531,8 @@ class dictset(dict):
 
         raise DKeyError('Neither of `%s` keys found' % keys)
 
-    def fget(self, key, default=None):
-        return self.flat().get(key, default)
+    def fget(self, key, *arg, **kw):
+        return self.flat().get(key, *arg, **kw)
 
     def deep_update(self, _dict):
         return self.flat().update(_dict.flat()).unflat()
