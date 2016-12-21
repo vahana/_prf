@@ -429,12 +429,12 @@ class TabRenderer(object):
 
         try:
             d_ = data[0]
-            column_names = d_.flat().keys()
+            column_names = d_.flat(keep_lists=0).keys()
             tabdata = tablib.Dataset(headers = column_names)
 
             for each in data:
                 row = []
-                each = each.flat()
+                each = each.flat(keep_lists=0)
 
                 for col in column_names:
                     row.append(pop_(each, col))
