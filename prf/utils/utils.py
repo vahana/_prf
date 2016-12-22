@@ -446,7 +446,8 @@ class TabRenderer(object):
 
                 tabdata.append(row)
 
-            return getattr(tabdata, _format)
+            return tabdata.get_csv(quoting=tablib.compat.csv.QUOTE_MINIMAL)
+
         except Exception as e:
             raise prf.exc.HTTPBadRequest(
                 'Could not convert to format `%s`: %s' % (_format, e) )
