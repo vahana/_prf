@@ -425,6 +425,13 @@ class ES(object):
         except IndexError:
             raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.name, params))
 
+    def get(self, **params):
+        results = self.get_collection(**params)
+        if results['data']:
+            return results['data'][0]
+        else:
+            return None
+
     # def delete(self, **params):
     #     if 'id' in params:
     #         self.api.delete(index=self.name, doc_type=self.name, id=id)

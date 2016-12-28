@@ -516,7 +516,6 @@ class BaseMixin(object):
 
     @classmethod
     def get_collection(cls, _q=None, **params):
-
         params = dictset(params)
         log.debug('IN: cls: %s, params: %.512s', cls.__name__, params)
         params, specials = prep_params(params)
@@ -531,58 +530,59 @@ class BaseMixin(object):
 
         query_set = query_set(**params)
 
-        if specials._frequencies:
-            return cls.get_frequencies(query_set, specials)
+        try:
+            if specials._frequencies:
+                return cls.get_frequencies(query_set, specials)
 
-        elif specials._group:
-            return cls.get_group(query_set, specials)
+            elif specials._group:
+                return cls.get_group(query_set, specials)
 
-        elif specials._join:
-            return cls.get_join(query_set, specials)
+            elif specials._join:
+                return cls.get_join(query_set, specials)
 
-        elif specials._distinct:
-            return cls.get_distinct(query_set, specials)
+            elif specials._distinct:
+                return cls.get_distinct(query_set, specials)
 
-        elif specials._unwind:
-            return cls.get_unwind(query_set, specials)
+            elif specials._unwind:
+                return cls.get_unwind(query_set, specials)
 
-        _total = query_set.count()
+            _total = query_set.count()
 
-        if specials._count:
-            return _total
+            if specials._count:
+                return _total
 
-        if specials._sort:
-            query_set = query_set.order_by(*specials._sort)
+            if specials._sort:
+                query_set = query_set.order_by(*specials._sort)
 
-        if specials._ix is not None:
-            cls._ix(specials, _total)
+            if specials._ix is not None:
+                cls._ix(specials, _total)
 
-        if specials._end is None:
-            if specials._start == 0:
-                return query_set
-            query_set = query_set[specials._start:]
-        else:
-            query_set = query_set[specials._start:specials._end]
+            if specials._end is None:
+                if specials._start == 0:
+                    return query_set
+                query_set = query_set[specials._start:]
+            else:
+                query_set = query_set[specials._start:specials._end]
 
-        if specials._scalar:
-            return query_set.scalar(*specials.aslist('_scalar'))
+            if specials._scalar:
+                return query_set.scalar(*specials.aslist('_scalar'))
 
-        if specials._fields:
-            only, exclude = process_fields(specials._fields).mget(['only', 'exclude'])
+            if specials._fields:
+                only, exclude = process_fields(specials._fields).mget(['only', 'exclude'])
 
-            if only:
-                query_set = query_set.only(*only)
-            elif exclude:
-                query_set = query_set.exclude(*exclude)
+                if only:
+                    query_set = query_set.only(*only)
+                elif exclude:
+                    query_set = query_set.exclude(*exclude)
 
-        query_set._total = _total
-        log.debug('OUT: collection: %s, query: %.512s',
-                                    cls._collection.name, query_set._query)
+            query_set._total = _total
+            if specials._explain and isinstance(query_set, mongo.QuerySet):
+                return query_set.explain()
 
-        if specials._explain and isinstance(query_set, mongo.QuerySet):
-            return query_set.explain()
-
-        return query_set
+            return query_set
+        finally:
+            log.debug('OUT: collection: %s, query: %.512s',
+                                        cls._collection.name, query_set._query)
 
     @classmethod
     def get_resource(cls, **params):
