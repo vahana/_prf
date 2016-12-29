@@ -12,10 +12,18 @@ def call_pserve(argv):
     argv.insert(0, 'pserve')
     return subprocess.call(argv)
 
+def call_pshell(argv):
+    argv.insert(0, 'pshell')
+    return subprocess.call(argv)
+
 def start(argv=sys.argv):
     pname = package_name(argv)
-    options = parse_vars(argv[1:])
-    config = config_uri(pname)
+    try:
+        config = argv[1]
+    except IndexError:
+        raise ValueError('No config file')
+
+    options = parse_vars(argv[2:])
 
     setup_logging(config)
     settings = dictset(get_appsettings(config, pname, options=options))
@@ -24,7 +32,16 @@ def start(argv=sys.argv):
     if settings.asbool('daemonize', False):
         pargs += [pid_arg(pname), 'start']
 
-    return call_pserve(pargs + argv[1:])
+    return call_pserve(pargs + argv[2:])
+
+def shell(argv=sys.argv):
+    pname = package_name(argv)
+    config = argv[1]
+    options = parse_vars(argv[2:])
+
+    setup_logging(config)
+    settings = dictset(get_appsettings(config, pname, options=options))
+    return call_pshell([config] + argv[2:])
 
 
 def stop(argv=sys.argv):

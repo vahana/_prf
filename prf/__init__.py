@@ -97,14 +97,27 @@ def disable_exc_tweens(config, names=None):
         tweens.sorter.remove(name)
 
 
+def prf_settings(config):
+    import sys
+    from pyramid.scripts.common import parse_vars
+
+    try:
+        config_file = sys.argv[1]
+    except IndexError:
+        raise ValueError('No config file provided')
+
+    return dictset(config.registry.settings).update_with(parse_vars(sys.argv[2:]))
+
+
 def includeme(config):
     log.info('%s %s' % (APP_NAME, __version__))
-    settings = dictset(config.get_settings())
+    settings = prf_settings(config)
 
     config.add_directive('get_root_resource', get_root_resource)
     config.add_directive('add_error_view', add_error_view)
     config.add_directive('set_default_acl', set_default_acl)
     config.add_directive('disable_exc_tweens', disable_exc_tweens)
+    config.add_directive('prf_settings', prf_settings)
 
     config.add_renderer('json', maybe_dotted('prf.renderers.JsonRenderer'))
 
