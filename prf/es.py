@@ -306,6 +306,9 @@ class ES(object):
 
             s_ = s_.query('simple_query_string', **q_params)
 
+        elif '_search' in specials:
+            s_ = s_.query('query_string', **{'query':specials._search})
+
         for key, val in _params.items():
 
             if isinstance(val, basestring) and ',' in val:
