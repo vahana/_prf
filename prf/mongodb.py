@@ -48,7 +48,7 @@ def drop_collections(name_prefix):
 
 
 def includeme(config):
-    mongo_connect(config.registry.settings)
+    mongo_connect(config.prf_settings())
 
     import pyramid
     config.add_tween('prf.mongodb.mongodb_exc_tween',

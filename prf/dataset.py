@@ -12,7 +12,7 @@ from prf.utils import dictset, split_strip
 from prf.utils.qs import prep_params
 
 log = logging.getLogger(__name__)
-DS_COLL_PREFIX = 'ds_'
+DS_COLL_PREFIX = ''
 
 def cls2collection(name):
     return DS_COLL_PREFIX + name

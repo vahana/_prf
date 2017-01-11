@@ -225,7 +225,7 @@ class dictset(dict):
             if key in _d:
                 for tr in trs:
                     if tr == 'str':
-                        _d[key] = str(_d[key])
+                        _d[key] = unicode(_d[key])
                         continue
                     elif tr == 'unicode':
                         _d[key] = unicode(_d[key])
