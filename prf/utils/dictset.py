@@ -561,9 +561,9 @@ class dictset(dict):
             if key in exclude:
                 continue
             if overwrite or key not in self_dict:
-                if key in append_to:
+                if key in append_to and key in self_dict:
                     _append_to(key, val)
-                elif key in append_to_set:
+                elif key in append_to_set and key in self_dict:
                     _append_to(key, val)
                     self_dict[key] = list(set(self_dict[key]))
                 else:
