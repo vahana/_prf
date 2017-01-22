@@ -593,7 +593,7 @@ class BaseMixin(object):
 
     @classmethod
     def get(cls, **params):
-        return cls.get_collection(**params).first()
+        return cls.get_collection(_limit=1, **params).first()
 
     @classmethod
     def search_text(cls, text, **params):

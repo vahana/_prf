@@ -422,14 +422,14 @@ class ES(object):
             yield self.get_collection(**_params)['data']
 
     def get_resource(self, **params):
-        results = self.get_collection(**params)
+        results = self.get_collection(_limit=1, **params)
         try:
             return results['data'][0]
         except IndexError:
             raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.name, params))
 
     def get(self, **params):
-        results = self.get_collection(**params)
+        results = self.get_collection(_limit=1, **params)
         if results['data']:
             return results['data'][0]
         else:
