@@ -23,6 +23,7 @@ def prep_params(params):
         _flat=None,
         _join=None,
         _unwind=None,
+        _where=None
     )
 
     specials._sort = params.aslist('_sort', default=[], pop=True)
@@ -30,10 +31,11 @@ def prep_params(params):
     specials._flat = '_flat' in params; params.pop('_flat', False)
     specials._count = '_count' in params; params.pop('_count', False)
     specials._explain = '_explain' in params; params.pop('_explain', False)
+
     specials._start, specials._limit = process_limit(
                                         params.pop('_start', None),
                                         params.pop('_page', None),
-                                        params.pop('_limit', 1))
+                                        params.asint('_limit', pop=True))
 
     specials._ix = params.asint('_ix', pop=True, allow_missing=True, _raise=False)
     specials._end = specials._start+specials._limit\
@@ -47,8 +49,10 @@ def prep_params(params):
 
     params = typecast(params)
 
-    return params, specials
+    if specials._where:
+        params['__raw__'] = {'$where': specials._where}
 
+    return params, specials
 
 def typecast(params):
     params = dictset(params)

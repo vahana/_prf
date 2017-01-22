@@ -586,7 +586,7 @@ class BaseMixin(object):
 
     @classmethod
     def get_resource(cls, **params):
-        obj = cls.get_collection(**params).first()
+        obj = cls.get_collection(_limit=1, **params).first()
         if not obj:
             raise prf.exc.HTTPNotFound("'%s(%s)' resource not found" % (cls.__name__, params))
         return obj

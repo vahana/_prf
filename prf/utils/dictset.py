@@ -211,7 +211,7 @@ class dictset(dict):
             _d = self.subset(only + ['-'+e for e in exclude])
 
         if nested:
-            flat_d = _d.flat(keep_lists=0)
+            flat_d = self.flat(keep_lists=0)
             process_lists(flat_d)
             flat_d = flat_d.subset(nested_keys)
             _d.remove(nested.values())

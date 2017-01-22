@@ -139,9 +139,6 @@ class BaseView(object):
                     raise prf.exc.HTTPBadRequest("Expecting JSON. Received: '%s'. Request: %s %s"
                                % (self.request.body, self.request.method, self.request.url))
 
-        if self.request.method == 'GET':
-            self._params.setdefault('_limit', 20)
-
         self._params = typecast(self._params)
 
     def process_variables(self):
