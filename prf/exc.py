@@ -125,6 +125,9 @@ def HTTPConflict(*arg, **kw):
 def HTTPBadRequest(*arg, **kw):
     return create_response(http_exc.HTTPBadRequest(*arg), kw)
 
+def HTTPGone(*arg, **kw):
+    return create_response(http_exc.HTTPGone(*arg), kw)
+
 def HTTPMethodNotAllowed(*arg, **kw):
     return create_response(http_exc.HTTPMethodNotAllowed(*arg), kw)
 
