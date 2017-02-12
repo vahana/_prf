@@ -451,3 +451,9 @@ class TabRenderer(object):
         except Exception as e:
             raise prf.exc.HTTPBadRequest(
                 'Could not convert to format `%s`: %s' % (_format, e) )
+
+def TODAY():
+    return datetime.now().strftime('%Y_%m_%d')
+
+def NOW():
+    return datetime.now().strftime('%Y_%m_%dT%H_%M_%S')
