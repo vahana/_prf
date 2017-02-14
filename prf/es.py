@@ -454,10 +454,9 @@ class ES(object):
             body = {'doc': data}
         )
 
-    # def delete(self, **params):
-    #     if 'id' in params:
-    #         self.api.delete(index=self.name, doc_type=self.name, id=id)
-    #     else:
-    #         self.api.delete_by_query(index=self.name, doc_type=self.name, q=params)
-
-
+    def delete(self, obj):
+        return ES.api.delete(
+            index = obj._meta._index,
+            doc_type = obj._meta._type,
+            id = obj._meta._id,
+        )
