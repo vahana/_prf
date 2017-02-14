@@ -580,8 +580,10 @@ class dictset(dict):
         return not other_ or self.subset(other_.keys()) == other_
 
     def pop_many(self, keys):
-        [self.pop(key, None) for key in keys]
-        return self
+        poped = dictset()
+        for key in keys:
+            poped[key] = self.pop(key, None)
+        return poped
 
     def sensor(self, patterns):
         self_f = self.flat()

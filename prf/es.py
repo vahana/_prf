@@ -222,10 +222,13 @@ class Aggregator(object):
 
 
 class ESDoc(object):
+    _meta_fields = ['_index', '_type', '_score', '_id']
+
     def __init__(self, data):
         self.data = dictset(data)
+        self._meta = self.data.pop_many(self._meta_fields)
 
-    def to_dict(self, fields):
+    def to_dict(self, fields=None):
         return self.data.extract(fields)
 
     def __getattr__(self, key):
@@ -233,6 +236,7 @@ class ESDoc(object):
             return self.data[key]
 
         raise AttributeError()
+
 
 class ES(object):
     RAW_FIELD = '.raw'
@@ -251,7 +255,12 @@ class ES(object):
         data = []
         for each in hits:
             _d = dictset(each['_source'])
-            _d = _d.update({'_score':each['_score'], '_type':each['_type']})
+            _d = _d.update({
+                '_score':each['_score'],
+                '_type':each['_type'],
+                '_index': each['_index'],
+                '_id': each['_id'],
+            })
             data.append(_d)
 
         return data
@@ -434,6 +443,16 @@ class ES(object):
             return results['data'][0]
         else:
             return None
+
+    def save(self, obj, data):
+        data = dictset(data).unflat()
+        return ES.api.update(
+            index = obj._meta._index,
+            doc_type = obj._meta._type,
+            id = obj._meta._id,
+            refresh=True,
+            body = {'doc': data}
+        )
 
     # def delete(self, **params):
     #     if 'id' in params:
