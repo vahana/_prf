@@ -31,14 +31,18 @@ class Request(object):
                       cookies=None, headers=None):
 
         self.base_url = base_url.strip('/')
-        cache_options = cache_options or {}
+        cache_options = dictset(cache_options) or dictset()
         self._raise = _raise
         self.delay = delay
         self.reqs_over_time = reqs_over_time or [] # [3,60] - 3 requests in 60 seconds
 
-        if cache_options:
+        if cache_options and cache_options.asbool('enable', default=False):
             import requests_cache
+            cache_options.asstr('cache_name')
+            cache_options.asfloat('expire_after')
             self.session = requests_cache.CachedSession(**cache_options)
+            if cache_options.asbool('clear', default=False):
+                self.session.cache.clear()
         else:
             self.session = requests.Session()
 
