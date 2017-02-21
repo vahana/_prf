@@ -38,6 +38,7 @@ class Request(object):
 
         if cache_options and cache_options.asbool('enable', default=False):
             import requests_cache
+            log.debug('CachedSession for %s' % cache_options)
             cache_options.asstr('cache_name')
             cache_options.asfloat('expire_after')
             self.session = requests_cache.CachedSession(**cache_options)
