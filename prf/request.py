@@ -31,7 +31,7 @@ class Request(object):
                       cookies=None, headers=None):
 
         self.base_url = base_url.strip('/')
-        cache_options = dictset(cache_options) or dictset()
+        cache_options = dictset(cache_options or {})
         self._raise = _raise
         self.delay = delay
         self.reqs_over_time = reqs_over_time or [] # [3,60] - 3 requests in 60 seconds
