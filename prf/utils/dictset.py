@@ -236,6 +236,9 @@ class dictset(dict):
                     elif tr == 'float':
                         _d[key] = float(_d[key]) if _d[key] else _d[key]
                         continue
+                    elif tr == 'flat' and isinstance(_d[key], dictset):
+                        _d[key] = _d[key].flat()
+                        continue
 
                     _type = type(_d[key])
                     try:

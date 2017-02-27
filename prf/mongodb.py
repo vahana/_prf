@@ -709,7 +709,8 @@ class BaseMixin(object):
         try:
             return self.save()
         except Exception as e:
-            log.error('%s: %s' % (e, self.to_dict()))
+            log.error('%s: class:<%s> data:%s' %
+                    (e, self.__class__.__name__, self.to_dict()))
 
     @classmethod
     def get_collection_paged(cls, page_size, **params):
