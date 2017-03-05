@@ -379,6 +379,11 @@ class Aggregator(object):
             for _v in split_strip(each):
                 _prj[_v] = '$%s' % self.undot(_v)
 
+        if '_group_count' in self.specials:
+            for op in ['list', 'set']:
+                if op in _prj:
+                    _prj[op] = {"$slice": ["$%s"%op, self.specials._group_count]}
+
         self._agg.append(
             {'$project': _prj}
         )

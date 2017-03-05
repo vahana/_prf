@@ -2,7 +2,7 @@ import pprint
 import urllib, re
 from collections import OrderedDict
 
-from prf.utils.utils import DKeyError, DValueError, split_strip, json_dumps
+from prf.utils.utils import DKeyError, DValueError, split_strip, json_dumps, str2dt
 from prf.utils.convert import *
 
 
@@ -107,6 +107,11 @@ class dictset(dict):
 
     DKeyError = DKeyError
     DValueError = DValueError
+
+
+    @classmethod
+    def to_dicts(cls, iterable, fields):
+        return [e.extract(fields) for e in iterable]
 
     def __init__(self, *arg, **kw):
         try:
@@ -238,6 +243,9 @@ class dictset(dict):
                         continue
                     elif tr == 'flat' and isinstance(_d[key], dictset):
                         _d[key] = _d[key].flat()
+                        continue
+                    elif tr == 'dt':
+                        _d[key] = str2dt(_d[key])
                         continue
 
                     _type = type(_d[key])
@@ -602,6 +610,7 @@ class dictset(dict):
 
     def _pp(self):
         pprint.pprint(self)
+
 
 #based on jsonurl
 
