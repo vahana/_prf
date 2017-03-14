@@ -1,6 +1,7 @@
 import pprint
 import urllib, re
 from collections import OrderedDict
+from itertools import groupby
 
 from prf.utils.utils import DKeyError, DValueError, split_strip, json_dumps, str2dt
 from prf.utils.convert import *
@@ -550,8 +551,20 @@ class dictset(dict):
 
     def update_with(self, _dict, overwrite=True, append_to=None, append_to_set=None,
                     reverse=False, exclude=[]):
+
+        if isinstance(append_to, basestring):
+            append_to = [append_to]
+
+        if isinstance(append_to_set, basestring):
+            append_to_set = [append_to_set]
+
         append_to = append_to or []
-        append_to_set = append_to_set or []
+
+        _append_to_set = {}
+        for each in (append_to_set or []):
+            k,_,sk = each.partition(':')
+            _append_to_set[k]=sk
+        append_to_set = _append_to_set
 
         if not reverse:
             self_dict = self.copy()
@@ -568,6 +581,24 @@ class dictset(dict):
             else:
                 raise DValueError('`%s` is not a list' % key)
 
+        def _append_to_set(key, val):
+            _append_to(key, val)
+            set_key = append_to_set.get(key)
+
+            if set_key:
+                self_dict[key] = sorted(self_dict[key], key=lambda x:x[set_key])
+                _uniques = []
+                _met = []
+                for each in self_dict[key]:
+                    if each[set_key] in _met:
+                        continue
+
+                    _met.append(each[set_key])
+                    _uniques.append(each)
+                self_dict[key] = _uniques
+            else:
+                self_dict[key] = list(set(self_dict[key]))
+
         for key, val in _dict.items():
             if key in exclude:
                 continue
@@ -575,8 +606,7 @@ class dictset(dict):
                 if key in append_to and key in self_dict:
                     _append_to(key, val)
                 elif key in append_to_set and key in self_dict:
-                    _append_to(key, val)
-                    self_dict[key] = list(set(self_dict[key]))
+                    _append_to_set(key, val)
                 else:
                     self_dict[key] = val
 
