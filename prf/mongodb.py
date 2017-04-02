@@ -328,7 +328,8 @@ class Aggregator(object):
 
                 if sfx in ['set', 'list']:
                     for _v in split_strip(val):
-                        _dd[self.undot(_v)] = '$%s' % _v
+                        _v,_,n2 = _v.partition('__as__')
+                        _dd[self.undot(n2 or _v)] = '$%s' % _v
                 else:
                     _dd = '$%s' % val
 

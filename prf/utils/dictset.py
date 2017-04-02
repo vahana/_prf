@@ -586,10 +586,14 @@ class dictset(dict):
             set_key = append_to_set.get(key)
 
             if set_key:
-                self_dict[key] = sorted(self_dict[key], key=lambda x:x[set_key])
                 _uniques = []
                 _met = []
                 for each in self_dict[key]:
+                    # if there is not set_key, it must be treated as unique
+                    if set_key not in each:
+                        _uniques.append(each)
+                        continue
+
                     if each[set_key] in _met:
                         continue
 
