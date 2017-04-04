@@ -789,7 +789,7 @@ class BaseMixin(object):
         missing = set(new_keys) - set(existing_indexes)
         if missing:
             log.warning('Missing indexes for the query on `%s`: %s',
-                        cls.__name__, missing)
+                        cls.__name__, list(missing))
 
     @classmethod
     def mark_dups(cls, keys, page_size=100, **query):

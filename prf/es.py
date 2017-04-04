@@ -8,13 +8,13 @@ from elasticsearch_dsl import Search, Q, A
 from elasticsearch_dsl.connections import connections
 
 import prf
-from prf.utils import dictset, process_fields, split_strip, pager
+from prf.utils import dictset, process_fields, split_strip, pager, chunks
 from prf.utils.qs import prep_params
 
 log = logging.getLogger(__name__)
 
 OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in',
-             'startswith', 'exists']
+             'startswith', 'exists', 'range']
 
 PRECISION_THRESHOLD = 40000
 DEFAULT_AGGS_LIMIT = 20
@@ -125,31 +125,31 @@ class Aggregator(object):
             raise prf.exc.HTTPBadRequest('`%s` results: %s' % (total, msg))
 
     def process_field(self, field):
-        retval = dictset()
-        retval.params = dictset()
+        _field = dictset()
+        _field.params = dictset()
 
-        retval.params['size'] = self.get_size()
-        retval.bucket_name = field
-        retval.field = ES._raw_field(field)
-        retval.op_type = 'terms'
+        _field.params['size'] = self.get_size()
+        _field.bucket_name = field
+        _field.field = ES._raw_field(field)
+        _field.op_type = 'terms'
 
         if '__as__' in field:
             field, _, _op = field.partition('__as__')
             if _op == 'geo':
-                retval.op_type = 'geohash_grid'
-                retval.params.precision = self.specials.asint('_geo_precision', default=5)
-                retval.bucket_name = retval.field = field.replace(',', '_')
+                _field.op_type = 'geohash_grid'
+                _field.params.precision = self.specials.asint('_geo_precision', default=5)
+                _field.bucket_name = _field.field = field.replace(',', '_')
 
             elif _op == 'date_range':
-                retval.bucket_name = field
-                retval.op_type = 'date_range'
-                retval.field = field
-                retval.params.format = "MM-YY"
+                _field.bucket_name = field
+                _field.op_type = 'date_range'
+                _field.field = field
+                _field.params.format = "MM-YY"
                 _from, _to = self.specials.aslist('_ranges')
-                retval.params.ranges = [{'from':_from}, {'to':_to}]
-                retval.params.pop('size', None)
+                _field.params.ranges = [{'from':_from}, {'to':_to}]
+                _field.params.pop('size', None)
 
-        return retval
+        return _field
 
     def build_agg_item(self, field_name, **params):
         field = self.process_field(field_name)
@@ -345,6 +345,17 @@ class ES(object):
                 if val == 0:
                     existsQ = ~existsQ
                 _filter = _filter & existsQ if _filter else existsQ
+                continue
+
+            elif op == 'range':
+                for _it in chunks(val, 2):
+                    rangeQ = Q('range', **{key: {'gte': _it[0]}})
+
+                    if len(_it) == 2:
+                        rangeQ = rangeQ & Q('range', **{key: {'lte': _it[1]}})
+
+                    _filter = _filter | rangeQ if _filter else rangeQ
+
                 continue
 
             if val is None:
