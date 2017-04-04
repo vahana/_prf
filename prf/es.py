@@ -348,7 +348,7 @@ class ES(object):
                 continue
 
             elif op == 'range':
-                for _it in chunks(val, 2):
+                for _it in chunks(split_strip(val), 2):
                     rangeQ = Q('range', **{key: {'gte': _it[0]}})
 
                     if len(_it) == 2:
