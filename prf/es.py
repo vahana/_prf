@@ -319,7 +319,6 @@ class ES(object):
             s_ = s_.query('query_string', **{'query':specials._search})
 
         for key, val in _params.items():
-
             if isinstance(val, basestring) and ',' in val:
                 val = _params.aslist(key)
 
@@ -348,14 +347,16 @@ class ES(object):
                 continue
 
             elif op == 'range':
+                _ranges = None
                 for _it in chunks(split_strip(val), 2):
                     rangeQ = Q('range', **{key: {'gte': _it[0]}})
 
                     if len(_it) == 2:
                         rangeQ = rangeQ & Q('range', **{key: {'lte': _it[1]}})
 
-                    _filter = _filter | rangeQ if _filter else rangeQ
+                    _ranges = _ranges | rangeQ if _ranges else rangeQ
 
+                _filter = _filter & _ranges if _filter else _ranges
                 continue
 
             if val is None:
