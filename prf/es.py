@@ -389,7 +389,7 @@ class ES(object):
             s_ = s_.filter(_filter)
 
         if specials._sort:
-            s_ = s_.sort(*specials._sort)
+            s_ = s_.sort(*[self._raw_field(_it) for _it in specials._sort])
 
         if specials._end is not None:
             s_ = s_[specials._start:specials._end]
