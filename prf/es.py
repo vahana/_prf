@@ -296,12 +296,13 @@ class ES(object):
 
     def get_collection(self, **params):
         params = dictset(params)
-        log.debug('(ES) IN: %s, params: %.512s', self.name, params)
+        log.debug('(ES) IN: %s, params: %.1024s', self.name, params)
 
         _params, specials = prep_params(params)
 
         s_ = Search(index=self.name)
         _filter = None
+        _ranges = []
 
         if '_q' in specials:
             q_fields = specials.aslist('_q_fields', default=[], pop=True)
@@ -347,16 +348,16 @@ class ES(object):
                 continue
 
             elif op == 'range':
-                _ranges = None
+                _range = []
                 for _it in chunks(split_strip(val), 2):
                     rangeQ = Q('range', **{key: {'gte': _it[0]}})
 
                     if len(_it) == 2:
                         rangeQ = rangeQ & Q('range', **{key: {'lte': _it[1]}})
 
-                    _ranges = _ranges | rangeQ if _ranges else rangeQ
+                    _range.append(rangeQ)
 
-                _filter = _filter & _ranges if _filter else _ranges
+                _ranges.append(Q('bool', should=_range))
                 continue
 
             if val is None:
@@ -381,8 +382,11 @@ class ES(object):
 
                 _filter = _filter & matchQ if _filter else matchQ
 
+        if _ranges:
+            _filter = _filter & Q('bool', must=_ranges) if _filter else Q('bool', must=_ranges)
+
         if _filter:
-            s_ = s_.query('bool', filter = _filter)
+            s_ = s_.filter(_filter)
 
         if specials._sort:
             s_ = s_.sort(*specials._sort)
@@ -425,7 +429,7 @@ class ES(object):
             raise prf.exc.HTTPBadRequest(e)
 
         finally:
-            log.debug('(ES) OUT: %s, query: %.512s', self.name, s_.to_dict())
+            log.debug('(ES) OUT: %s, query: %.2048s', self.name, s_.to_dict())
 
     def get_collection_paged(self, page_size, **params):
         params = dictset(params or {})
