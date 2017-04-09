@@ -32,10 +32,10 @@ class DynamicSchema(object):
         def to_dict(obj):
             if isinstance(obj, dict):
                 d_ = dictset(obj).extract(self.context.get('fields'))
-                return d_ if not flat else d_.flat()
+                return d_ if not flat else d_.flat(keep_lists=0)
             if hasattr(obj, 'to_dict'):
                 d_ = obj.to_dict(self.context.get('fields'))
-                return d_ if not flat else d_.flat()
+                return d_ if not flat else d_.flat(keep_lists=0)
             else:
                 return obj
 
