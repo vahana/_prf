@@ -41,6 +41,7 @@ def process_fields(fields, parse=True):
     fields_exclude = []
     nested = {}
     show_as = {}
+    show_as_r = {}
     transforms = {}
     star = False
 
@@ -68,6 +69,8 @@ def process_fields(fields, parse=True):
         if parse and '__as__' in field:
             root,_,val = field.partition('__as__')
             show_as[root] = val or root.split('.')[-1]
+            show_as_r[val or root.split('.')[-1]]=root
+
             field = root
 
         if trans:
@@ -91,6 +94,7 @@ def process_fields(fields, parse=True):
              'exclude':fields_exclude,
              'nested': nested,
              'show_as': show_as,
+             'show_as_r': show_as_r,
              'transforms': transforms,
              'star': star})
 
@@ -185,10 +189,10 @@ class dictset(dict):
         if not fields:
             return self
 
-        only, exclude, nested, show_as, trans, star =\
+        only, exclude, nested, show_as, show_as_r, trans, star =\
                 process_fields(fields).mget(
                                ['only','exclude', 'nested',
-                                'show_as', 'transforms',
+                                'show_as', 'show_as_r', 'transforms',
                                 'star'])
 
         nested_keys = nested.keys()
@@ -223,9 +227,13 @@ class dictset(dict):
             _d.remove(nested.values())
             _d.update(flat_d)
 
-        for key, new_key in show_as.items():
+        for new_key, key in show_as_r.items():
             if key in _d:
-                _d.merge(dictset({new_key:_d.pop(key)}))
+                _d.merge(dictset({new_key:_d.get(key)}))
+
+        #remove old keys
+        for _k in show_as_r.values():
+            _d.pop(_k, None)
 
         for key, trs in trans.items():
             if key in _d:
