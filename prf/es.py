@@ -20,7 +20,7 @@ PRECISION_THRESHOLD = 40000
 DEFAULT_AGGS_LIMIT = 20
 DEFAULT_AGGS_NESTED_LIMIT = 1000
 TOP_HITS_MAX_SIZE = 100000
-
+MAX_SKIP = 10000
 
 def includeme(config):
     Settings = dictset(config.registry.settings)
@@ -299,6 +299,9 @@ class ES(object):
         log.debug('(ES) IN: %s, params: %.1024s', self.name, params)
 
         _params, specials = prep_params(params)
+
+        if specials._start > MAX_SKIP:
+            raise prf.exc.HTTPBadRequest('Reached max pagination limit')
 
         s_ = Search(index=self.name)
         _filter = None
