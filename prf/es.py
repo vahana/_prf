@@ -307,20 +307,18 @@ class ES(object):
         _filter = None
         _ranges = []
 
+        q_params = {'default_operator': 'and'}
+        q_fields = specials.aslist('_q_fields', default=[], pop=True)
+        if q_fields:
+            q_params['fields'] = q_fields
+
         if '_q' in specials:
-            q_fields = specials.aslist('_q_fields', default=[], pop=True)
-            q_params = dict(
-                query=specials._q,
-                default_operator = "and"
-            )
-
-            if q_fields:
-                q_params['fields'] = q_fields
-
+            q_params['query'] = specials._q
             s_ = s_.query('simple_query_string', **q_params)
 
         elif '_search' in specials:
-            s_ = s_.query('query_string', **{'query':specials._search})
+            q_params['query'] = specials._search
+            s_ = s_.query('query_string', **q_params)
 
         for key, val in _params.items():
             if isinstance(val, basestring) and ',' in val:
