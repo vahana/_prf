@@ -83,6 +83,9 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path = os.path.join(path_prefix, (collection_name or member_name))
 
     _auth = config.registry.get('prf.auth', False)
+
+    kwargs['xhr'] = config.registry.get('prf.xhr', False)
+
     _traverse = kwargs.pop('traverse', None) or id_slug
     added_routes = {}
 
@@ -135,7 +138,7 @@ class Resource(object):
 
     def __init__(self, config, member_name='', collection_name='',
                  parent=None, uid='', children=None, id_name='', prefix='',
-                 http_cache=0, path=''):
+                 http_cache=0, path='', xhr=False):
 
         if parent and not member_name:
             raise ValueError('member_name can not be empty')
@@ -151,6 +154,7 @@ class Resource(object):
         self._ancestors = []
         self.uid = self.get_uid(collection_name or member_name)
         self.path = ''
+        self.xhr = xhr
 
     def __repr__(self):
         return "%s(uid='%s')" % (self.__class__.__name__, self.uid)
@@ -229,6 +233,7 @@ class Resource(object):
         # set some defaults
         kwargs.setdefault('renderer', child_view._default_renderer)
         kwargs.setdefault('http_cache', root_resource.http_cache)
+        kwargs.setdefault('xhr', root_resource.xhr)
 
         # add the routes for the resource
         path = add_action_routes(self.config, child_view, member_name,

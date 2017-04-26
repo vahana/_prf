@@ -124,6 +124,7 @@ def includeme(config):
     config.registry['prf.root_resources'] = {}
     config.registry['prf.resources_map'] = {}
     config.registry['prf.auth'] = settings.asbool('auth.enabled', default=False)
+    config.registry['prf.xhr'] = settings.asbool('xhr.enabled', default=False)
 
     config.add_request_method(get_resource_map, 'resource_map', reify=True)
 
