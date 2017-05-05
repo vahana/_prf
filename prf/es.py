@@ -47,6 +47,24 @@ def wrap_results(specials, data, total, took):
         'took': took
     }
 
+def prep_sort(sort):
+    new_sort = []
+    for each in sort:
+        if each.startswith('-'):
+            order = 'desc'
+            each = each[1:]
+            missing = '_last'
+        else:
+            order = 'asc'
+            missing = '_first'
+
+        new_sort.append({ES._raw_field(each): {
+                'order': order,
+                'missing': missing,
+            }
+        })
+
+    return new_sort
 
 class Aggregator(object):
 
@@ -390,7 +408,7 @@ class ES(object):
             s_ = s_.filter(_filter)
 
         if specials._sort:
-            s_ = s_.sort(*[self._raw_field(_it) for _it in specials._sort])
+            s_ = s_.sort(*prep_sort(specials._sort))
 
         if specials._end is not None:
             s_ = s_[specials._start:specials._end]
