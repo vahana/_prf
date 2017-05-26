@@ -400,11 +400,37 @@ class TabRenderer(object):
     def __init__(self, info):
         pass
 
+    @classmethod
+    def dict2tab(cls, data, headers):
+        import tablib
+
+        def pop_(each, key):
+            val = each.pop(key, '')
+            if isinstance(val, (datetime, date)):
+                return val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
+            else:
+                return unicode(val)
+
+        tabdata = tablib.Dataset(headers = headers)
+
+        for each in data:
+            row = []
+            each = each.flat(keep_lists=0)
+            for col in headers:
+                row.append(pop_(each, col))
+
+            #add missing col data
+            for key in each.keys():
+                headers.append(key)
+                tabdata.append_col((tabdata.height)*[''], header=key)
+                row.append(pop_(each, col))
+
+            tabdata.append(row)
+
+        return tabdata.get_csv(quoting=tablib.compat.csv.QUOTE_MINIMAL)
+
     def __call__(self, value, system):
         import prf
-        from prf import dictset
-        import tablib
-        from datetime import datetime, date
 
         request = system.get('request')
 
@@ -420,33 +446,9 @@ class TabRenderer(object):
         if not data:
             return '--EMPTY--'
 
-        def pop_(each, key):
-            val = each.pop(key, '')
-            if isinstance(val, (datetime, date)):
-                return val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
-            else:
-                return unicode(val)
-
         try:
-            d_ = data[0]
-            column_names = d_.flat(keep_lists=0).keys()
-            tabdata = tablib.Dataset(headers = column_names)
-
-            for each in data:
-                row = []
-                each = each.flat(keep_lists=0)
-
-                for col in column_names:
-                    row.append(pop_(each, col))
-
-                for key in each.keys():
-                    column_names.append(key)
-                    tabdata.append_col((tabdata.height)*[''], header=key)
-                    row.append(pop_(each, col))
-
-                tabdata.append(row)
-
-            return tabdata.get_csv(quoting=tablib.compat.csv.QUOTE_MINIMAL)
+            column_names = data[0].flat(keep_lists=0).keys()
+            return dict2tab(data, column_names)
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(

@@ -4,7 +4,7 @@ from bson import ObjectId, DBRef
 
 from elasticsearch.exceptions import ElasticsearchException
 from elasticsearch.serializer import JSONSerializer
-from elasticsearch_dsl import Search, Q, A
+from elasticsearch_dsl import Search, Q, A, DocType
 from elasticsearch_dsl.connections import connections
 
 import prf
@@ -28,6 +28,9 @@ def includeme(config):
     config.add_error_view(ElasticsearchException, error='%128s', error_attr='args')
 
 
+class Base(DocType):
+    pass
+
 class Serializer(JSONSerializer):
     def default(self, obj):
         if isinstance(obj, (ObjectId, DBRef)):
@@ -47,8 +50,11 @@ def wrap_results(specials, data, total, took):
         'took': took
     }
 
-def prep_sort(sort):
+def prep_sort(specials, nested=None):
+    sort = specials._sort
+    nested = nested or {}
     new_sort = []
+
     for each in sort:
         if each.startswith('-'):
             order = 'desc'
@@ -58,11 +64,21 @@ def prep_sort(sort):
             order = 'asc'
             missing = '_first'
 
-        new_sort.append({ES._raw_field(each): {
+        srt = {
                 'order': order,
                 'missing': missing,
-            }
-        })
+        }
+
+        if '_sort_mode' in specials:
+            srt['mode'] = specials._sort_mode
+
+        root = each.split('.')[0]
+        if root in specials._nested:
+            srt['nested_path'] = root
+            if root in nested:
+                srt['nested_filter'] = nested[root].to_dict()
+
+        new_sort.append({each: srt})
 
     return new_sort
 
@@ -97,7 +113,7 @@ class Aggregator(object):
             'size': self.get_size(),
         }
 
-        field = ES._raw_field(self.specials._distinct)
+        field = self.specials._distinct
 
         if self.specials._sort and self.specials._sort[0].startswith('-'):
             order = { "_term" : "desc" }
@@ -148,7 +164,6 @@ class Aggregator(object):
 
         _field.params['size'] = self.get_size()
         _field.bucket_name = field
-        _field.field = ES._raw_field(field)
         _field.op_type = 'terms'
 
         if '__as__' in field:
@@ -257,11 +272,6 @@ class ESDoc(object):
 
 
 class ES(object):
-    RAW_FIELD = '.raw'
-
-    @classmethod
-    def _raw_field(cls, name):
-        return '%s%s' % (name, cls.RAW_FIELD)
 
     @classmethod
     def wrap_results(cls, specials, data, total, took):
@@ -309,21 +319,25 @@ class ES(object):
         except KeyError as e:
             raise Exception('Bad or missing settings for elasticsearch. %s' % e)
 
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, name, ):
+        self.index, _, self.doc_type = name.partition('/')
 
     def get_collection(self, **params):
         params = dictset(params)
-        log.debug('(ES) IN: %s, params: %.1024s', self.name, params)
+        log.debug('(ES) IN: %s, params: %.1024s', self.index, params)
 
         _params, specials = prep_params(params)
 
         if specials._start > MAX_SKIP:
             raise prf.exc.HTTPBadRequest('Reached max pagination limit')
 
-        s_ = Search(index=self.name)
-        _filter = None
+        s_ = Search(index=self.index, doc_type=self.doc_type)
+
         _ranges = []
+        _filters = None
+
+        _nested = {}
+        specials.aslist('_nested', default=[])
 
         q_params = {'default_operator': 'and'}
         q_fields = specials.aslist('_q_fields', default=[], pop=True)
@@ -344,27 +358,23 @@ class ES(object):
 
             _key, div, op = key.rpartition('__')
             if div and op in OPERATORS:
-                key = _key.replace(div, '.')
+                key = _key
 
-            # match with non-analyzed version
-            key = self._raw_field(key)
+            key = key.replace('__', '.')
+            root_key = key.split('.')[0]
+
+            _filter = None
 
             if op in ['lt', 'lte', 'gt', 'gte']:
-                rangeQ = Q('range', **{key: {op: val}})
-                _filter = _filter & rangeQ if _filter else rangeQ
-                continue
+                _filter = Q('range', **{key: {op: val}})
 
             elif op in ['startswith']:
-                prefixQ = Q('prefix', **{key:val})
-                _filter = _filter & prefixQ if _filter else prefixQ
-                continue
+                _filter = Q('prefix', **{key:val})
 
             elif op == 'exists':
-                existsQ = Q('exists', field=key)
+                _filter = Q('exists', field=key)
                 if val == 0:
-                    existsQ = ~existsQ
-                _filter = _filter & existsQ if _filter else existsQ
-                continue
+                    _filter = ~_filter
 
             elif op == 'range':
                 _range = []
@@ -377,38 +387,41 @@ class ES(object):
                     _range.append(rangeQ)
 
                 _ranges.append(Q('bool', should=_range))
-                continue
 
-            if val is None:
-                existsQ = Q('exists', field=key)
+            elif val is None:
+                _filter = Q('exists', field=key)
                 if op != 'ne':
-                    existsQ = ~existsQ
-                _filter = _filter & existsQ if _filter else existsQ
-                continue
+                    _filter = ~_filter
 
-            if isinstance(val, list):
-                _orQ = Q('bool',
-                    should=[Q("match", **{key:each}) for each in val]
+            elif isinstance(val, list):
+                _filter = Q('bool',
+                    should=[Q("term", **{key:each}) for each in val]
                 )
                 if op == 'ne':
-                    _orQ = ~_orQ
-                _filter = _filter & _orQ if _filter else _orQ
+                    _filter = ~_filter
 
             else:
-                matchQ = Q("match", **{key:val})
+                _filter = Q("term", **{key:val})
                 if op == 'ne':
-                    matchQ = ~matchQ
+                    _filter = ~_filter
 
-                _filter = _filter & matchQ if _filter else matchQ
+            if root_key in specials._nested:
+                _nested[root_key] = _nested[root_key] & _filter if root_key in _nested else _filter
+            else:
+                _filters = _filters & _filter if _filters else _filter
+
+        for path, nestedQ in _nested.items():
+            q = Q('nested', path=path, query=nestedQ)
+            _filters = _filters & q if _filters else q
 
         if _ranges:
-            _filter = _filter & Q('bool', must=_ranges) if _filter else Q('bool', must=_ranges)
+            _filters = _filters & Q('bool', must=_ranges) if _filters else Q('bool', must=_ranges)
 
-        if _filter:
-            s_ = s_.filter(_filter)
+        if _filters:
+            s_ = s_.filter(_filters)
 
         if specials._sort:
-            s_ = s_.sort(*prep_sort(specials._sort))
+            s_ = s_.sort(*prep_sort(specials, _nested))
 
         if specials._end is not None:
             s_ = s_[specials._start:specials._end]
@@ -426,10 +439,10 @@ class ES(object):
                 return s_.count()
 
             if specials._group:
-                return Aggregator(specials, s_, self.name).do_group()
+                return Aggregator(specials, s_, self.index).do_group()
 
             if specials._distinct:
-                return Aggregator(specials, s_, self.name).do_distinct()
+                return Aggregator(specials, s_, self.index).do_distinct()
 
             if '_scan' in specials or specials._limit == -1:
                 data = []
@@ -448,7 +461,8 @@ class ES(object):
             raise prf.exc.HTTPBadRequest(e)
 
         finally:
-            log.debug('(ES) OUT: %s, query: %.2048s', self.name, s_.to_dict())
+            # from pprint import pprint as pp;pp(s_.to_dict())
+            log.debug('(ES) OUT: %s, query: %.2048s', self.index, s_.to_dict())
 
     def get_collection_paged(self, page_size, **params):
         params = dictset(params or {})
@@ -470,7 +484,7 @@ class ES(object):
         try:
             return results['data'][0]
         except IndexError:
-            raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.name, params))
+            raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.index, params))
 
     def get(self, **params):
         results = self.get_collection(_limit=1, **params)
