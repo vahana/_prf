@@ -274,6 +274,15 @@ class ESDoc(object):
 class ES(object):
 
     @classmethod
+    def dot_key(cls, key, suffix=''):
+
+        _key, div, op = key.rpartition('__')
+        if div and op in OPERATORS:
+            key = _key
+        key = key.replace('__', '.')
+        return ('%s.%s' % (key, suffix) if suffix else key), op
+
+    @classmethod
     def wrap_results(cls, specials, data, total, took):
         data = [ESDoc(each) for each in data]
         return wrap_results(specials, data, total, took)
@@ -352,15 +361,12 @@ class ES(object):
             q_params['query'] = specials._search
             s_ = s_.query('query_string', **q_params)
 
+
         for key, val in _params.items():
             if isinstance(val, basestring) and ',' in val:
                 val = _params.aslist(key)
 
-            _key, div, op = key.rpartition('__')
-            if div and op in OPERATORS:
-                key = _key
-
-            key = key.replace('__', '.')
+            key, op = self.dot_key(key)
             root_key = key.split('.')[0]
 
             _filter = None
@@ -369,7 +375,12 @@ class ES(object):
                 _filter = Q('range', **{key: {op: val}})
 
             elif op in ['startswith']:
-                _filter = Q('prefix', **{key:val})
+                if isinstance(val, list):
+                    _filter = Q('bool',
+                        should=[Q('prefix', **{key:each}) for each in val]
+                    )
+                else:
+                    _filter = Q('prefix', **{key:val})
 
             elif op == 'exists':
                 _filter = Q('exists', field=key)
