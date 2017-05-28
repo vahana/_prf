@@ -275,12 +275,11 @@ class ES(object):
 
     @classmethod
     def dot_key(cls, key, suffix=''):
-
         _key, div, op = key.rpartition('__')
         if div and op in OPERATORS:
             key = _key
         key = key.replace('__', '.')
-        return ('%s.%s' % (key, suffix) if suffix else key), op
+        return ('%s.%s' % (key, suffix) if suffix else key), (op if op in OPERATORS else '')
 
     @classmethod
     def wrap_results(cls, specials, data, total, took):
