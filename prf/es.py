@@ -22,6 +22,7 @@ DEFAULT_AGGS_NESTED_LIMIT = 1000
 TOP_HITS_MAX_SIZE = 100000
 MAX_SKIP = 10000
 
+
 def includeme(config):
     Settings = dictset(config.registry.settings)
     ES.setup(Settings)
@@ -113,7 +114,7 @@ class Aggregator(object):
             'size': self.get_size(),
         }
 
-        field = self.specials._distinct
+        field, _ = ES.dot_key(self.specials._distinct)
 
         if self.specials._sort and self.specials._sort[0].startswith('-'):
             order = { "_term" : "desc" }
@@ -164,7 +165,7 @@ class Aggregator(object):
 
         _field.params['size'] = self.get_size()
         _field.bucket_name = field
-        _field.field = field
+        _field.field, _ = ES.dot_key(field)
         _field.op_type = 'terms'
 
         if '__as__' in field:
@@ -275,7 +276,7 @@ class ESDoc(object):
 class ES(object):
 
     @classmethod
-    def dot_key(cls, key, suffix=''):
+    def dot_key(cls, key, suffix='keyword'):
         _key, div, op = key.rpartition('__')
         if div and op in OPERATORS:
             key = _key
@@ -363,6 +364,7 @@ class ES(object):
 
 
         for key, val in _params.items():
+
             if isinstance(val, basestring) and ',' in val:
                 val = _params.aslist(key)
 
