@@ -164,6 +164,7 @@ class Aggregator(object):
 
         _field.params['size'] = self.get_size()
         _field.bucket_name = field
+        _field.field = field
         _field.op_type = 'terms'
 
         if '__as__' in field:
