@@ -118,7 +118,7 @@ class Aggregator(object):
         self._agg = []
         self.specials = specials
         self.match_query = dictset(query)
-        self.accumulators = {}
+        self.accumulators = []
 
         if specials.get('_group'):
             self.setup_group()
@@ -135,7 +135,7 @@ class Aggregator(object):
 
     def setup_group(self):
         self.specials.aslist('_group')
-        self.accumulators = dictset()
+        self.accumulators = []
 
         self.count_cond = self.group_count_cond()
 
@@ -144,7 +144,12 @@ class Aggregator(object):
                 self.specials.asint(name)
                 continue
             elif name.startswith('_group_'):
-                self.accumulators[name[7:]] = val
+                op = name[7:]
+                if op in ['avg']:
+                    for _v in split_strip(val):
+                        self.accumulators.append([op, _v])
+                else:
+                    self.accumulators.append([op, val])
 
     def setup_join(self):
         _join,_,_join_on = self.specials._join.partition('.')
@@ -308,7 +313,7 @@ class Aggregator(object):
             _d = {'_id': group_dict,
                   'count': {'$sum':1}}
 
-            for op, val in self.accumulators.items():
+            for (op, val) in self.accumulators:
                 _op = op.lower()
                 if _op in ['addtoset', 'set']:
                     sfx = 'set'
@@ -317,8 +322,8 @@ class Aggregator(object):
                     sfx = 'list'
                     op = '$push'
                 else:
-                    sfx = op
-                    op = '$%s'%sfx
+                    sfx = '%s_%s' % (val, op)
+                    op = '$%s'%op
 
                 if val == '$ROOT':
                     _d[sfx] = {op:'$$ROOT'}
