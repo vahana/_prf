@@ -276,7 +276,7 @@ class ESDoc(object):
 class ES(object):
 
     @classmethod
-    def dot_key(cls, key, suffix='keyword'):
+    def dot_key(cls, key, suffix=''):
         _key, div, op = key.rpartition('__')
         if div and op in OPERATORS:
             key = _key
