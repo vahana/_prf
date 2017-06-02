@@ -145,7 +145,7 @@ class Aggregator(object):
                 continue
             elif name.startswith('_group_'):
                 op = name[7:]
-                if op in ['avg']:
+                if op not in ['list', 'set']:
                     for _v in split_strip(val):
                         self.accumulators.append([op, _v])
                 else:
