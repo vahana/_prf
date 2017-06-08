@@ -420,7 +420,7 @@ class ES(object):
 
             if root_key in specials._nested:
                 _nested[root_key] = _nested[root_key] & _filter if root_key in _nested else _filter
-            else:
+            elif _filter:
                 _filters = _filters & _filter if _filters else _filter
 
         for path, nestedQ in _nested.items():
