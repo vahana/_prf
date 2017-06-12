@@ -448,7 +448,7 @@ class TabRenderer(object):
 
         try:
             column_names = data[0].flat(keep_lists=0).keys()
-            return dict2tab(data, column_names)
+            return self.dict2tab(data, column_names)
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(
