@@ -1,8 +1,9 @@
 import mock
 import pytest
 from pyramid.config import Configurator
+from pyramid.exceptions import ConfigurationExecutionError
 
-from prf.resource import Resource, get_view_class, get_uri_elements
+from prf.resource import Resource, get_view_class, get_parent_elements
 from prf.view import BaseView
 
 
@@ -35,6 +36,7 @@ class TestResource(object):
         anc = two.get_ancestors()
         assert anc[0] == one
 
+    @pytest.mark.skip('Can\'t add the same view twice anymore')
     def test_add(self):
         root = Resource(self.conf)
         two = root.add('two', view=BaseView)
@@ -68,7 +70,7 @@ class TestResource(object):
         assert two.id_name == 'username'
 
         #same id_name for nested resource must raise
-        with pytest.raises(ValueError):
+        with pytest.raises(ConfigurationExecutionError):
             two.add('tree', view=UserView)
 
     @mock.patch('prf.resource.maybe_dotted')
@@ -81,10 +83,11 @@ class TestResource(object):
         assert get_view_class('prf.view.BaseView', root) == BaseView
         fake_maybe_dotted.reset_mock()
 
+    @pytest.mark.skip('Can\'t add 2 identical views')
     def test_get_uri_elements(self):
         self.conf.route_prefix = 'route_prefix'
         root = Resource(self.conf)
-        ppref, npref = get_uri_elements(
+        ppref, npref = get_parent_elements(
                 root.add('one', view=BaseView).add('two', view=BaseView))
 
         assert ppref == 'ones/{one_id}'

@@ -16,16 +16,20 @@ def fake_resp(code):
 
 
 class TestExc(object):
-
     @mock.patch('prf.exc.log_exception')
     def test_create_response(self, fake_log_exception):
         out = prf.exc.create_response(fake_resp(200), {})
         assert fake_log_exception.call_count == 0
+        # Temporarily pop timestamp, we need to freeze time to test it
+        d = json.loads(out.body)
+        d.pop('timestamp')
 
-        assert {"explanation": "explanation", 
-                "code": "200", 
-                "detail": "detail",
-                "title": "title"} == json.loads(out.body)
+        assert {
+            'explanation': 'explanation',
+            'code': '200',
+            'detail': 'detail',
+            'title': 'title'
+        } == d
 
         assert out.content_type == 'application/json'
 
@@ -39,7 +43,7 @@ class TestExc(object):
             remote_addr = 'remote_addr'
         )
 
-        out = prf.exc.log_exception(fake_resp(400), 
+        out = prf.exc.log_exception(fake_resp(400),
                 params = dict(
                     headers = ['Header'],
                     request = request,
@@ -53,7 +57,7 @@ class TestExc(object):
 
     @mock.patch('prf.exc.log_exception')
     def test_create_response_w_log(self, fake_log_exception):
-        
+
         in_resp = mock.MagicMock()
         in_resp.code = '400'
         in_resp.status_code = 400
@@ -72,7 +76,7 @@ class TestExc(object):
         assert 'error_id' in out.json
 
     def test_statuses(self):
-        res = {'id':1}        
+        res = {'id':1}
         out = prf.exc.HTTPCreated(
             location = 'http://location',
             resource = res

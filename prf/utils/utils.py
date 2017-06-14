@@ -18,7 +18,6 @@ class DValueError(ValueError):
 
 
 class JSONEncoder(json.JSONEncoder):
-
     def default(self, obj):
         if isinstance(obj, (datetime, date)):
             return obj.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
@@ -32,9 +31,13 @@ class JSONEncoder(json.JSONEncoder):
 def json_dumps(body):
     return json.dumps(body, cls=JSONEncoder)
 
-def split_strip(_str, on=','):
+
+def split_strip(_str, on=',', remove_empty=True):
     lst = (_str if isinstance(_str, list) else _str.split(on))
-    return filter(bool, [e.strip() for e in lst])
+    lst = [e.strip() for e in lst]
+    if remove_empty:
+        lst = filter(bool, lst)
+    return lst
 
 
 def process_limit(start, page, limit):
@@ -42,8 +45,7 @@ def process_limit(start, page, limit):
         limit = int(limit)
 
         if start is not None and page is not None:
-            raise ValueError('Can not specify _start and _page at the same time'
-                             )
+            raise ValueError('Can not specify _start and _page at the same time')
 
         if start is not None:
             start = int(start)

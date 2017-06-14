@@ -2,8 +2,8 @@ import pytest
 from prf.utils.convert import *
 from prf.utils import dictset
 
-class TestConvert():
 
+class TestConvert():
     def test_parametrize(self):
         def func(dset, value):
             return value
@@ -27,8 +27,10 @@ class TestConvert():
         assert asbool(d_, 'c') is False
         assert asbool(d_, 'd') is True
         assert asbool(d_, 'e') is False
-        assert asbool(d_, 'f') is False
         assert asbool(d_, 'g') is False
+
+        with pytest.raises(DValueError):
+            asbool(d_, 'f')
 
         with pytest.raises(DKeyError):
             asbool(d_, 'NOTHERE')
@@ -53,7 +55,6 @@ class TestConvert():
 
         assert aslist(dict(a='a,b,a'), 'a', unique=True) == ['a','b']
 
-    @pytest.skip('Fix ME')
     def test_list1(self):
         assert aslist(dict(a='a,'), 'a', remove_empty=False) == ['a', '']
 

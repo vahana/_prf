@@ -375,6 +375,7 @@ class dictset(dict):
     def remove(self, keys):
         for k in keys:
             self.pop(k, None)
+        return self
 
     def update(self, d_):
         super(dictset, self).update(dictset(d_))
