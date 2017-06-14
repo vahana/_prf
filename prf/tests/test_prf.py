@@ -7,15 +7,13 @@ settings = dict(tweens='prf.tweens.cors')
 
 
 class TestPRF(object):
-
-    @pytest.mark.skip('Method doesn\'t exist anymore')
     def test_includeme(self):
         conf = Configurator(settings=settings)
         prf.includeme(conf)
 
         assert hasattr(conf, 'get_root_resource')
         assert hasattr(conf, 'add_error_view')
-        assert hasattr(conf, 'add_login_views')
+        assert hasattr(conf, 'add_account_views')
 
         assert 'prf.root_resources' in conf.registry
         assert 'prf.resources_map' in conf.registry
@@ -27,13 +25,12 @@ class TestPRF(object):
         assert conf.get_root_resource() == prf.get_root_resource(conf)
         assert 'prf.tests' in conf.registry['prf.root_resources']
 
-    @pytest.mark.skip('Method doesn\'t exist anymore')
-    def test_add_login_views(self):
+    def test_add_account_views(self):
         conf = Configurator(settings=settings)
 
         # prf.includeme(conf)
 
-        prf.add_login_views(conf, mock.MagicMock())
+        prf.add_account_views(conf, mock.MagicMock())
 
     def test_add_error_view(self):
         conf = Configurator(settings=settings)

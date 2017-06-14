@@ -3,7 +3,7 @@ import pytest
 from pyramid.config import Configurator
 from pyramid.exceptions import ConfigurationExecutionError
 
-from prf.resource import Resource, get_view_class
+from prf.resource import Resource, get_view_class, get_parent_elements
 from prf.view import BaseView
 
 
@@ -83,11 +83,11 @@ class TestResource(object):
         assert get_view_class('prf.view.BaseView', root) == BaseView
         fake_maybe_dotted.reset_mock()
 
-    @pytest.mark.skip('This method doesnt exist anymore')
+    @pytest.mark.skip('Can\'t add 2 identical views')
     def test_get_uri_elements(self):
         self.conf.route_prefix = 'route_prefix'
         root = Resource(self.conf)
-        ppref, npref = get_uri_elements(
+        ppref, npref = get_parent_elements(
                 root.add('one', view=BaseView).add('two', view=BaseView))
 
         assert ppref == 'ones/{one_id}'

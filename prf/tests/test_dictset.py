@@ -147,4 +147,6 @@ class TestDictSet():
     def test_asdt(self):
         assert dictset(a='2000-01-01T01:01:01').asdt('a') == datetime(2000,01,01,01,01,01)
 
-
+    @pytest.mark.skip('Not implemented yet')
+    def test_flat_unflat(self):
+        pass

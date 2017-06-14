@@ -55,7 +55,6 @@ class TestConvert():
 
         assert aslist(dict(a='a,b,a'), 'a', unique=True) == ['a','b']
 
-    @pytest.mark.skip('Fix ME')
     def test_list1(self):
         assert aslist(dict(a='a,'), 'a', remove_empty=False) == ['a', '']
 

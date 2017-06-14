@@ -69,11 +69,11 @@ def asbool(dset, value):
 
 
 @parametrize
-def aslist(dset, value, sep=',', remove_empty=False, unique=False):
+def aslist(dset, value, sep=',', remove_empty=True, unique=False):
     if isinstance(value, list):
         _lst = value
     elif isinstance(value, basestring):
-        _lst = split_strip(value, sep)
+        _lst = split_strip(value, sep, remove_empty)
     else:
         _lst = [value]
 
