@@ -8,6 +8,7 @@ settings = dict(tweens='prf.tweens.cors')
 
 class TestPRF(object):
 
+    @pytest.mark.skip('Method doesn\'t exist anymore')
     def test_includeme(self):
         conf = Configurator(settings=settings)
         prf.includeme(conf)
@@ -26,6 +27,7 @@ class TestPRF(object):
         assert conf.get_root_resource() == prf.get_root_resource(conf)
         assert 'prf.tests' in conf.registry['prf.root_resources']
 
+    @pytest.mark.skip('Method doesn\'t exist anymore')
     def test_add_login_views(self):
         conf = Configurator(settings=settings)
 
