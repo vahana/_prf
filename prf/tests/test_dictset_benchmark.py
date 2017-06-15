@@ -56,9 +56,19 @@ class TestDictSetBenchmark(object):
         d = dictset(self.sample_d)
         benchmark(d.flat)
 
+    @pytest.mark.benchmark(**options('flat'))
+    def test_flat_lists(self, benchmark):
+        d = dictset(self.sample_d)
+        benchmark(d.flat, keep_lists=False)
+
     @pytest.mark.benchmark(**options('unflat'))
     def test_unflat(self, benchmark):
         d = dictset(self.sample_d).flat()
+        benchmark(d.unflat)
+
+    @pytest.mark.benchmark(**options('unflat'))
+    def test_unflat_lists(self, benchmark):
+        d = dictset(self.sample_d).flat(keep_lists=False)
         benchmark(d.unflat)
 
     @pytest.mark.benchmark(**options('extract'))
@@ -82,3 +92,11 @@ class TestDictSetBenchmark(object):
         d = dictset(self.sample_d).subset(['a', 'b', 'd'])
         e = dictset(self.sample_d).subset(['c', 'd', 'e'])
         benchmark(d.update_with, e)
+
+    @pytest.mark.benchmark(**options('update_with'))
+    def test_update_with_append_to(self, benchmark):
+        # Include d in both to have a collision
+        d = dictset(self.sample_d).subset(['a', 'b', 'd'])
+        e = dictset(self.sample_d).subset(['c', 'd', 'e'])
+        a = []
+        benchmark(d.update_with, e, append_to=a)
