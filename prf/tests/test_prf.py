@@ -7,7 +7,8 @@ settings = dict(tweens='prf.tweens.cors')
 
 
 class TestPRF(object):
-    def test_includeme(self):
+    @mock.patch('prf.prf_settings', return_value=prf.utils.dictset())
+    def test_includeme(self, m):
         conf = Configurator(settings=settings)
         prf.includeme(conf)
 
