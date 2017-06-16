@@ -32,7 +32,11 @@ class TestDictSetBenchmark(object):
             'ii': {
                 'aa': LOREM,
                 'ab': [5, 6, 7],
-            }
+            },
+            'iii': [
+                {'j': LOREM},
+                {'jj': LOREM},
+            ]
         },
         e={
             'i': LOREM,
@@ -64,12 +68,12 @@ class TestDictSetBenchmark(object):
     @pytest.mark.benchmark(**options('unflat'))
     def test_unflat(self, benchmark):
         d = dictset(self.sample_d).flat()
-        benchmark(d.unflat)
+        r = benchmark(d.unflat)
 
     @pytest.mark.benchmark(**options('unflat'))
     def test_unflat_lists(self, benchmark):
         d = dictset(self.sample_d).flat(keep_lists=False)
-        benchmark(d.unflat)
+        r = benchmark(d.unflat)
 
     @pytest.mark.benchmark(**options('extract'))
     def test_extract(self, benchmark):

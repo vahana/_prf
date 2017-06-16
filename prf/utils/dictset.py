@@ -534,11 +534,11 @@ class dictset(dict):
 
     def unflat(self):
         if hasattr(self, '_ordered_dict'):
-            _d = dictset(args_to_dict(self._ordered_dict))
+            _d = dictset(unflat(self._ordered_dict))
             del self._ordered_dict
             return _d
 
-        return dictset(args_to_dict(self))
+        return dictset(unflat(self))
 
     def set_default(self, name, val):
         if name not in self.flat():
@@ -700,54 +700,51 @@ def dict_to_args(d, keep_lists=False):
 
 
 def dot_split(s):
-    return [part for part in re.split("(?<!\.)\.(?!\.)", s)]
+    return [part for part in re.split(r"(?<!\.)\.(?!\.)", s)]
 
 
-def args_to_dict(_args):
-    _d = dictset()
-    keys = _args.keys()
-    # keys.sort()
+def _extend_list(_list, length):
+    if len(_list) < length:
+        for _ in range(length - len(_list)):
+            _list.append({})
 
-    for arg in keys:
-        value = _args[arg]
 
-        bits = dot_split(arg)
-        ctx = _d
+def unflat(d):
+    r = {}
 
-        for i in range(len(bits)):
-            bit = bits[i]
-            last = not (i < len(bits) - 1)
+    for k, leaf_value in d.items():
+        path = k.split('.')
+        ctx = r
+        for i, part in enumerate(path[:-1]):
+            # If context is a list, part should be an int
+            # Testing part.isdigit() is significantly faster than isinstance(ctx, list)
+            ctx_is_list = part.isdigit()
+            if ctx_is_list:
+                part = int(part)
+            # If the next part is an int, we need to contain a list
+            ctx_contains_list = path[i+1].isdigit()
 
-            next_is_dict = False
-            if not last:
-                try:
-                    int(bits[i + 1])
-                except ValueError:
-                    next_is_dict = True
+            # Set the current node to placeholder value, {} or []
+            # It doesn't matter if it's a leaf, we'll override it
+            if not ctx_is_list and not ctx.get(part):
+                ctx[part] = [] if ctx_contains_list else {}
 
-            if isinstance(ctx, dict):
-                if not ctx.has_key(bit):
-                    if not last:
-                        ctx[bit] = dictset() if next_is_dict else []
-                        ctx = ctx[bit]
-                    else:
-                        ctx[bit] = type_cast(value)
-                        ctx = None
-                else:
-                    ctx = ctx[bit]
-            elif isinstance(ctx, list):
-                if not last:
-                    int_bit = int(bit)
-                    if int_bit > len(ctx) - 1:
-                        ctx.append(dictset() if next_is_dict else [])
-                    try:
-                        ctx = ctx[int_bit]
-                    except IndexError as e:
-                        pass
-                else:
-                    ctx.append(type_cast(value))
-                    ctx = None
-    return _d
+            # If we're dealing with a list, make sure it's big enough
+            # for part to be in range
+            if ctx_is_list:
+                _extend_list(ctx, part + 1)
+
+            ctx = ctx[part]
+
+        k = path[-1]
+        if k.isdigit():
+            k = int(k)
+            _extend_list(ctx, k + 1)
+
+        ctx[k] = leaf_value
+
+    return r
+
 
 #TODO: replace dict_to_args with this
 import collections
