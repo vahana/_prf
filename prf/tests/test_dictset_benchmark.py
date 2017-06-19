@@ -103,6 +103,16 @@ class TestDictSetBenchmark(object):
             'ab': self.sample_d['d']['ii']['ab'],
         }
 
+    @pytest.mark.benchmark(**options('extract'))
+    def test_extract_exclude(self, benchmark):
+        d = dictset(self.sample_d)
+        args = ['-a', '-b', '-c', '-e', '-g', '-h']
+        benchmark(d.extract, args)
+        assert d.extract(args) == {
+            'd': self.sample_d['d'],
+            'f': self.sample_d['f'],
+        }
+
     @pytest.mark.benchmark(**options('subset'))
     def test_subset(self, benchmark):
         d = dictset(self.sample_d)
@@ -112,6 +122,16 @@ class TestDictSetBenchmark(object):
             'a': self.sample_d['a'],
             'b': self.sample_d['b'],
             'd': self.sample_d['d'],
+        }
+
+    @pytest.mark.benchmark(**options('subset'))
+    def test_subset_exclude(self, benchmark):
+        d = dictset(self.sample_d)
+        args = ['-a', '-b', '-c', '-e', '-g', '-h']
+        benchmark(d.subset, args)
+        assert d.subset(args) == {
+            'd': self.sample_d['d'],
+            'f': self.sample_d['f'],
         }
 
     @pytest.mark.benchmark(**options('update_with'))

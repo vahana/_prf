@@ -720,11 +720,15 @@ def unflat(d):
 
 def flat(d, key='', keep_lists=False):
     r = {}
+    # Make a dict regardless, ints as keys for a list
     iterable = d if isinstance(d, dict) else dict(enumerate(d))
     for k, v in iterable.items():
-        kk = k if not key else '.'.join(map(str, [key, k]))
+        # Join keys but prevent keys from starting by '.'
+        kk = k if not key else '.'.join([key, str(k)])
+        # Recursion if we find a dict or list, except if we're keeping lists
         if isinstance(v, dict) or (isinstance(v, list) and not keep_lists):
             r.update(flat(v, key=kk, keep_lists=keep_lists))
+        # Otherwise just set attribute
         else:
             r[kk] = v
     return r
