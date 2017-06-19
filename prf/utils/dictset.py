@@ -734,6 +734,10 @@ def unflat(d):
             if ctx_is_list:
                 _extend_list(ctx, part + 1)
 
+            # If we're empty and contain a list
+            if not ctx[part] and ctx_contains_list:
+                ctx[part] = []
+
             ctx = ctx[part]
 
         k = path[-1]
