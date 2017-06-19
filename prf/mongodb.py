@@ -457,6 +457,16 @@ class BaseMixin(object):
             return {name: _default}
 
     @classmethod
+    def insert_into(cls, name, docs=None, query=None):
+        if query:
+            docs = [d.to_dict(query.get('_fields')) for
+                        d in cls.get_collection(**query)]
+
+        with mongo.context_managers.switch_collection(cls, name) as kls:
+            for each in docs:
+                kls(**each).save()
+
+    @classmethod
     def get_frequencies(cls, queryset, specials):
         specials.asstr('_frequencies',  allow_missing=True)
         specials.asbool('_fq_normalize',  default=False)
