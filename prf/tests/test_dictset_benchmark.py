@@ -68,12 +68,12 @@ class TestDictSetBenchmark(object):
     @pytest.mark.benchmark(**options('unflat'))
     def test_unflat(self, benchmark):
         d = dictset(self.sample_d).flat()
-        r = benchmark(d.unflat)
+        benchmark(d.unflat)
 
     @pytest.mark.benchmark(**options('unflat'))
     def test_unflat_lists(self, benchmark):
         d = dictset(self.sample_d).flat(keep_lists=False)
-        r = benchmark(d.unflat)
+        benchmark(d.unflat)
 
     @pytest.mark.benchmark(**options('extract'))
     def test_extract(self, benchmark):

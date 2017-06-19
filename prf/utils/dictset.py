@@ -715,6 +715,7 @@ def unflat(d):
     for k, leaf_value in d.items():
         path = k.split('.')
         ctx = r
+        # Last item is a leaf, we save time by doing it outside the loop
         for i, part in enumerate(path[:-1]):
             # If context is a list, part should be an int
             # Testing part.isdigit() is significantly faster than isinstance(ctx, list)
@@ -725,7 +726,6 @@ def unflat(d):
             ctx_contains_list = path[i+1].isdigit()
 
             # Set the current node to placeholder value, {} or []
-            # It doesn't matter if it's a leaf, we'll override it
             if not ctx_is_list and not ctx.get(part):
                 ctx[part] = [] if ctx_contains_list else {}
 
