@@ -52,9 +52,6 @@ class TestDictSetBenchmark(object):
         }
     )
 
-    def json_print(self, v):
-        print json.dumps(v, indent=2)
-
     @pytest.mark.benchmark(**options('flat'))
     def test_flat(self, benchmark):
         d = dictset(self.sample_d)
@@ -69,26 +66,48 @@ class TestDictSetBenchmark(object):
     def test_unflat(self, benchmark):
         d = dictset(self.sample_d).flat()
         benchmark(d.unflat)
+        assert d.unflat() == self.sample_d
 
     @pytest.mark.benchmark(**options('unflat'))
     def test_unflat_lists(self, benchmark):
         d = dictset(self.sample_d).flat(keep_lists=False)
         benchmark(d.unflat)
+        assert d.unflat() == self.sample_d
 
     @pytest.mark.benchmark(**options('extract'))
     def test_extract(self, benchmark):
         d = dictset(self.sample_d)
-        benchmark(d.extract, ['a', 'b', 'c'])
+        args = ['a', 'b', 'c']
+        benchmark(d.extract, args)
+        assert d.extract(args) == {
+            'a': self.sample_d['a'],
+            'b': self.sample_d['b'],
+            'c': self.sample_d['c'],
+        }
 
     @pytest.mark.benchmark(**options('extract'))
     def test_extract_nested(self, benchmark):
         d = dictset(self.sample_d)
-        benchmark(d.extract, ['a', 'b', 'c', 'd.ii.*'])
+        args = ['a', 'b', 'c', 'd.ii.*']
+        benchmark(d.extract, args)
+        assert d.extract(['a', 'b', 'c', 'd.ii.*']) == {
+            'a': self.sample_d['a'],
+            'b': self.sample_d['b'],
+            'c': self.sample_d['c'],
+            'aa': self.sample_d['d']['ii']['aa'],
+            'ab': self.sample_d['d']['ii']['ab'],
+        }
 
     @pytest.mark.benchmark(**options('subset'))
     def test_subset(self, benchmark):
         d = dictset(self.sample_d)
-        benchmark(d.subset, ['a', 'b', 'd'])
+        args = ['a', 'b', 'd']
+        benchmark(d.subset, args)
+        assert d.subset(args) == {
+            'a': self.sample_d['a'],
+            'b': self.sample_d['b'],
+            'd': self.sample_d['d'],
+        }
 
     @pytest.mark.benchmark(**options('update_with'))
     def test_update_with(self, benchmark):
@@ -96,6 +115,7 @@ class TestDictSetBenchmark(object):
         d = dictset(self.sample_d).subset(['a', 'b', 'd'])
         e = dictset(self.sample_d).subset(['c', 'd', 'e'])
         benchmark(d.update_with, e)
+        assert d.update_with(e) == self.sample_d
 
     @pytest.mark.benchmark(**options('update_with'))
     def test_update_with_append_to(self, benchmark):
@@ -104,3 +124,4 @@ class TestDictSetBenchmark(object):
         e = dictset(self.sample_d).subset(['c', 'd', 'e'])
         a = []
         benchmark(d.update_with, e, append_to=a)
+        assert d.update_with(e, append_to=a) == self.sample_d
