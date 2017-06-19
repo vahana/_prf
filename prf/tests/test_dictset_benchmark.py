@@ -26,12 +26,12 @@ class TestDictSetBenchmark(object):
     sample_d = dictset(
         a=1,
         b=LOREM,
-        c=[2] * 10,
+        c=list(range(20)),
         d={
             'i': [LOREM] * 10,
             'ii': {
                 'aa': LOREM,
-                'ab': [5, 6, 7],
+                'ab': [5, 6, [7, 8, 9]],
             },
             'iii': [
                 {'j': LOREM},
@@ -49,18 +49,23 @@ class TestDictSetBenchmark(object):
             'viii': LOREM,
             'ix': LOREM,
             'x': LOREM,
-        }
+        },
+        f=[[1, 2, 3], 4, 5],
+        g=[1, 2, 4, [4, 5], 6],
+        h=[1, 2, 4, [[4, 5], 6]],
     )
 
     @pytest.mark.benchmark(**options('flat'))
     def test_flat(self, benchmark):
         d = dictset(self.sample_d)
         benchmark(d.flat)
+        assert dictset(d.flat()).unflat() == self.sample_d
 
     @pytest.mark.benchmark(**options('flat'))
     def test_flat_lists(self, benchmark):
         d = dictset(self.sample_d)
         benchmark(d.flat, keep_lists=False)
+        assert dictset(d.flat(keep_lists=False)).unflat() == self.sample_d
 
     @pytest.mark.benchmark(**options('unflat'))
     def test_unflat(self, benchmark):
@@ -112,16 +117,16 @@ class TestDictSetBenchmark(object):
     @pytest.mark.benchmark(**options('update_with'))
     def test_update_with(self, benchmark):
         # Include d in both to have a collision
-        d = dictset(self.sample_d).subset(['a', 'b', 'd'])
-        e = dictset(self.sample_d).subset(['c', 'd', 'e'])
+        d = dictset(self.sample_d).subset(['a', 'b', 'd', 'g', 'h'])
+        e = dictset(self.sample_d).subset(['c', 'd', 'e', 'f'])
         benchmark(d.update_with, e)
         assert d.update_with(e) == self.sample_d
 
     @pytest.mark.benchmark(**options('update_with'))
     def test_update_with_append_to(self, benchmark):
         # Include d in both to have a collision
-        d = dictset(self.sample_d).subset(['a', 'b', 'd'])
-        e = dictset(self.sample_d).subset(['c', 'd', 'e'])
+        d = dictset(self.sample_d).subset(['a', 'b', 'd', 'g', 'h'])
+        e = dictset(self.sample_d).subset(['c', 'd', 'e', 'f'])
         a = []
         benchmark(d.update_with, e, append_to=a)
         assert d.update_with(e, append_to=a) == self.sample_d

@@ -527,7 +527,7 @@ class dictset(dict):
         return super(dictset, self).pop(*arg, **kw)
 
     def flat(self, keep_lists=True):
-        _flat = dict_to_args(self, keep_lists=keep_lists)
+        _flat = flat(self, keep_lists=keep_lists)
         _d = dictset(_flat)
         _d._ordered_dict = _flat
         return _d
@@ -665,40 +665,6 @@ def type_cast(value):
         return value
 
 
-def list_to_args(l):
-    args = OrderedDict()
-    pos = 0
-    for i in l:
-        if isinstance(i, dict):
-            sub = dict_to_args(i)
-            for s, nv in sub.items():
-                args[str(pos) + "." + s] = nv
-        elif isinstance(i, list):
-            sub = list_to_args(i)
-            for s, nv in sub.items():
-                args[str(pos) + "." + s] = nv
-        else:
-            args[str(pos)] = i
-        pos += 1
-    return args
-
-
-def dict_to_args(d, keep_lists=False):
-    args = OrderedDict()
-    for k, v in d.items():
-        if isinstance(v, dict):
-            sub = dict_to_args(v, keep_lists=keep_lists)
-            for s, nv in sub.items():
-                args["%s.%s" % (k,s)] = nv
-        elif isinstance(v, list) and not keep_lists:
-            sub = list_to_args(v)
-            for s, nv in sub.items():
-                args["%s.%s" % (k,s)] = nv
-        else:
-            args[k] = v
-    return args
-
-
 def dot_split(s):
     return [part for part in re.split(r"(?<!\.)\.(?!\.)", s)]
 
@@ -714,6 +680,7 @@ def unflat(d):
 
     for k, leaf_value in d.items():
         path = k.split('.')
+        prev_ctx = r
         ctx = r
         # Last item is a leaf, we save time by doing it outside the loop
         for i, part in enumerate(path[:-1]):
@@ -738,6 +705,7 @@ def unflat(d):
             if not ctx[part] and ctx_contains_list:
                 ctx[part] = []
 
+            prev_ctx = ctx
             ctx = ctx[part]
 
         k = path[-1]
@@ -750,35 +718,13 @@ def unflat(d):
     return r
 
 
-#TODO: replace dict_to_args with this
-import collections
-def flat(_dict, parent_key='', sep='.', keep_lists=False, depth=-1):
-    items = []
-
-    if depth != -1:
-        if depth == 0:
-            return _dict
-        depth -= 1
-
-    for k, v in _dict.items():
-        new_key = parent_key + sep + k if parent_key else k
-
-        if isinstance(v, collections.MutableMapping):
-            items.extend(flat(v, new_key, sep=sep,
-                         keep_lists=keep_lists,
-                         depth=depth).items())
-
-        elif isinstance(v, collections.MutableSequence) and not keep_lists:
-            for ix in range(len(v)):
-                new_lkey = new_key + sep + str(ix)
-                if isinstance(v[ix],
-                        (collections.MutableSequence, collections.MutableMapping)):
-                    items.extend(flat(v[ix], new_lkey, sep=sep, depth=depth).items())
-                else:
-                    items.append((new_lkey, v[ix]))
+def flat(d, key='', keep_lists=False):
+    r = {}
+    iterable = d if isinstance(d, dict) else dict(enumerate(d))
+    for k, v in iterable.items():
+        kk = k if not key else '.'.join(map(str, [key, k]))
+        if isinstance(v, dict) or (isinstance(v, list) and not keep_lists):
+            r.update(flat(v, key=kk, keep_lists=keep_lists))
         else:
-            items.append((new_key, v))
-
-    return OrderedDict(items)
-
-
+            r[kk] = v
+    return r
