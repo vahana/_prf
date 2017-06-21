@@ -305,7 +305,7 @@ class ES(object):
 
     @classmethod
     def setup(cls, settings):
-        cls.settings = settings.unflat().es
+        cls.settings = dictset(settings.unflat().es)
 
         try:
             hosts = []
