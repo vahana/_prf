@@ -280,7 +280,22 @@ def pager(start, page, total):
 def extract_domain(url, _raise=True):
     import tldextract
     try:
-        return tldextract.extract(url).registered_domain
+        parsed = tldextract.extract(url)
+        domain = parsed.registered_domain
+        subdomain = parsed.subdomain
+
+        if subdomain.startswith('www'):
+            #ie [www].abc.com
+            subdomain = subdomain[3:]
+            if subdomain.startswith('.'):
+                #ie [www.abc].xyz.com
+                subdomain = subdomain[1:]
+
+        if subdomain:
+            domain = '%s.%s' % (subdomain, domain)
+
+        return domain
+
     except TypeError as e:
         if _raise:
             raise DValueError(e)
