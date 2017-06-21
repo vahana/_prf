@@ -45,9 +45,6 @@ class dictset(basedictset):
             val = dictset(val)
         self[key] = val
 
-    def to_dictset(self):
-        return dictset(self.to_slovar())
-
     def copy(self):
         return dictset(super(dictset, self).copy())
 
