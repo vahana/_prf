@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 from prf.utils.utils import *
-from prf.utils.dictset import process_fields, expand_list
+from prf.utils import process_fields
 from prf import dictset
 
 class TestUtils(object):
@@ -40,15 +40,6 @@ class TestUtils(object):
         assert (0, 10) == process_limit(None, 0, 10)
         assert (10, 10) == process_limit(None, 1, 10)
         assert (20, 10) == process_limit(None, 2, 10)
-
-    def test_expand_list(self):
-        assert expand_list(None) == []
-
-        assert expand_list('1,2,3') == ['1', '2', '3']
-        assert expand_list([1,2,3]) == [1,2,3]
-        assert expand_list([1,2,[3,4]]) == [1,2,3,4]
-
-        assert expand_list([1,2,'3,4']) == [1,2,'3','4']
 
     @pytest.mark.skip('process_fields doesn\'t seem to behave like this anymore')
     def test_process_fields(self):

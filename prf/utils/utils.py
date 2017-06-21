@@ -7,21 +7,16 @@ from datetime import date, datetime
 import requests
 from functools import partial
 
+from dictset.errors import DKeyError, DValueError
+from dictset.operations.string import split_strip, str2dt, str2rdt
+
 log = logging.getLogger(__name__)
-
-class DKeyError(KeyError):
-    pass
-
-
-class DValueError(ValueError):
-    pass
 
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, (datetime, date)):
             return obj.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
-
         try:
             return super(JSONEncoder, self).default(obj)
         except TypeError:
@@ -30,14 +25,6 @@ class JSONEncoder(json.JSONEncoder):
 
 def json_dumps(body):
     return json.dumps(body, cls=JSONEncoder)
-
-
-def split_strip(_str, on=',', remove_empty=True):
-    lst = (_str if isinstance(_str, list) else _str.split(on))
-    lst = [e.strip() for e in lst]
-    if remove_empty:
-        lst = filter(bool, lst)
-    return lst
 
 
 def process_limit(start, page, limit):
@@ -358,44 +345,6 @@ def qs2dict(qs):
     from urlparse import parse_qsl
     from prf.utils import dictset
     return dictset(parse_qsl(qs))
-
-
-def str2rdt(strdt):
-    matches = dict(
-        s = 'seconds',
-        m = 'minutes',
-        h = 'hours',
-        d = 'days',
-        M = 'months',
-        y = 'years'
-    )
-
-    # is it a relative date ?
-    rg = re.compile('(([-+]?)(\d+))([smhdMy])\\b', re.DOTALL)
-    m = rg.search(strdt)
-    if m:
-        number = int(m.group(1))
-        word = m.group(4)
-        if word in matches:
-            return dateutil.relativedelta.relativedelta(**{matches[word]:number})
-
-
-def str2dt(strdt):
-    if not strdt:
-        raise DValueError('Datetime string can not be empty or None')
-
-    if isinstance(strdt, datetime):
-        return datetime
-
-    dt = str2rdt(strdt)
-    if dt:
-        return datetime.utcnow()+dt
-
-    try:
-        return dateutil.parser.parse(strdt)
-    except ValueError as e:
-        raise DValueError(
-            'Datetime string `%s` not recognized as datetime. Did you miss +- signs for relative dates?' % strdt)
 
 
 class TabRenderer(object):

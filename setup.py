@@ -13,6 +13,7 @@ install_requires = [
     'requests',
     'mongoengine',
     'waitress',
+    'dictset',
 ]
 
 setup(
@@ -21,10 +22,10 @@ setup(
     description='prf',
     long_description=README + '\n\n' +  CHANGES,
     classifiers=[
-    "Programming Language :: Python",
-    "Framework :: Pyramid",
-    "Topic :: Internet :: WWW/HTTP",
-    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+        "Programming Language :: Python",
+        "Framework :: Pyramid",
+        "Topic :: Internet :: WWW/HTTP",
+        "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
     ],
     author='vahan',
     author_email='aivosha@gmail.com',
@@ -34,5 +35,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=install_requires,
-
+    dependency_links=[
+        "git+ssh://git@github.com/vahana/dictset.git"
+    ]
 )

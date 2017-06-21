@@ -9,7 +9,7 @@ import pymongo
 
 import prf.exc
 from prf.utils import dictset, split_strip, pager,\
-                      to_dunders, process_fields, qs2dict
+                      to_dunders, process_fields, qs2dict, DValueError
 from prf.utils.qs import prep_params, typecast
 from prf.renderers import _JSONEncoder
 
@@ -36,7 +36,7 @@ def get_document_cls(name, _raise=True):
         return mongo.document.get_document(name)
     except Exception as e:
         if _raise:
-            raise dictset.DValueError('`%s` document does not exist' % name)
+            raise DValueError('`%s` document does not exist' % name)
 
 
 def drop_collections(name_prefix):
