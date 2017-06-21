@@ -1,4 +1,4 @@
-from dictset import dictset as basedictset
+from slovar import slovar as basedictset
 from prf.utils.convert import *
 from prf.utils.utils import json_dumps
 

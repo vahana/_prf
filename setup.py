@@ -13,7 +13,7 @@ install_requires = [
     'requests',
     'mongoengine',
     'waitress',
-    'dictset',
+    'slovar',
 ]
 
 setup(
@@ -36,6 +36,6 @@ setup(
     zip_safe=False,
     install_requires=install_requires,
     dependency_links=[
-        "git+ssh://git@github.com/vahana/dictset.git"
+        "git+ssh://git@github.com/vahana/slovar.git#egg=slovar"
     ]
 )
