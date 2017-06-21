@@ -658,10 +658,10 @@ def _extend_list(_list, length):
             _list.append({})
 
 
-def unflat(d):
+def unflat(_dict):
     result = {}
 
-    for dotted_path, leaf_value in d.items():
+    for dotted_path, leaf_value in _dict.items():
         path = dotted_path.split('.')
         ctx = result
         # Last item is a leaf, we save time by doing it outside the loop
@@ -700,10 +700,10 @@ def unflat(d):
     return result
 
 
-def flat(d, base_key='', keep_lists=False):
+def flat(_dict, base_key='', keep_lists=False):
     result = {}
     # Make a dict regardless, ints as keys for a list
-    iterable = d if isinstance(d, dict) else dict(enumerate(d))
+    iterable = _dict if isinstance(_dict, dict) else dict(enumerate(_dict))
     for key, value in iterable.items():
         # Join keys but prevent keys from starting by '.'
         dotted_key = key if not base_key else '.'.join([base_key, str(key)])
