@@ -1,6 +1,5 @@
 import pprint
 import urllib, re
-from collections import OrderedDict
 from itertools import groupby
 
 from prf.utils.utils import DKeyError, DValueError, split_strip, json_dumps, str2dt
@@ -136,9 +135,6 @@ class dictset(dict):
             raise AttributeError(e.message)
 
     def __setattr__(self, key, val):
-        if key == '_ordered_dict':
-            return super(dictset, self).__setattr__(key, val)
-
         if isinstance(val, dict):
             val = dictset(val)
         self[key] = val
@@ -521,24 +517,11 @@ class dictset(dict):
 
         return _d.unflat()
 
-    def pop(self, *arg, **kw):
-        if hasattr(self, '_ordered_dict'):
-            self._ordered_dict.pop(*arg, **kw)
-        return super(dictset, self).pop(*arg, **kw)
-
     def flat(self, keep_lists=True):
-        _flat = dict_to_args(self, keep_lists=keep_lists)
-        _d = dictset(_flat)
-        _d._ordered_dict = _flat
-        return _d
+        return dictset(flat(self, keep_lists=keep_lists))
 
     def unflat(self):
-        if hasattr(self, '_ordered_dict'):
-            _d = dictset(args_to_dict(self._ordered_dict))
-            del self._ordered_dict
-            return _d
-
-        return dictset(args_to_dict(self))
+        return dictset(unflat(self))
 
     def set_default(self, name, val):
         if name not in self.flat():
@@ -665,119 +648,68 @@ def type_cast(value):
         return value
 
 
-def list_to_args(l):
-    args = OrderedDict()
-    pos = 0
-    for i in l:
-        if isinstance(i, dict):
-            sub = dict_to_args(i)
-            for s, nv in sub.items():
-                args[str(pos) + "." + s] = nv
-        elif isinstance(i, list):
-            sub = list_to_args(i)
-            for s, nv in sub.items():
-                args[str(pos) + "." + s] = nv
-        else:
-            args[str(pos)] = i
-        pos += 1
-    return args
-
-
-def dict_to_args(d, keep_lists=False):
-    args = OrderedDict()
-    for k, v in d.items():
-        if isinstance(v, dict):
-            sub = dict_to_args(v, keep_lists=keep_lists)
-            for s, nv in sub.items():
-                args["%s.%s" % (k,s)] = nv
-        elif isinstance(v, list) and not keep_lists:
-            sub = list_to_args(v)
-            for s, nv in sub.items():
-                args["%s.%s" % (k,s)] = nv
-        else:
-            args[k] = v
-    return args
-
-
 def dot_split(s):
-    return [part for part in re.split("(?<!\.)\.(?!\.)", s)]
+    return [part for part in re.split(r"(?<!\.)\.(?!\.)", s)]
 
 
-def args_to_dict(_args):
-    _d = dictset()
-    keys = _args.keys()
-    # keys.sort()
+def _extend_list(_list, length):
+    if len(_list) < length:
+        for _ in range(length - len(_list)):
+            _list.append({})
 
-    for arg in keys:
-        value = _args[arg]
 
-        bits = dot_split(arg)
-        ctx = _d
+def unflat(_dict):
+    result = {}
 
-        for i in range(len(bits)):
-            bit = bits[i]
-            last = not (i < len(bits) - 1)
+    for dotted_path, leaf_value in _dict.items():
+        path = dotted_path.split('.')
+        ctx = result
+        # Last item is a leaf, we save time by doing it outside the loop
+        for i, part in enumerate(path[:-1]):
+            # If context is a list, part should be an int
+            # Testing part.isdigit() is significantly faster than isinstance(ctx, list)
+            ctx_is_list = part.isdigit()
+            if ctx_is_list:
+                part = int(part)
+            # If the next part is an int, we need to contain a list
+            ctx_contains_list = path[i+1].isdigit()
 
-            next_is_dict = False
-            if not last:
-                try:
-                    int(bits[i + 1])
-                except ValueError:
-                    next_is_dict = True
+            # Set the current node to placeholder value, {} or []
+            if not ctx_is_list and not ctx.get(part):
+                ctx[part] = [] if ctx_contains_list else {}
 
-            if isinstance(ctx, dict):
-                if not ctx.has_key(bit):
-                    if not last:
-                        ctx[bit] = dictset() if next_is_dict else []
-                        ctx = ctx[bit]
-                    else:
-                        ctx[bit] = type_cast(value)
-                        ctx = None
-                else:
-                    ctx = ctx[bit]
-            elif isinstance(ctx, list):
-                if not last:
-                    int_bit = int(bit)
-                    if int_bit > len(ctx) - 1:
-                        ctx.append(dictset() if next_is_dict else [])
-                    try:
-                        ctx = ctx[int_bit]
-                    except IndexError as e:
-                        pass
-                else:
-                    ctx.append(type_cast(value))
-                    ctx = None
-    return _d
+            # If we're dealing with a list, make sure it's big enough
+            # for part to be in range
+            if ctx_is_list:
+                _extend_list(ctx, part + 1)
 
-#TODO: replace dict_to_args with this
-import collections
-def flat(_dict, parent_key='', sep='.', keep_lists=False, depth=-1):
-    items = []
+            # If we're empty and contain a list
+            if not ctx[part] and ctx_contains_list:
+                ctx[part] = []
 
-    if depth != -1:
-        if depth == 0:
-            return _dict
-        depth -= 1
+            ctx = ctx[part]
 
-    for k, v in _dict.items():
-        new_key = parent_key + sep + k if parent_key else k
+        leaf_key = path[-1]
+        if leaf_key.isdigit():
+            leaf_key = int(leaf_key)
+            _extend_list(ctx, leaf_key + 1)
 
-        if isinstance(v, collections.MutableMapping):
-            items.extend(flat(v, new_key, sep=sep,
-                         keep_lists=keep_lists,
-                         depth=depth).items())
+        ctx[leaf_key] = leaf_value
 
-        elif isinstance(v, collections.MutableSequence) and not keep_lists:
-            for ix in range(len(v)):
-                new_lkey = new_key + sep + str(ix)
-                if isinstance(v[ix],
-                        (collections.MutableSequence, collections.MutableMapping)):
-                    items.extend(flat(v[ix], new_lkey, sep=sep, depth=depth).items())
-                else:
-                    items.append((new_lkey, v[ix]))
+    return result
+
+
+def flat(_dict, base_key='', keep_lists=False):
+    result = {}
+    # Make a dict regardless, ints as keys for a list
+    iterable = _dict if isinstance(_dict, dict) else dict(enumerate(_dict))
+    for key, value in iterable.items():
+        # Join keys but prevent keys from starting by '.'
+        dotted_key = key if not base_key else '.'.join([base_key, str(key)])
+        # Recursion if we find a dict or list, except if we're keeping lists
+        if isinstance(value, dict) or (isinstance(value, list) and not keep_lists):
+            result.update(flat(value, base_key=dotted_key, keep_lists=keep_lists))
+        # Otherwise just set attribute
         else:
-            items.append((new_key, v))
-
-    return OrderedDict(items)
-
-
+            result[dotted_key] = value
+    return result

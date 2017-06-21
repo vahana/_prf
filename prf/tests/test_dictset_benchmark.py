@@ -26,13 +26,17 @@ class TestDictSetBenchmark(object):
     sample_d = dictset(
         a=1,
         b=LOREM,
-        c=[2] * 10,
+        c=list(range(20)),
         d={
             'i': [LOREM] * 10,
             'ii': {
                 'aa': LOREM,
-                'ab': [5, 6, 7],
-            }
+                'ab': [5, 6, [7, 8, 9]],
+            },
+            'iii': [
+                {'j': LOREM},
+                {'jj': LOREM},
+            ]
         },
         e={
             'i': LOREM,
@@ -45,58 +49,104 @@ class TestDictSetBenchmark(object):
             'viii': LOREM,
             'ix': LOREM,
             'x': LOREM,
-        }
+        },
+        f=[[1, 2, 3], 4, 5],
+        g=[1, 2, 4, [4, 5], 6],
+        h=[1, 2, 4, [[4, 5], 6]],
     )
-
-    def json_print(self, v):
-        print json.dumps(v, indent=2)
 
     @pytest.mark.benchmark(**options('flat'))
     def test_flat(self, benchmark):
         d = dictset(self.sample_d)
         benchmark(d.flat)
+        assert dictset(d.flat()).unflat() == self.sample_d
 
     @pytest.mark.benchmark(**options('flat'))
     def test_flat_lists(self, benchmark):
         d = dictset(self.sample_d)
         benchmark(d.flat, keep_lists=False)
+        assert dictset(d.flat(keep_lists=False)).unflat() == self.sample_d
 
     @pytest.mark.benchmark(**options('unflat'))
     def test_unflat(self, benchmark):
         d = dictset(self.sample_d).flat()
         benchmark(d.unflat)
+        assert d.unflat() == self.sample_d
 
     @pytest.mark.benchmark(**options('unflat'))
     def test_unflat_lists(self, benchmark):
         d = dictset(self.sample_d).flat(keep_lists=False)
         benchmark(d.unflat)
+        assert d.unflat() == self.sample_d
 
     @pytest.mark.benchmark(**options('extract'))
     def test_extract(self, benchmark):
         d = dictset(self.sample_d)
-        benchmark(d.extract, ['a', 'b', 'c'])
+        args = ['a', 'b', 'c']
+        benchmark(d.extract, args)
+        assert d.extract(args) == {
+            'a': self.sample_d['a'],
+            'b': self.sample_d['b'],
+            'c': self.sample_d['c'],
+        }
 
     @pytest.mark.benchmark(**options('extract'))
     def test_extract_nested(self, benchmark):
         d = dictset(self.sample_d)
-        benchmark(d.extract, ['a', 'b', 'c', 'd.ii.*'])
+        args = ['a', 'b', 'c', 'd.ii.*']
+        benchmark(d.extract, args)
+        assert d.extract(['a', 'b', 'c', 'd.ii.*']) == {
+            'a': self.sample_d['a'],
+            'b': self.sample_d['b'],
+            'c': self.sample_d['c'],
+            'aa': self.sample_d['d']['ii']['aa'],
+            'ab': self.sample_d['d']['ii']['ab'],
+        }
+
+    @pytest.mark.benchmark(**options('extract'))
+    def test_extract_exclude(self, benchmark):
+        d = dictset(self.sample_d)
+        args = ['-a', '-b', '-c', '-e', '-g', '-h']
+        benchmark(d.extract, args)
+        assert d.extract(args) == {
+            'd': self.sample_d['d'],
+            'f': self.sample_d['f'],
+        }
 
     @pytest.mark.benchmark(**options('subset'))
     def test_subset(self, benchmark):
         d = dictset(self.sample_d)
-        benchmark(d.subset, ['a', 'b', 'd'])
+        args = ['a', 'b', 'd']
+        benchmark(d.subset, args)
+        assert d.subset(args) == {
+            'a': self.sample_d['a'],
+            'b': self.sample_d['b'],
+            'd': self.sample_d['d'],
+        }
+
+    @pytest.mark.benchmark(**options('subset'))
+    def test_subset_exclude(self, benchmark):
+        d = dictset(self.sample_d)
+        args = ['-a', '-b', '-c', '-e', '-g', '-h']
+        benchmark(d.subset, args)
+        assert d.subset(args) == {
+            'd': self.sample_d['d'],
+            'f': self.sample_d['f'],
+        }
 
     @pytest.mark.benchmark(**options('update_with'))
     def test_update_with(self, benchmark):
         # Include d in both to have a collision
-        d = dictset(self.sample_d).subset(['a', 'b', 'd'])
-        e = dictset(self.sample_d).subset(['c', 'd', 'e'])
+        d = dictset(self.sample_d).subset(['a', 'b', 'd', 'g', 'h'])
+        e = dictset(self.sample_d).subset(['c', 'd', 'e', 'f'])
         benchmark(d.update_with, e)
+        assert d.update_with(e) == self.sample_d
 
     @pytest.mark.benchmark(**options('update_with'))
     def test_update_with_append_to(self, benchmark):
         # Include d in both to have a collision
-        d = dictset(self.sample_d).subset(['a', 'b', 'd'])
-        e = dictset(self.sample_d).subset(['c', 'd', 'e'])
+        d = dictset(self.sample_d).subset(['a', 'b', 'd', 'g', 'h'])
+        e = dictset(self.sample_d).subset(['c', 'd', 'e', 'f'])
         a = []
         benchmark(d.update_with, e, append_to=a)
+        assert d.update_with(e, append_to=a) == self.sample_d

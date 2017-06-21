@@ -5,10 +5,12 @@ from pyramid.exceptions import ConfigurationExecutionError
 
 from prf.resource import Resource, get_view_class, get_parent_elements
 from prf.view import BaseView
+import prf
 
 
 class TestResource(object):
-    def setup_method(self, method):
+    @mock.patch('prf.prf_settings', return_value=prf.utils.dictset())
+    def setup_method(self, method, m):
         self.conf = Configurator()
         self.conf.include('prf')
 
