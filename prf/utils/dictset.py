@@ -659,12 +659,11 @@ def _extend_list(_list, length):
 
 
 def unflat(d):
-    r = {}
+    result = {}
 
-    for k, leaf_value in d.items():
-        path = k.split('.')
-        prev_ctx = r
-        ctx = r
+    for dotted_path, leaf_value in d.items():
+        path = dotted_path.split('.')
+        ctx = result
         # Last item is a leaf, we save time by doing it outside the loop
         for i, part in enumerate(path[:-1]):
             # If context is a list, part should be an int
@@ -691,27 +690,27 @@ def unflat(d):
             prev_ctx = ctx
             ctx = ctx[part]
 
-        k = path[-1]
-        if k.isdigit():
-            k = int(k)
-            _extend_list(ctx, k + 1)
+        leaf_key = path[-1]
+        if leaf_key.isdigit():
+            leaf_key = int(leaf_key)
+            _extend_list(ctx, leaf_key + 1)
 
-        ctx[k] = leaf_value
+        ctx[leaf_key] = leaf_value
 
-    return r
+    return result
 
 
-def flat(d, key='', keep_lists=False):
-    r = {}
+def flat(d, base_key='', keep_lists=False):
+    result = {}
     # Make a dict regardless, ints as keys for a list
     iterable = d if isinstance(d, dict) else dict(enumerate(d))
-    for k, v in iterable.items():
+    for key, value in iterable.items():
         # Join keys but prevent keys from starting by '.'
-        kk = k if not key else '.'.join([key, str(k)])
+        dotted_key = key if not base_key else '.'.join([base_key, str(key)])
         # Recursion if we find a dict or list, except if we're keeping lists
-        if isinstance(v, dict) or (isinstance(v, list) and not keep_lists):
-            r.update(flat(v, key=kk, keep_lists=keep_lists))
+        if isinstance(value, dict) or (isinstance(value, list) and not keep_lists):
+            result.update(flat(value, base_key=dotted_key, keep_lists=keep_lists))
         # Otherwise just set attribute
         else:
-            r[kk] = v
-    return r
+            result[dotted_key] = value
+    return result
