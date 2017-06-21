@@ -8,7 +8,7 @@ import requests
 from functools import partial
 
 from slovar.errors import DKeyError, DValueError
-from slovar.operations.string import split_strip, str2dt, str2rdt
+from slovar.operations.strings import split_strip, str2dt, str2rdt
 
 log = logging.getLogger(__name__)
 
