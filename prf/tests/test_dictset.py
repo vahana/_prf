@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 from prf.utils import dictset
-from dictset.errors import DKeyError, DValueError
+from slovar.errors import DKeyError, DValueError
 
 
 class TestDictSet():

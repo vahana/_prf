@@ -7,8 +7,8 @@ from datetime import date, datetime
 import requests
 from functools import partial
 
-from dictset.errors import DKeyError, DValueError
-from dictset.operations.string import split_strip, str2dt, str2rdt
+from slovar.errors import DKeyError, DValueError
+from slovar.operations.string import split_strip, str2dt, str2rdt
 
 log = logging.getLogger(__name__)
 

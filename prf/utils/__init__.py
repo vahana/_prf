@@ -1,5 +1,5 @@
-from prf.utils.prfdictset import dictset
-from dictset import process_fields
+from prf.utils.dictset import dictset
+from slovar import process_fields
 from prf.utils.utils import (DKeyError, DValueError, JSONEncoder, json_dumps,
                              process_limit, snake2camel, camel2snake,
                              resolve, maybe_dotted, issequence, prep_params,
