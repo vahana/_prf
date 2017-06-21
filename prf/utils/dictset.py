@@ -1,6 +1,5 @@
 import pprint
 import urllib, re
-from collections import OrderedDict
 from itertools import groupby
 
 from prf.utils.utils import DKeyError, DValueError, split_strip, json_dumps, str2dt
@@ -136,9 +135,6 @@ class dictset(dict):
             raise AttributeError(e.message)
 
     def __setattr__(self, key, val):
-        if key == '_ordered_dict':
-            return super(dictset, self).__setattr__(key, val)
-
         if isinstance(val, dict):
             val = dictset(val)
         self[key] = val
@@ -521,23 +517,10 @@ class dictset(dict):
 
         return _d.unflat()
 
-    def pop(self, *arg, **kw):
-        if hasattr(self, '_ordered_dict'):
-            self._ordered_dict.pop(*arg, **kw)
-        return super(dictset, self).pop(*arg, **kw)
-
     def flat(self, keep_lists=True):
-        _flat = flat(self, keep_lists=keep_lists)
-        _d = dictset(_flat)
-        _d._ordered_dict = _flat
-        return _d
+        return dictset(flat(self, keep_lists=keep_lists))
 
     def unflat(self):
-        if hasattr(self, '_ordered_dict'):
-            _d = dictset(unflat(self._ordered_dict))
-            del self._ordered_dict
-            return _d
-
         return dictset(unflat(self))
 
     def set_default(self, name, val):
