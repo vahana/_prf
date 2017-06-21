@@ -687,7 +687,6 @@ def unflat(_dict):
             if not ctx[part] and ctx_contains_list:
                 ctx[part] = []
 
-            prev_ctx = ctx
             ctx = ctx[part]
 
         leaf_key = path[-1]
