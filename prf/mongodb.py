@@ -48,7 +48,10 @@ def drop_collections(name_prefix):
 
 
 def includeme(config):
+    # Connect to default
     mongo_connect(config.prf_settings())
+    # Connect to all other ones
+    connect_dataset_aliases(config, config.prf_settings())
 
     import pyramid
     config.add_tween('prf.mongodb.mongodb_exc_tween',
@@ -63,15 +66,26 @@ Field2Default = {
     mongo.MapField : {},
 }
 
+
+def connect_dataset_aliases(config, mongo_config):
+    ds = split_strip(config.prf_settings().get('dataset.namespaces'))
+    if len(ds) == 1 and ds[0] == 'auto':
+        ds = map(str, mongo.connection.get_connection().database_names())
+    for alias in ds:
+        connect_settings = mongo_config.update({'mongodb.alias': alias, 'mongodb.db': alias})
+        mongo_connect(connect_settings)
+
+
 def mongo_connect(settings):
     settings = dictset(settings)
     db = settings['mongodb.db']
     host = settings.get('mongodb.host', 'localhost')
     port = settings.asint('mongodb.port', default=27017)
+    alias = settings.get('mongodb.alias', 'default')
 
-    log.info('MongoDB enabled with db:%s, host:%s, port:%s', db, host, port)
+    mongo.connect(db=db, host=host, port=port, alias=alias)
 
-    mongo.connect(db=db, host=host, port=port)
+    log.info('MongoDB enabled with db:%s, host:%s, port:%s, alias:%s', db, host, port, alias)
 
 
 def mongodb_exc_tween(handler, registry):

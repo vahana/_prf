@@ -5,14 +5,16 @@ import mongoengine as mongo
 from datetime import datetime
 
 import prf
-from prf.mongodb import (get_document_cls, DynamicBase,
-                        TopLevelDocumentMetaclass, Aggregator,
-                        BaseMixin)
+from prf.mongodb import (
+    DynamicBase, TopLevelDocumentMetaclass, Aggregator, BaseMixin,
+    get_document_cls
+)
 from prf.utils import dictset, split_strip
 from prf.utils.qs import prep_params
 
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = ''
+
 
 def cls2collection(name):
     return DS_COLL_PREFIX + name
@@ -23,21 +25,31 @@ def get_uniques(index_meta):
 
     for index in index_meta:
         if isinstance(index, dict) and index.get('unique', False):
-            uniques.append( [(each[1:] if each[0]=='-' else each)
-                            for each in index['fields']])
+            uniques.append([
+                (each[1:] if each[0] == '-' else each) for each in index['fields']
+            ])
 
     return uniques
 
 
-def get_dataset_names(match=""):
-    db = mongo.connection.get_db()
-    match = match.lower()
-    return [[name, name[len(DS_COLL_PREFIX):]] for name in db.collection_names()
-             if match in name.lower() and name.startswith(DS_COLL_PREFIX)]
+def get_dataset_names(match="", only_namespace=""):
+    namespaces = get_namespaces()
+    names = []
+    for namespace in namespaces:
+        if only_namespace and only_namespace == namespace or not only_namespace:
+            db = mongo.connection.get_db(namespace)
+            for name in db.collection_names():
+                if match in name.lower() and name.startswith(DS_COLL_PREFIX):
+                    names.append([namespace, name, name[len(DS_COLL_PREFIX):]])
+    return names
 
 
-def get_document_meta(doc_name):
-    db = mongo.connection.get_db()
+def get_namespaces():
+    return mongo.connection._connections.keys()
+
+
+def get_document_meta(alias, doc_name):
+    db = mongo.connection.get_db(alias)
 
     name = cls2collection(doc_name)
 
@@ -73,10 +85,7 @@ def define_document(name, meta={}, redefine=False):
     if redefine:
         return type(name, (DatasetDoc,), {'meta': meta})
 
-    try:
-        return get_document_cls(name)
-    except ValueError:
-        return type(name, (DatasetDoc,), {'meta': meta})
+    return type(name, (DatasetDoc,), {'meta': meta})
 
 
 class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
@@ -100,7 +109,7 @@ class DSDocumentMetaclass(TopLevelDocumentMetaclass):
 
         pk_ = attrs_meta.aslist('pk', pop=True, default=[])
 
-        current_meta = get_document_meta(name)
+        current_meta = get_document_meta(attrs_meta.get('db_alias', 'default'), name)
 
         if current_meta:
             new_indexes = []
