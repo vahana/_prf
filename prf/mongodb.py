@@ -31,6 +31,7 @@ class TopLevelDocumentMetaclass(TLDMetaclass):
 
         return new_klass
 
+
 def get_document_cls(name, _raise=True):
     try:
         return mongo.document.get_document(name)

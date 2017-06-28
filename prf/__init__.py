@@ -101,12 +101,20 @@ def prf_settings(config):
     import sys
     from pyramid.scripts.common import parse_vars
 
-    try:
-        config_file = sys.argv[1]
-    except IndexError:
-        raise ValueError('No config file provided')
+    if not config.registry.settings.get('testing'):
+        try:
+            config_file = sys.argv[1]
+        except IndexError:
+            raise ValueError('No config file provided')
 
-    return dictset(config.registry.settings).update_with(parse_vars(sys.argv[2:]))
+        return dictset(config.registry.settings).update_with(parse_vars(sys.argv[2:]))
+    return dictset(config.registry.settings)
+
+
+def set_dataset_module(name):
+    import prf.dataset, importlib
+    importlib.import_module(name)
+    setattr(prf.dataset, 'dataset_module_name', name)
 
 
 def includeme(config):
@@ -148,3 +156,5 @@ def includeme(config):
         config.add_api_view()
 
     config.set_root_factory(RootFactory)
+
+    set_dataset_module(config.prf_settings().get('dataset.module', 'prf.dataset'))

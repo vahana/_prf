@@ -1,19 +1,19 @@
 import sys
 import logging
-from bson import ObjectId
+from types import ModuleType
 import mongoengine as mongo
 from datetime import datetime
 
 import prf
 from prf.mongodb import (
-    DynamicBase, TopLevelDocumentMetaclass, Aggregator, BaseMixin,
-    get_document_cls
+    DynamicBase, TopLevelDocumentMetaclass, Aggregator, BaseMixin
 )
-from prf.utils import dictset, split_strip
+from prf.utils import dictset
 from prf.utils.qs import prep_params
 
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = ''
+dataset_module_name = 'prf.dataset'
 
 
 def cls2collection(name):
@@ -75,17 +75,49 @@ def get_document_meta(alias, doc_name):
     return meta
 
 
-def define_document(name, meta={}, redefine=False):
+def define_document(name, meta=None, namespace='default', redefine=False):
     if not name:
         raise ValueError('Document class name can not be empty')
 
     name = str(name)
+    if not meta:
+        meta = {}
     meta['ordering'] = ['-id']
+    meta['db_alias'] = namespace
 
     if redefine:
         return type(name, (DatasetDoc,), {'meta': meta})
 
-    return type(name, (DatasetDoc,), {'meta': meta})
+    try:
+        return get_document(namespace, name)
+    except AttributeError:
+        return type(name, (DatasetDoc,), {'meta': meta})
+
+
+def load_documents():
+    names = get_dataset_names()
+    for alias, _, _cls in names:
+        doc = define_document(_cls)
+        doc._meta['db_alias'] = alias
+        log.info('Registering collection %s.%s', alias, _cls)
+        set_document(alias, _cls, doc)
+
+
+def get_document(namespace, name, _raise=True):
+    datasets_module = sys.modules[dataset_module_name]
+    namespace_module = getattr(datasets_module, namespace)
+    if _raise:
+        return getattr(namespace_module, name)
+    else:
+        return getattr(namespace_module, name, None)
+
+
+def set_document(namespace, name, klass):
+    datasets_module = sys.modules[dataset_module_name]
+    if not hasattr(datasets_module, namespace):
+        setattr(datasets_module, namespace, ModuleType(namespace))
+    namespaced_module = getattr(datasets_module, namespace)
+    setattr(namespaced_module, name, klass)
 
 
 class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
