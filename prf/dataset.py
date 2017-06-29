@@ -1,3 +1,4 @@
+import re
 import sys
 import logging
 from types import ModuleType
@@ -14,6 +15,10 @@ from prf.utils.qs import prep_params
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = ''
 dataset_module_name = 'prf.dataset'
+
+
+class DatasetStorageModule(ModuleType):
+    pass
 
 
 def cls2collection(name):
@@ -33,6 +38,9 @@ def get_uniques(index_meta):
 
 
 def get_dataset_names(match="", only_namespace=""):
+    """
+    Get dataset names, matching `match` pattern if supplied, restricted to `only_namespace` if supplied
+    """
     namespaces = get_namespaces()
     names = []
     for namespace in namespaces:
@@ -45,6 +53,8 @@ def get_dataset_names(match="", only_namespace=""):
 
 
 def get_namespaces():
+    # Mongoengine stores connections as a dict {alias: connection}
+    # Getting the keys is the list of aliases (or namespaces) we're connected to
     return mongo.connection._connections.keys()
 
 
@@ -103,21 +113,39 @@ def load_documents():
         set_document(alias, _cls, doc)
 
 
-def get_document(namespace, name, _raise=True):
+def safe_name(name):
+    # Remove invalid characters
+    cleaned = re.sub('[^0-9a-zA-Z_]', '', name)
+    # Remove leading characters until we find a letter or underscore
+    return re.sub('^[^a-zA-Z_]+', '', cleaned)
+
+
+def namespace_storage_module(namespace, _set=False):
+    namespace = safe_name(namespace)
     datasets_module = sys.modules[dataset_module_name]
-    namespace_module = getattr(datasets_module, namespace)
+    if _set:
+        # If we're requesting to set and the target exists but isn't a dataset storage module
+        # then we're reasonably sure we're doing something wrong
+        if hasattr(datasets_module, namespace):
+            if not isinstance(getattr(datasets_module, namespace), DatasetStorageModule):
+                raise AttributeError('%s.%s already exists, not overriding.' % (dataset_module_name, namespace))
+        else:
+            setattr(datasets_module, namespace, DatasetStorageModule(namespace))
+    return getattr(datasets_module, namespace, None)
+
+
+def get_document(namespace, name, _raise=True):
+    namespace_module = namespace_storage_module(namespace)
+    cls_name = safe_name(name)
     if _raise:
-        return getattr(namespace_module, name)
+        return getattr(namespace_module, cls_name)
     else:
-        return getattr(namespace_module, name, None)
+        return getattr(namespace_module, cls_name, None)
 
 
 def set_document(namespace, name, klass):
-    datasets_module = sys.modules[dataset_module_name]
-    if not hasattr(datasets_module, namespace):
-        setattr(datasets_module, namespace, ModuleType(namespace))
-    namespaced_module = getattr(datasets_module, namespace)
-    setattr(namespaced_module, name, klass)
+    namespace_module = namespace_storage_module(namespace, _set=True)
+    setattr(namespace_module, safe_name(name), klass)
 
 
 class Log(BaseMixin, mongo.DynamicEmbeddedDocument):

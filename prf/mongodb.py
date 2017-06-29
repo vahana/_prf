@@ -13,7 +13,9 @@ from prf.utils import dictset, split_strip, pager,\
 from prf.utils.qs import prep_params, typecast
 from prf.renderers import _JSONEncoder
 
+
 log = logging.getLogger(__name__)
+
 
 class TopLevelDocumentMetaclass(TLDMetaclass):
 
@@ -71,7 +73,7 @@ Field2Default = {
 def connect_dataset_aliases(config, mongo_config):
     ds = split_strip(config.prf_settings().get('dataset.namespaces'))
     if len(ds) == 1 and ds[0] == 'auto':
-        ds = map(str, mongo.connection.get_connection().database_names())
+        ds = [str(x) for x in mongo.connection.get_connection().database_names()]
     for alias in ds:
         connect_settings = mongo_config.update({'mongodb.alias': alias, 'mongodb.db': alias})
         mongo_connect(connect_settings)

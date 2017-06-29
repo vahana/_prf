@@ -1,5 +1,6 @@
 import os
 import logging
+import importlib
 from pkg_resources import get_distribution
 from pyramid import httpexceptions
 from pyramid.security import  NO_PERMISSION_REQUIRED
@@ -8,6 +9,7 @@ import prf.exc
 from prf.utils import maybe_dotted, dictset
 from prf.utils.utils import DKeyError, DValueError
 from prf.utility_views import AccountView, APIView
+import prf.dataset
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
@@ -101,6 +103,8 @@ def prf_settings(config):
     import sys
     from pyramid.scripts.common import parse_vars
 
+    # When running unit tests, sys.argv is pytest's options
+    # Added a `testing` setting to prevent trying to load the settings file
     if not config.registry.settings.get('testing'):
         try:
             config_file = sys.argv[1]
@@ -112,7 +116,8 @@ def prf_settings(config):
 
 
 def set_dataset_module(name):
-    import prf.dataset, importlib
+    if not name:
+        raise ValueError('Missing configuration option: dataset.module')
     importlib.import_module(name)
     setattr(prf.dataset, 'dataset_module_name', name)
 
@@ -157,4 +162,8 @@ def includeme(config):
 
     config.set_root_factory(RootFactory)
 
-    set_dataset_module(config.prf_settings().get('dataset.module', 'prf.dataset'))
+    set_dataset_module(config.prf_settings().get('dataset.module'))
+
+
+def main(*args, **kwargs):
+    pass

@@ -35,4 +35,9 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=install_requires,
+    entry_points={
+        'paste.app_factory': [
+            'main = prf:main',
+        ]
+    },
 )
