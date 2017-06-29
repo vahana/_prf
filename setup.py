@@ -35,7 +35,4 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=install_requires,
-    dependency_links=[
-        "git+ssh://git@github.com/vahana/slovar.git#egg=slovar"
-    ]
 )
