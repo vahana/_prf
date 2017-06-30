@@ -112,11 +112,11 @@ def define_document(name, meta=None, namespace='default', redefine=False):
 
 def load_documents():
     names = get_dataset_names()
-    for alias, _, _cls in names:
+    for namespace, _, _cls in names:
         doc = define_document(_cls)
-        doc._meta['db_alias'] = alias
-        log.info('Registering collection %s.%s', alias, _cls)
-        set_document(alias, _cls, doc)
+        doc._meta['db_alias'] = namespace
+        log.info('Registering collection %s.%s', namespace, _cls)
+        set_document(namespace, _cls, doc)
 
 
 def safe_name(name):

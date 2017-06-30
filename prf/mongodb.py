@@ -75,8 +75,11 @@ def connect_dataset_aliases(config, mongo_config):
     ds = split_strip(config.prf_settings().get('dataset.namespaces', ''))
     if len(ds) == 1 and ds[0] == 'auto':
         ds = [str(x) for x in mongo.connection.get_connection().database_names()]
-    for alias in ds:
-        connect_settings = mongo_config.update({'mongodb.alias': alias, 'mongodb.db': alias})
+    for namespace in ds:
+        connect_settings = mongo_config.update({
+            'mongodb.alias': namespace,
+            'mongodb.db': namespace
+        })
         mongo_connect(connect_settings)
 
 
