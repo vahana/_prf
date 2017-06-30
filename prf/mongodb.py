@@ -35,6 +35,7 @@ class TopLevelDocumentMetaclass(TLDMetaclass):
 
 
 def get_document_cls(name, _raise=True):
+    # Avoid using this method, prefer `prf.dataset.get_document`
     try:
         return mongo.document.get_document(name)
     except Exception as e:

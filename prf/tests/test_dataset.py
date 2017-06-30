@@ -14,23 +14,8 @@ class TestDataset(PrfTestCase):
         self.drop_databases()
         self.unload_documents()
 
-    def drop_databases(self):
-        c = prf.mongodb.mongo.connection.get_connection()
-        c.drop_database(self.conf.registry.settings.get('mongodb.db'))
-        for namespace in get_namespaces():
-            if namespace != 'default':
-                c.drop_database(namespace)
-
-    def unload_documents(self):
-        for ns in ['default', 'prftest2']:
-            if hasattr(prf.dataset, ns):
-                delattr(prf.dataset, ns)
-
-    def create_collection(self, namespace, name):
-        cls = define_document(name, namespace=namespace)
-        # Create a document and delete it to make sure the collection exists
-        cls(name='hello').save().delete()
-        return cls
+    def test_get_namespaces(self):
+        assert get_namespaces() == ['default', 'prf-test2']
 
     def test_get_dataset_names(self):
         self.create_collection('default', 'col1')
