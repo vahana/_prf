@@ -1,6 +1,5 @@
 from prf.tests.prf_testcase import PrfTestCase
 from prf.mongodb import get_document_cls
-from prf.dataset import get_document
 
 
 class TestMongoDB(PrfTestCase):
@@ -21,6 +20,6 @@ class TestMongoDB(PrfTestCase):
         assert cls == dcls
         assert cls2 == dcls2
         assert dcls2._meta['db_alias'] == 'prf-test2'
-        # This is broken behavior with collision on collection names,
+        # This is broken behavior with collision on collection names across dbs,
         # get_document_cls will return the most recently defined class with that name.
         assert dcls3 == cls4

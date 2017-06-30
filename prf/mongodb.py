@@ -72,7 +72,7 @@ Field2Default = {
 
 
 def connect_dataset_aliases(config, mongo_config):
-    ds = split_strip(config.prf_settings().get('dataset.namespaces'))
+    ds = split_strip(config.prf_settings().get('dataset.namespaces', ''))
     if len(ds) == 1 and ds[0] == 'auto':
         ds = [str(x) for x in mongo.connection.get_connection().database_names()]
     for alias in ds:
