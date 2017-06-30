@@ -58,8 +58,8 @@ def get_namespaces():
     return mongo.connection._connections.keys()
 
 
-def get_document_meta(alias, doc_name):
-    db = mongo.connection.get_db(alias)
+def get_document_meta(namespace, doc_name):
+    db = mongo.connection.get_db(namespace)
 
     name = cls2collection(doc_name)
 
@@ -67,24 +67,30 @@ def get_document_meta(alias, doc_name):
         return dictset()
 
     meta = dictset(
-        _cls = doc_name,
-        collection = name,
+        _cls=doc_name,
+        collection=name,
+        db_alias=namespace,
     )
 
     indexes = []
     for ix_name, index in db[name].index_information().items():
-        fields = ['%s%s' % (('-' if order == -1 else ''), name)
-                    for (name,order) in index['key']]
+        fields = [
+            '%s%s' % (('-' if order == -1 else ''), name)
+            for (name, order) in index['key']
+        ]
 
-        indexes.append(dictset({'name': ix_name,
-                        'fields':fields,
-                        'unique': index.get('unique', False)}))
+        indexes.append(dictset({
+            'name': ix_name,
+            'fields':fields,
+            'unique': index.get('unique', False)
+        }))
 
     meta['indexes'] = indexes
 
     return meta
 
 
+# TODO Check how this method is used and see if it can call set_document
 def define_document(name, meta=None, namespace='default', redefine=False):
     if not name:
         raise ValueError('Document class name can not be empty')
