@@ -120,6 +120,7 @@ def load_documents():
 
 
 def safe_name(name):
+    # See https://stackoverflow.com/questions/3303312/how-do-i-convert-a-string-to-a-valid-variable-name-in-python
     # Remove invalid characters
     cleaned = re.sub('[^0-9a-zA-Z_]', '', name)
     # Remove leading characters until we find a letter or underscore
