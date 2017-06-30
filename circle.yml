@@ -1,6 +1,4 @@
 dependencies:
-  pre:
-    - pip install wheel
   post:
     - pip install -r requirements.test
 
