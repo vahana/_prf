@@ -37,18 +37,17 @@ def get_uniques(index_meta):
     return uniques
 
 
-def get_dataset_names(match="", only_namespace=""):
+def get_dataset_names(match=""):
     """
-    Get dataset names, matching `match` pattern if supplied, restricted to `only_namespace` if supplied
+    Get dataset names, matching `match` pattern if supplied
     """
     namespaces = get_namespaces()
     names = []
     for namespace in namespaces:
-        if only_namespace and only_namespace == namespace or not only_namespace:
-            db = mongo.connection.get_db(namespace)
-            for name in db.collection_names():
-                if match in name.lower() and name.startswith(DS_COLL_PREFIX):
-                    names.append([namespace, name, name[len(DS_COLL_PREFIX):]])
+        db = mongo.connection.get_db(namespace)
+        for name in db.collection_names():
+            if match in name.lower() and name.startswith(DS_COLL_PREFIX):
+                names.append([namespace, name, name[len(DS_COLL_PREFIX):]])
     return names
 
 
