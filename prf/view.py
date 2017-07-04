@@ -111,7 +111,7 @@ class BaseView(object):
     @property
     def resource(self):
         rname = self.request.matched_route.name
-        return self.request.resource_map[rname]
+        return self.request.resource_map.get(rname)
 
     def set_renderer(self):
         # no accept headers, use default
@@ -124,7 +124,8 @@ class BaseView(object):
         elif 'text/plain' in self.request.accept:
             self.request.override_renderer = 'string'
 
-        elif 'text/csv' in self.request.accept:
+        elif 'text/csv' in self.request.accept or\
+             'text/xls' in self.request.accept:
             self.request.override_renderer = 'tab'
 
     def process_params(self):
@@ -248,6 +249,9 @@ class BaseView(object):
 
     def _create(self, **kw):
         obj = self.create(**kw)
+
+        if self.show_returns_many:
+            return obj
 
         if not obj:
             return prf.exc.HTTPCreated()

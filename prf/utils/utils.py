@@ -362,23 +362,29 @@ def qs2dict(qs):
     return dictset(parse_qsl(qs))
 
 
-class TabRenderer(object):
-    def __init__(self, info):
-        pass
+def dict2tab(data, query_fields=None, headers=None, fmt='csv', auto=False):
+    import tablib
 
-    @classmethod
-    def dict2tab(cls, data, headers):
-        import tablib
+    query_fields = query_fields or []
+    headers = headers or []
 
-        def pop_(each, key):
-            val = each.pop(key, '')
-            if isinstance(val, (datetime, date)):
-                return val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
-            else:
-                return unicode(val)
+    def pop_(each, key):
+        val = each.pop(key, '')
+        if isinstance(val, (datetime, date)):
+            return val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
+        else:
+            return unicode(val)
 
-        tabdata = tablib.Dataset(headers = headers)
+    if auto and data:
+        query_fields = data[0].flat(keep_lists=0).keys()
 
+    for each in split_strip(query_fields):
+        aa, _, bb = each.partition('__as__')
+        name = (bb or aa).split(':')[0]
+        headers.append(name)
+
+    tabdata = tablib.Dataset(headers = headers)
+    try:
         for each in data:
             row = []
             each = each.flat(keep_lists=0)
@@ -386,39 +392,44 @@ class TabRenderer(object):
                 row.append(pop_(each, col))
 
             #add missing col data
-            for key in each.keys():
-                headers.append(key)
-                tabdata.append_col((tabdata.height)*[''], header=key)
-                row.append(pop_(each, col))
+            if auto:
+                for key in each.keys():
+                    headers.append(key)
+                    tabdata.append_col((tabdata.height)*[''], header=key)
+                    row.append(pop_(each, col))
 
             tabdata.append(row)
 
-        return tabdata.get_csv(quoting=tablib.compat.csv.QUOTE_MINIMAL)
+        return getattr(tabdata, fmt)
 
-    def __call__(self, value, system):
+    except:
+        import sys
         import prf
 
-        request = system.get('request')
+        log.debug('Headers:%s, Fields:%s, Format:%s', headers, query_fields, fmt)
+        raise prf.exc.HTTPBadRequest('dict2tab error: %r'%sys.exc_value)
 
+
+class TabRenderer(object):
+    def __init__(self, info):
+        pass
+
+    def __call__(self, value, system):
+        request = system.get('request')
         response = request.response
+
         if 'text/csv' in request.accept:
             response.content_type = 'text/csv'
             _format = 'csv'
+        elif 'text/xls' in request.accept:
+            _format = 'xls'
         else:
+            import prf
             raise prf.exc.HTTPBadRequest('Unsupported Accept Header `%s`' % request.accept)
 
-        data = value.get('data', [])
-
-        if not data:
-            return '--EMPTY--'
-
-        try:
-            column_names = data[0].flat(keep_lists=0).keys()
-            return self.dict2tab(data, column_names)
-
-        except Exception as e:
-            raise prf.exc.HTTPBadRequest(
-                'Could not convert to format `%s`: %s' % (_format, e) )
+        return dict2tab(value.get('data', []),
+                        query_fields=request.params.get('_fields'),
+                        fmt=_format)
 
 def TODAY():
     return datetime.now().strftime('%Y_%m_%d')
