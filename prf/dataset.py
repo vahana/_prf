@@ -46,7 +46,7 @@ def get_dataset_names(match=""):
     for namespace in namespaces:
         db = mongo.connection.get_db(namespace)
         for name in db.collection_names():
-            if match in name.lower() and name.startswith(DS_COLL_PREFIX):
+            if match in name.lower() and name.startswith(DS_COLL_PREFIX) and not name.startswith('system.'):
                 names.append([namespace, name, name[len(DS_COLL_PREFIX):]])
     return names
 
