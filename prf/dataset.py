@@ -11,6 +11,7 @@ from prf.mongodb import (
 )
 from prf.utils import dictset
 from prf.utils.qs import prep_params
+from prf.utils.utils import maybe_dotted
 
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = ''
@@ -19,6 +20,18 @@ DATASET_MODULE_NAME = 'prf.dataset'
 
 class DatasetStorageModule(ModuleType):
     pass
+
+
+def set_dataset_module(name):
+    if not name:
+        raise ValueError('Missing configuration option: dataset.module')
+    # Just make sure the module gets loaded
+    maybe_dotted(name)
+    setattr(prf.dataset, 'DATASET_MODULE_NAME', name)
+
+
+def includeme(config):
+    set_dataset_module(config.prf_settings().get('dataset.module'))
 
 
 def cls2collection(name):

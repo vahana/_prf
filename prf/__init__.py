@@ -6,7 +6,7 @@ from pyramid.security import  NO_PERMISSION_REQUIRED
 
 import prf.exc
 from prf.utils import maybe_dotted, dictset
-from prf.utils.utils import DKeyError, DValueError, maybe_dotted
+from prf.utils.utils import DKeyError, DValueError
 from prf.utility_views import AccountView, APIView
 import prf.dataset
 
@@ -68,6 +68,7 @@ def add_account_views(config, user_model, route_prefix=''):
                         renderer='json',
                         permission=NO_PERMISSION_REQUIRED)
 
+
 def add_api_view(config):
     config.add_route('prf_api','/')
     config.add_view(view=APIView, attr='show', route_name='prf_api',
@@ -114,14 +115,6 @@ def prf_settings(config):
     return dictset(config.registry.settings)
 
 
-def set_dataset_module(name):
-    if not name:
-        raise ValueError('Missing configuration option: dataset.module')
-    # Just make sure the module gets loaded
-    maybe_dotted(name)
-    setattr(prf.dataset, 'DATASET_MODULE_NAME', name)
-
-
 def includeme(config):
     log.info('%s %s' % (APP_NAME, __version__))
     settings = prf_settings(config)
@@ -161,8 +154,6 @@ def includeme(config):
         config.add_api_view()
 
     config.set_root_factory(RootFactory)
-
-    set_dataset_module(config.prf_settings().get('dataset.module'))
 
 
 def main(*args, **kwargs):

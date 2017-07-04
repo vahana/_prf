@@ -21,7 +21,6 @@ class TestDataset(PrfTestCase):
         self.create_collection('default', 'col1')
         self.create_collection('default', 'col2')
         self.create_collection('prf-test2', 'col3')
-        print get_dataset_names()
         assert get_dataset_names() == [
             ['default', 'col1', 'col1'],
             ['default', 'col2', 'col2'],
