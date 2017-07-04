@@ -8,7 +8,6 @@ import prf.exc
 from prf.utils import maybe_dotted, dictset
 from prf.utils.utils import DKeyError, DValueError
 from prf.utility_views import AccountView, APIView
-import prf.dataset
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
