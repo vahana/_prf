@@ -9,7 +9,7 @@ VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 
 install_requires = [
     'pyramid',
-    'marshmallow',
+    'marshmallow==1.2.4',
     'requests',
     'mongoengine',
     'waitress',
