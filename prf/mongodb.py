@@ -55,7 +55,7 @@ def includeme(config):
     # Connect to default
     mongo_connect(config.prf_settings())
     # Connect to all other ones
-    connect_dataset_aliases(config, config.prf_settings())
+    connect_dataset_aliases(config)
 
     import pyramid
     config.add_tween('prf.mongodb.mongodb_exc_tween',
@@ -71,12 +71,12 @@ Field2Default = {
 }
 
 
-def connect_dataset_aliases(config, mongo_config):
+def connect_dataset_aliases(config):
     ds = split_strip(config.prf_settings().get('dataset.namespaces', ''))
     if len(ds) == 1 and ds[0] == 'auto':
         ds = [str(x) for x in mongo.connection.get_connection().database_names()]
     for namespace in ds:
-        connect_settings = mongo_config.update({
+        connect_settings = config.prf_settings().update({
             'mongodb.alias': namespace,
             'mongodb.db': namespace
         })

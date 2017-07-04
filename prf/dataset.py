@@ -14,7 +14,7 @@ from prf.utils.qs import prep_params
 
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = ''
-dataset_module_name = 'prf.dataset'
+DATASET_MODULE_NAME = 'prf.dataset'
 
 
 class DatasetStorageModule(ModuleType):
@@ -37,18 +37,17 @@ def get_uniques(index_meta):
     return uniques
 
 
-def get_dataset_names(match="", only_namespace=""):
+def get_dataset_names(match=""):
     """
-    Get dataset names, matching `match` pattern if supplied, restricted to `only_namespace` if supplied
+    Get dataset names, matching `match` pattern if supplied
     """
     namespaces = get_namespaces()
     names = []
     for namespace in namespaces:
-        if only_namespace and only_namespace == namespace or not only_namespace:
-            db = mongo.connection.get_db(namespace)
-            for name in db.collection_names():
-                if match in name.lower() and name.startswith(DS_COLL_PREFIX):
-                    names.append([namespace, name, name[len(DS_COLL_PREFIX):]])
+        db = mongo.connection.get_db(namespace)
+        for name in db.collection_names():
+            if match in name.lower() and name.startswith(DS_COLL_PREFIX):
+                names.append([namespace, name, name[len(DS_COLL_PREFIX):]])
     return names
 
 
@@ -129,13 +128,13 @@ def safe_name(name):
 
 def namespace_storage_module(namespace, _set=False):
     namespace = safe_name(namespace)
-    datasets_module = sys.modules[dataset_module_name]
+    datasets_module = sys.modules[DATASET_MODULE_NAME]
     if _set:
         # If we're requesting to set and the target exists but isn't a dataset storage module
         # then we're reasonably sure we're doing something wrong
         if hasattr(datasets_module, namespace):
             if not isinstance(getattr(datasets_module, namespace), DatasetStorageModule):
-                raise AttributeError('%s.%s already exists, not overriding.' % (dataset_module_name, namespace))
+                raise AttributeError('%s.%s already exists, not overriding.' % (DATASET_MODULE_NAME, namespace))
         else:
             setattr(datasets_module, namespace, DatasetStorageModule(namespace))
     return getattr(datasets_module, namespace, None)

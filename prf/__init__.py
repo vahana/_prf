@@ -1,13 +1,12 @@
 import os
 import logging
-import importlib
 from pkg_resources import get_distribution
 from pyramid import httpexceptions
 from pyramid.security import  NO_PERMISSION_REQUIRED
 
 import prf.exc
 from prf.utils import maybe_dotted, dictset
-from prf.utils.utils import DKeyError, DValueError
+from prf.utils.utils import DKeyError, DValueError, maybe_dotted
 from prf.utility_views import AccountView, APIView
 import prf.dataset
 
@@ -118,8 +117,9 @@ def prf_settings(config):
 def set_dataset_module(name):
     if not name:
         raise ValueError('Missing configuration option: dataset.module')
-    importlib.import_module(name)
-    setattr(prf.dataset, 'dataset_module_name', name)
+    # Just make sure the module gets loaded
+    maybe_dotted(name)
+    setattr(prf.dataset, 'DATASET_MODULE_NAME', name)
 
 
 def includeme(config):

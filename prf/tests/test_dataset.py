@@ -27,14 +27,6 @@ class TestDataset(PrfTestCase):
             ['prf-test2', 'col3', 'col3'],
         ]
 
-    def test_get_dataset_names_only(self):
-        self.create_collection('default', 'col1')
-        self.create_collection('default', 'col2')
-        self.create_collection('prf-test2', 'col3')
-        assert get_dataset_names(only_namespace="prf-test2") == [
-            ['prf-test2', 'col3', 'col3'],
-        ]
-
     def test_load_documents(self):
         self.create_collection('default', 'col1')
         self.create_collection('prf-test2', 'col2')
