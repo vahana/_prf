@@ -128,6 +128,8 @@ def load_documents():
     for namespace, _, _cls in names:
         doc = define_document(_cls)
         doc._meta['db_alias'] = namespace
+        # Force rebuilding the collection to use the correct alias
+        doc._collection = None
         log.info('Registering collection %s.%s', namespace, _cls)
         set_document(namespace, _cls, doc)
 
