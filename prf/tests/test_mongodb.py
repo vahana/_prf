@@ -27,6 +27,6 @@ class TestMongoDB(PrfTestCase):
 
     @mock.patch('prf.mongodb.mongo_connect')
     def test_connect_dataset_aliases_missing_config(self, connect):
-        del self.conf.registry.settings['dataset.namespaces']
+        del self.conf.registry.settings['dataset.ns']
         connect_dataset_aliases(self.conf)
         connect.assert_not_called()

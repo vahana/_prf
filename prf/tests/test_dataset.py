@@ -15,7 +15,7 @@ class TestDataset(PrfTestCase):
         self.unload_documents()
 
     def test_get_namespaces(self):
-        assert get_namespaces() == ['default', 'prf-test2']
+        assert get_namespaces() == ['default', 'prf-test2', '2prf-test3']
 
     def test_get_dataset_names(self):
         self.create_collection('default', 'col1')
