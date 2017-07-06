@@ -162,8 +162,9 @@ def get_document(namespace, name, _raise=True):
         cls = getattr(namespace_module, cls_name)
     else:
         cls = getattr(namespace_module, cls_name, None)
-    cls._collection = None
-    cls._meta['db_alias'] = namespace
+    if cls:
+        cls._collection = None
+        cls._meta['db_alias'] = namespace
     return cls
 
 
