@@ -1,14 +1,16 @@
+import os
 import pytest
 import mock
 from pyramid.config import Configurator
+from pyramid.paster import get_appsettings
 import prf
 
-settings = dict(tweens='prf.tweens.cors')
+test_ini_file = os.environ.get('INI_FILE', 'test.ini')
+settings = get_appsettings(test_ini_file, name='main')
 
 
 class TestPRF(object):
-    @mock.patch('prf.prf_settings', return_value=prf.utils.dictset())
-    def test_includeme(self, m):
+    def test_includeme(self):
         conf = Configurator(settings=settings)
         prf.includeme(conf)
 

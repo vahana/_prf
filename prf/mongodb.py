@@ -13,7 +13,9 @@ from prf.utils import dictset, split_strip, pager,\
 from prf.utils.qs import prep_params, typecast
 from prf.renderers import _JSONEncoder
 
+
 log = logging.getLogger(__name__)
+
 
 class TopLevelDocumentMetaclass(TLDMetaclass):
 
@@ -31,7 +33,9 @@ class TopLevelDocumentMetaclass(TLDMetaclass):
 
         return new_klass
 
+
 def get_document_cls(name, _raise=True):
+    # Avoid using this method, prefer `prf.dataset.get_document`
     try:
         return mongo.document.get_document(name)
     except Exception as e:
@@ -48,7 +52,10 @@ def drop_collections(name_prefix):
 
 
 def includeme(config):
+    # Connect to default
     mongo_connect(config.prf_settings())
+    # Connect to all other ones
+    connect_dataset_aliases(config)
 
     import pyramid
     config.add_tween('prf.mongodb.mongodb_exc_tween',
@@ -63,15 +70,30 @@ Field2Default = {
     mongo.MapField : {},
 }
 
+
+def connect_dataset_aliases(config):
+    ds = (config.prf_settings().aslist('dataset.namespaces', '')
+          or config.prf_settings().aslist('dataset.ns', ''))
+    if len(ds) == 1 and ds[0] == 'auto':
+        ds = [str(x) for x in mongo.connection.get_connection().database_names()]
+    for namespace in ds:
+        connect_settings = config.prf_settings().update({
+            'mongodb.alias': namespace,
+            'mongodb.db': namespace
+        })
+        mongo_connect(connect_settings)
+
+
 def mongo_connect(settings):
     settings = dictset(settings)
     db = settings['mongodb.db']
     host = settings.get('mongodb.host', 'localhost')
     port = settings.asint('mongodb.port', default=27017)
+    alias = settings.get('mongodb.alias', 'default')
 
-    log.info('MongoDB enabled with db:%s, host:%s, port:%s', db, host, port)
+    mongo.connect(db=db, host=host, port=port, alias=alias)
 
-    mongo.connect(db=db, host=host, port=port)
+    log.info('MongoDB enabled with db:%s, host:%s, port:%s, alias:%s', db, host, port, alias)
 
 
 def mongodb_exc_tween(handler, registry):

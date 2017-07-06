@@ -1,19 +1,13 @@
 import mock
 import pytest
-from pyramid.config import Configurator
+from prf.tests.prf_testcase import PrfTestCase
 from pyramid.exceptions import ConfigurationExecutionError
 
 from prf.resource import Resource, get_view_class, get_parent_elements
 from prf.view import BaseView
-import prf
 
 
-class TestResource(object):
-    @mock.patch('prf.prf_settings', return_value=prf.utils.dictset())
-    def setup_method(self, method, m):
-        self.conf = Configurator()
-        self.conf.include('prf')
-
+class TestResource(PrfTestCase):
     def test_init_(self):
         res = Resource(self.conf)
         assert res.member_name == ''
