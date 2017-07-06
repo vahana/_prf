@@ -128,8 +128,6 @@ def load_documents():
     for namespace, _, _cls in names:
         doc = define_document(_cls)
         doc._meta['db_alias'] = namespace
-        # Force rebuilding the collection to use the correct alias
-        doc._collection = None
         log.info('Registering collection %s.%s', namespace, _cls)
         set_document(namespace, _cls, doc)
 
@@ -159,15 +157,19 @@ def namespace_storage_module(namespace, _set=False):
 def get_document(namespace, name, _raise=True):
     namespace_module = namespace_storage_module(namespace)
     cls_name = safe_name(name)
+    cls = None
     if _raise:
-        return getattr(namespace_module, cls_name)
+        cls = getattr(namespace_module, cls_name)
     else:
-        return getattr(namespace_module, cls_name, None)
+        cls = getattr(namespace_module, cls_name, None)
+    cls._collection = None
+    cls._meta['db_alias'] = namespace
+    return cls
 
 
-def set_document(namespace, name, klass):
+def set_document(namespace, name, cls):
     namespace_module = namespace_storage_module(namespace, _set=True)
-    setattr(namespace_module, safe_name(name), klass)
+    setattr(namespace_module, safe_name(name), cls)
 
 
 class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
