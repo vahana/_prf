@@ -1,18 +1,38 @@
+import re
 import sys
 import logging
-from bson import ObjectId
+from types import ModuleType
 import mongoengine as mongo
 from datetime import datetime
 
 import prf
-from prf.mongodb import (get_document_cls, DynamicBase,
-                        TopLevelDocumentMetaclass, Aggregator,
-                        BaseMixin)
-from prf.utils import dictset, split_strip
+from prf.mongodb import (
+    DynamicBase, TopLevelDocumentMetaclass, Aggregator, BaseMixin
+)
+from prf.utils import dictset
 from prf.utils.qs import prep_params
+from prf.utils.utils import maybe_dotted
 
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = ''
+DATASET_MODULE_NAME = 'prf.dataset'
+
+
+class DatasetStorageModule(ModuleType):
+    pass
+
+
+def set_dataset_module(name):
+    if not name:
+        raise ValueError('Missing configuration option: dataset.module')
+    # Just make sure the module gets loaded
+    maybe_dotted(name)
+    setattr(prf.dataset, 'DATASET_MODULE_NAME', name)
+
+
+def includeme(config):
+    set_dataset_module(config.prf_settings().get('dataset.module'))
+
 
 def cls2collection(name):
     return DS_COLL_PREFIX + name
@@ -23,21 +43,36 @@ def get_uniques(index_meta):
 
     for index in index_meta:
         if isinstance(index, dict) and index.get('unique', False):
-            uniques.append( [(each[1:] if each[0]=='-' else each)
-                            for each in index['fields']])
+            uniques.append([
+                (each[1:] if each[0] == '-' else each) for each in index['fields']
+            ])
 
     return uniques
 
 
-def get_dataset_names(match=""):
-    db = mongo.connection.get_db()
-    match = match.lower()
-    return [[name, name[len(DS_COLL_PREFIX):]] for name in db.collection_names()
-             if match in name.lower() and name.startswith(DS_COLL_PREFIX)]
+def get_dataset_names(match_name="", match_namespace=""):
+    """
+    Get dataset names, matching `match` pattern if supplied, restricted to `only_namespace` if supplied
+    """
+    namespaces = get_namespaces()
+    names = []
+    for namespace in namespaces:
+        if match_namespace and match_namespace == namespace or not match_namespace:
+            db = mongo.connection.get_db(namespace)
+            for name in db.collection_names():
+                if match_name in name.lower() and name.startswith(DS_COLL_PREFIX) and not name.startswith('system.'):
+                    names.append([namespace, name, name[len(DS_COLL_PREFIX):]])
+    return names
 
 
-def get_document_meta(doc_name):
-    db = mongo.connection.get_db()
+def get_namespaces():
+    # Mongoengine stores connections as a dict {alias: connection}
+    # Getting the keys is the list of aliases (or namespaces) we're connected to
+    return mongo.connection._connections.keys()
+
+
+def get_document_meta(namespace, doc_name):
+    db = mongo.connection.get_db(namespace)
 
     name = cls2collection(doc_name)
 
@@ -45,38 +80,97 @@ def get_document_meta(doc_name):
         return dictset()
 
     meta = dictset(
-        _cls = doc_name,
-        collection = name,
+        _cls=doc_name,
+        collection=name,
+        db_alias=namespace,
     )
 
     indexes = []
     for ix_name, index in db[name].index_information().items():
-        fields = ['%s%s' % (('-' if order == -1 else ''), name)
-                    for (name,order) in index['key']]
+        fields = [
+            '%s%s' % (('-' if order == -1 else ''), name)
+            for (name, order) in index['key']
+        ]
 
-        indexes.append(dictset({'name': ix_name,
-                        'fields':fields,
-                        'unique': index.get('unique', False)}))
+        indexes.append(dictset({
+            'name': ix_name,
+            'fields':fields,
+            'unique': index.get('unique', False)
+        }))
 
     meta['indexes'] = indexes
 
     return meta
 
 
-def define_document(name, meta={}, redefine=False):
+# TODO Check how this method is used and see if it can call set_document
+def define_document(name, meta=None, namespace='default', redefine=False):
     if not name:
         raise ValueError('Document class name can not be empty')
 
     name = str(name)
+    if not meta:
+        meta = {}
     meta['ordering'] = ['-id']
+    meta['db_alias'] = namespace
 
     if redefine:
         return type(name, (DatasetDoc,), {'meta': meta})
 
     try:
-        return get_document_cls(name)
-    except ValueError:
+        return get_document(namespace, name)
+    except AttributeError:
         return type(name, (DatasetDoc,), {'meta': meta})
+
+
+def load_documents():
+    names = get_dataset_names()
+    for namespace, _, _cls in names:
+        doc = define_document(_cls)
+        doc._meta['db_alias'] = namespace
+        log.info('Registering collection %s.%s', namespace, _cls)
+        set_document(namespace, _cls, doc)
+
+
+def safe_name(name):
+    # See https://stackoverflow.com/questions/3303312/how-do-i-convert-a-string-to-a-valid-variable-name-in-python
+    # Remove invalid characters
+    cleaned = re.sub('[^0-9a-zA-Z_]', '', name)
+    # Remove leading characters until we find a letter or underscore
+    return re.sub('^[^a-zA-Z_]+', '', cleaned)
+
+
+def namespace_storage_module(namespace, _set=False):
+    namespace = safe_name(namespace)
+    datasets_module = sys.modules[DATASET_MODULE_NAME]
+    if _set:
+        # If we're requesting to set and the target exists but isn't a dataset storage module
+        # then we're reasonably sure we're doing something wrong
+        if hasattr(datasets_module, namespace):
+            if not isinstance(getattr(datasets_module, namespace), DatasetStorageModule):
+                raise AttributeError('%s.%s already exists, not overriding.' % (DATASET_MODULE_NAME, namespace))
+        else:
+            setattr(datasets_module, namespace, DatasetStorageModule(namespace))
+    return getattr(datasets_module, namespace, None)
+
+
+def get_document(namespace, name, _raise=True):
+    namespace_module = namespace_storage_module(namespace)
+    cls_name = safe_name(name)
+    cls = None
+    if _raise:
+        cls = getattr(namespace_module, cls_name)
+    else:
+        cls = getattr(namespace_module, cls_name, None)
+    if cls:
+        cls._collection = None
+        cls._meta['db_alias'] = namespace
+    return cls
+
+
+def set_document(namespace, name, cls):
+    namespace_module = namespace_storage_module(namespace, _set=True)
+    setattr(namespace_module, safe_name(name), cls)
 
 
 class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
@@ -100,7 +194,7 @@ class DSDocumentMetaclass(TopLevelDocumentMetaclass):
 
         pk_ = attrs_meta.aslist('pk', pop=True, default=[])
 
-        current_meta = get_document_meta(name)
+        current_meta = get_document_meta(attrs_meta.get('db_alias', 'default'), name)
 
         if current_meta:
             new_indexes = []

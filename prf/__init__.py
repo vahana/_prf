@@ -67,6 +67,7 @@ def add_account_views(config, user_model, route_prefix=''):
                         renderer='json',
                         permission=NO_PERMISSION_REQUIRED)
 
+
 def add_api_view(config):
     config.add_route('prf_api','/')
     config.add_view(view=APIView, attr='show', route_name='prf_api',
@@ -101,12 +102,16 @@ def prf_settings(config):
     import sys
     from pyramid.scripts.common import parse_vars
 
-    try:
-        config_file = sys.argv[1]
-    except IndexError:
-        raise ValueError('No config file provided')
+    # When running unit tests, sys.argv is pytest's options
+    # Added a `testing` setting to prevent trying to load the settings file
+    if not config.registry.settings.get('testing'):
+        try:
+            config_file = sys.argv[1]
+        except IndexError:
+            raise ValueError('No config file provided')
 
-    return dictset(config.registry.settings).update_with(parse_vars(sys.argv[2:]))
+        return dictset(config.registry.settings).update_with(parse_vars(sys.argv[2:]))
+    return dictset(config.registry.settings)
 
 
 def includeme(config):
@@ -148,3 +153,7 @@ def includeme(config):
         config.add_api_view()
 
     config.set_root_factory(RootFactory)
+
+
+def main(*args, **kwargs):
+    pass
