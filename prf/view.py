@@ -124,8 +124,8 @@ class BaseView(object):
         elif 'text/plain' in self.request.accept:
             self.request.override_renderer = 'string'
 
-        elif 'text/csv' in self.request.accept or\
-             'text/xls' in self.request.accept:
+        elif ('text/csv' in self.request.accept or
+             'text/xls' in self.request.accept):
             self.request.override_renderer = 'tab'
 
     def process_params(self):
