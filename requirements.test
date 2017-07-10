@@ -16,4 +16,5 @@ pymongo
 python-dateutil
 WebTest
 mongomock
+tablib
 -e .
