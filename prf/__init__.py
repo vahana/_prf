@@ -40,7 +40,6 @@ def add_error_view(config, exc, http_exc=None, error='', error_attr='message'):
     http_exc = maybe_dotted(http_exc or prf.exc.HTTPBadRequest)
 
     def view(context, request):
-
         err = getattr(context, error_attr, 'empty error message')
 
         msg = error % str(err) if error else err

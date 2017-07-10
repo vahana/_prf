@@ -98,8 +98,7 @@ class BaseView(object):
         self.request = request
         self._model_class = None
         self.show_returns_many = False
-
-        self.process_params()
+        self._params = self.process_params(request)
         # self.process_variables()
         self.set_renderer()
         self.init()
@@ -128,19 +127,22 @@ class BaseView(object):
              'text/xls' in self.request.accept):
             self.request.override_renderer = 'tab'
 
-    def process_params(self):
-        ctype = self.request.content_type
+    @classmethod
+    def process_params(cls, request):
+        ctype = request.content_type
 
-        self._params = dictset(self.request.params.mixed())
+        _params = dictset(request.params.mixed())
         if 'application/json' in ctype:
-            if self.request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
                 try:
-                    self._params.update(self.request.json)
+                    _params.update(request.json)
                 except ValueError, e:
-                    raise prf.exc.HTTPBadRequest("Expecting JSON. Received: '%s'. Request: %s %s"
-                               % (self.request.body, self.request.method, self.request.url))
+                    raise prf.exc.HTTPBadRequest(
+                        "Expecting JSON. Received: '%s'. Request: %s %s"
+                            % (request.body, request.method, request.url))
 
-        self._params = typecast(self._params)
+        _params = typecast(_params)
+        return _params
 
     def process_variables(self):
         if self.request.method  == 'GET':
