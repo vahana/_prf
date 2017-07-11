@@ -1,6 +1,5 @@
-import mock
 from prf.tests.prf_testcase import PrfTestCase
-from prf.mongodb import get_document_cls, connect_dataset_aliases
+from prf.mongodb import get_document_cls
 
 
 class TestMongoDB(PrfTestCase):
@@ -24,9 +23,3 @@ class TestMongoDB(PrfTestCase):
         # This is broken behavior with collision on collection names across dbs,
         # get_document_cls will return the most recently defined class with that name.
         assert dcls3 == cls4
-
-    @mock.patch('prf.mongodb.mongo_connect')
-    def test_connect_dataset_aliases_missing_config(self, connect):
-        del self.conf.registry.settings['dataset.ns']
-        connect_dataset_aliases(self.conf)
-        connect.assert_not_called()

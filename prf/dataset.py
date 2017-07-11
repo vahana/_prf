@@ -30,8 +30,24 @@ def set_dataset_module(name):
     setattr(prf.dataset, 'DATASET_MODULE_NAME', name)
 
 
+def connect_dataset_aliases(config):
+    from prf.mongodb import mongo_connect
+
+    ds = (config.prf_settings().aslist('dataset.namespaces', '')
+          or config.prf_settings().aslist('dataset.ns', ''))
+    if len(ds) == 1 and ds[0] == 'auto':
+        ds = [str(x) for x in mongo.connection.get_connection().database_names()]
+    for namespace in ds:
+        connect_settings = config.prf_settings().update({
+            'mongodb.alias': namespace,
+            'mongodb.db': namespace
+        })
+        mongo_connect(connect_settings)
+
+
 def includeme(config):
     set_dataset_module(config.prf_settings().get('dataset.module'))
+    connect_dataset_aliases(config)
 
 
 def cls2collection(name):

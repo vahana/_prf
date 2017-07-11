@@ -52,10 +52,7 @@ def drop_collections(name_prefix):
 
 
 def includeme(config):
-    # Connect to default
     mongo_connect(config.prf_settings())
-    # Connect to all other ones
-    connect_dataset_aliases(config)
 
     import pyramid
     config.add_tween('prf.mongodb.mongodb_exc_tween',
@@ -69,19 +66,6 @@ Field2Default = {
     mongo.DictField : {},
     mongo.MapField : {},
 }
-
-
-def connect_dataset_aliases(config):
-    ds = (config.prf_settings().aslist('dataset.namespaces', '')
-          or config.prf_settings().aslist('dataset.ns', ''))
-    if len(ds) == 1 and ds[0] == 'auto':
-        ds = [str(x) for x in mongo.connection.get_connection().database_names()]
-    for namespace in ds:
-        connect_settings = config.prf_settings().update({
-            'mongodb.alias': namespace,
-            'mongodb.db': namespace
-        })
-        mongo_connect(connect_settings)
 
 
 def mongo_connect(settings):

@@ -13,6 +13,7 @@ class PrfTestCase(unittest.TestCase):
         self.conf = Configurator(settings=settings)
         prf.includeme(self.conf)
         prf.mongodb.includeme(self.conf)
+        prf.dataset.includeme(self.conf)
 
     def drop_databases(self):
         c = prf.mongodb.mongo.connection.get_connection()

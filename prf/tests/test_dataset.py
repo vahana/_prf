@@ -1,10 +1,12 @@
+import mock
 from prf.tests.prf_testcase import PrfTestCase
 import prf
 import prf.mongodb
 import prf.dataset
 from prf.dataset import (
     get_dataset_names, define_document, load_documents, get_document,
-    set_document, get_namespaces, namespace_storage_module, get_document_meta
+    set_document, get_namespaces, namespace_storage_module, get_document_meta,
+    connect_dataset_aliases
 )
 
 
@@ -13,6 +15,12 @@ class TestDataset(PrfTestCase):
         super(TestDataset, self).setUp()
         self.drop_databases()
         self.unload_documents()
+
+    @mock.patch('prf.mongodb.mongo_connect')
+    def test_connect_dataset_aliases_missing_config(self, connect):
+        del self.conf.registry.settings['dataset.ns']
+        connect_dataset_aliases(self.conf)
+        connect.assert_not_called()
 
     def test_get_namespaces(self):
         assert get_namespaces() == ['default', 'prf-test2', '2prf-test3']
