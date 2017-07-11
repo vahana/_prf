@@ -97,7 +97,9 @@ class BaseView(object):
         self.context = context
         self.request = request
         self._model_class = None
-        self.show_returns_many = False
+        self.returns_many = False
+        self.post_as_get = False
+
         self._params = self.process_params(request)
         # self.process_variables()
         self.set_renderer()
@@ -246,14 +248,14 @@ class BaseView(object):
         return self._process(self.index(**kw), many=True)
 
     def _show(self, **kw):
-        data = self._process(self.show(**kw), many=self.show_returns_many)
-        return data['data'] if self.show_returns_many == False else data
+        data = self._process(self.show(**kw), many=self.returns_many)
+        return data['data'] if self.returns_many == False else data
 
     def _create(self, **kw):
         obj = self.create(**kw)
 
-        if self.show_returns_many:
-            return obj
+        if self.post_as_get:
+            return self._process(obj, many=self.returns_many)
 
         if not obj:
             return prf.exc.HTTPCreated()
@@ -321,7 +323,7 @@ class BaseView(object):
                     id_name = self._id_name or 'id'
                     val = urllib.quote(str(each[id_name]))
 
-                    if self.show_returns_many == True: # show action returned a collection
+                    if self.returns_many == True: # show action returned a collection
                         _id = '?%s=%s' % (id_name, val)
                     else:
                         _id = '/%s' % val
