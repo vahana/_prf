@@ -125,12 +125,16 @@ def define_document(name, meta=None, namespace='default', redefine=False):
 
 def load_documents():
     names = get_dataset_names()
+    _namespaces = set()
+
     for namespace, _, _cls in names:
         doc = define_document(_cls)
         doc._meta['db_alias'] = namespace
-        log.info('Registering collection %s.%s', namespace, _cls)
+        # log.debug('Registering collection %s.%s', namespace, _cls)
         set_document(namespace, _cls, doc)
+        _namespaces.add(namespace)
 
+    log.info('Loaded namespaces: %s', list(_namespaces))
 
 def safe_name(name):
     # See https://stackoverflow.com/questions/3303312/how-do-i-convert-a-string-to-a-valid-variable-name-in-python
