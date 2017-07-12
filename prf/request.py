@@ -1,3 +1,4 @@
+import os
 import logging
 import requests
 from urlparse import urlparse, urljoin
@@ -84,7 +85,7 @@ class Request(object):
         if self._raise:
             params = self.json(resp) or {'detail':resp.text}
             raise prf.exc.exception_response(status_code=resp.status_code,
-                                    **params)
+                                             **params)
 
         log.error(str(self.json(resp)))
         return resp
@@ -214,6 +215,23 @@ class Request(object):
             return self.raise_or_log(resp)
 
         return resp
+
+    def download(self, path='', params={}, local_path='.',
+                            local_name=None, chunk_size=4096, **kw):
+        url = self.prepare_url(path, params)
+        log.debug(url)
+
+        local_name = local_name or urlparse(url).path.split('/')[-1]
+        resp = self.get(url, stream=True, **kw)
+
+        with open(os.path.join(local_path, local_name), 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=chunk_size):
+                if chunk: # filter out keep-alive new chunks
+                    log.debug('writing %s chunk', len(chunk))
+                    f.write(chunk)
+
+        return resp
+
 
 class PRFRequest(Request):
     def get_paginated(self, page_size, **kw):
