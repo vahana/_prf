@@ -19,7 +19,7 @@ install_requires = [
 setup(
     name='prf',
     version=VERSION,
-    description='prf',
+    description='Pyramid RESTful Framework is designed to help coding REST CRUD endpoints with couple of lines of code.',
     long_description=README + '\n\n' +  CHANGES,
     classifiers=[
         "Programming Language :: Python",
