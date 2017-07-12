@@ -1,7 +1,7 @@
 import re
 import sys
 import logging
-from types import ModuleType
+from types import ModuleType, ClassType
 import mongoengine as mongo
 from datetime import datetime
 
@@ -22,8 +22,9 @@ class DatasetStorageModule(ModuleType):
     def __getattribute__(self, attr, *args, **kwargs):
         ns = ModuleType.__getattribute__(self, '__name__')
         cls = ModuleType.__getattribute__(self, attr, *args, **kwargs)
-        cls._collection = None
-        cls._meta['db_alias'] = ns
+        if isinstance(cls, (type, ClassType)) and issubclass(cls, DynamicBase):
+            cls._collection = None
+            cls._meta['db_alias'] = ns
         return cls
 
 
