@@ -19,7 +19,13 @@ DATASET_MODULE_NAME = 'prf.dataset'
 
 
 class DatasetStorageModule(ModuleType):
-    pass
+    def __getattribute__(self, attr, *args, **kwargs):
+        ns = ModuleType.__getattribute__(self, '__name__')
+        cls = ModuleType.__getattribute__(self, attr, *args, **kwargs)
+        cls._collection = None
+        cls._meta['db_alias'] = ns
+        return cls
+
 
 
 def set_dataset_module(name):
@@ -182,9 +188,6 @@ def get_document(namespace, name, _raise=True):
         cls = getattr(namespace_module, cls_name)
     else:
         cls = getattr(namespace_module, cls_name, None)
-    if cls:
-        cls._collection = None
-        cls._meta['db_alias'] = namespace
     return cls
 
 
