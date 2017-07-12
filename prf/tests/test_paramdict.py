@@ -1,3 +1,4 @@
+import pytest
 from prf.utils.params import paramdict
 from slovar.errors import DKeyError
 
@@ -5,9 +6,5 @@ from slovar.errors import DKeyError
 class TestParamDict(object):
     def test_exc(self):
         params = paramdict(a=1)
-        try:
+        with pytest.raises(DKeyError):
             params.b
-        except DKeyError:
-            pass
-        else:
-            raise Exception('Expected and exception')
