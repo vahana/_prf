@@ -74,3 +74,8 @@ class dictset(basedictset):
 
     def pop_many(self, *args, **kwargs):
         return dictset(super(dictset, self).pop_many(*args, **kwargs))
+
+
+class dkdict(dictset):
+    def raise_getattr_exc(self, error):
+        raise self.DKeyError(error)

@@ -359,7 +359,7 @@ def ld2dd(ld, key):
 def qs2dict(qs):
     from urlparse import parse_qsl
     from prf.utils import dictset
-    return dictset(parse_qsl(qs))
+    return dictset(parse_qsl(qs,keep_blank_values=True))
 
 
 def TODAY():
