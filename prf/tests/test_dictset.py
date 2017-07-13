@@ -1,8 +1,6 @@
 import pytest
 from datetime import datetime
 from prf.utils import dictset, dkdict
-from slovar.errors import DKeyError, DValueError
-
 
 class TestDictSet():
     def test_asbool(self):
@@ -25,5 +23,5 @@ class TestDictSet():
 
     def test_dkdict(self):
         params = dkdict(a=1)
-        with pytest.raises(DKeyError):
+        with pytest.raises(dkdict.DKeyError):
             params.b

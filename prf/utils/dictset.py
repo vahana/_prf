@@ -2,8 +2,16 @@ from slovar import slovar as basedictset
 from prf.utils.convert import *
 from prf.utils.utils import json_dumps
 
+class DKeyError(KeyError):
+    pass
+
+class DValueError(ValueError):
+    pass
 
 class dictset(basedictset):
+    DKeyError = DKeyError
+    DValueError = DValueError
+
     def asbool(self, *arg, **kw):
         return asbool(self, *arg, **kw)
 
@@ -78,4 +86,5 @@ class dictset(basedictset):
 
 class dkdict(dictset):
     def raise_getattr_exc(self, error):
-        raise self.DKeyError(error)
+        raise DKeyError(error)
+

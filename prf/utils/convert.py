@@ -1,4 +1,4 @@
-from prf.utils.utils import DKeyError, DValueError, split_strip, str2dt, qs2dict
+from prf.utils.utils import split_strip, str2dt, qs2dict
 
 def parametrize(func):
 
@@ -14,7 +14,7 @@ def parametrize(func):
                 value = dset[name]
             except KeyError:
                 if not allow_missing:
-                    raise DKeyError("Missing '%s'" % name)
+                    raise KeyError("Missing '%s'" % name)
                 else:
                     return
         else:
@@ -25,14 +25,14 @@ def parametrize(func):
             return
 
         if raise_on_empty and not value:
-            raise DValueError("'%s' can not be empty" % name)
+            raise ValueError("'%s' can not be empty" % name)
 
         try:
             result = func(dset, value, **kw)
         except:
             if _raise:
                 import sys
-                raise DValueError(sys.exc_value)
+                raise ValueError(sys.exc_value)
             else:
                 result = default
 
@@ -65,7 +65,7 @@ def asbool(dset, value):
     elif lvalue in falsey:
         return False
     else:
-        raise DValueError('Dont know how to convert `%s` to bool' % value)
+        raise ValueError('Dont know how to convert `%s` to bool' % value)
 
 
 @parametrize
@@ -115,7 +115,7 @@ def asrange(dset, value, typecast=str, sep='-'):
     elif isinstance(value, basestring):
         rng = split_strip(value, sep)
         if len(rng) !=2:
-            raise DValueError('bad range')
+            raise ValueError('bad range')
         list_ = range(int(rng[0]), int(rng[1])+1)
 
     else:
@@ -133,7 +133,7 @@ def asdict(dset, name, _type=None, _set=False, pop=False):
     try:
         value = dset[name]
     except KeyError:
-        raise DKeyError("Missing '%s'" % name)
+        raise KeyError("Missing '%s'" % name)
 
     if _type is None:
         _type = lambda t: t

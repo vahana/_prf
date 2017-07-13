@@ -8,7 +8,6 @@ from pyramid.authorization import ACLAuthorizationPolicy
 import prf.exc
 from prf.utils.convert import asbool
 from prf.utils import dictset, maybe_dotted, with_metaclass
-from prf.utils.utils import DKeyError, DValueError
 
 
 log = logging.getLogger(__name__)
@@ -25,7 +24,7 @@ class BaseACL(object):
     @property
     def view(self):
         if not self.request.matched_route:
-            raise DKeyError('no matched route for request')
+            raise dictset.DKeyError('no matched route for request')
 
         rname = self.request.matched_route.name
         resource = self.request.resource_map[rname]
@@ -50,7 +49,7 @@ class BaseACL(object):
 
     def get_item(self, key):
         if not self.view._model:
-            raise DValueError('`%s._model` can not be None'\
+            raise dictset.DValueError('`%s._model` can not be None'\
                               % self.view)
         return self.view._model.get_resource(**{self.view._id_name:key})
 
@@ -72,9 +71,9 @@ def includeme(config):
                                               secret=None))
 
     if not auth_params.callback:
-        raise DValueError('Missing auth.callback')
+        raise dictset.DValueError('Missing auth.callback')
     if not auth_params.secret:
-        raise DValueError('Missing auth.secret')
+        raise dictset.DValueError('Missing auth.secret')
 
     auth_params.callback = maybe_dotted(auth_params.callback)
     authn_policy = AuthTktAuthenticationPolicy(**auth_params.subset(

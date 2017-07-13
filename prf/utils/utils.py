@@ -7,7 +7,6 @@ from datetime import date, datetime
 import requests
 from functools import partial
 
-from slovar.errors import DKeyError, DValueError
 from slovar.operations.strings import split_strip, str2dt, str2rdt
 
 log = logging.getLogger(__name__)
@@ -42,11 +41,11 @@ def process_limit(start, page, limit):
             start = 0
 
         if limit < -1 or start < 0:
-            raise DValueError('_limit/_page or _limit/_start can not be < 0')
+            raise ValueError('_limit/_page or _limit/_start can not be < 0')
     except (ValueError, TypeError), e:
-        raise DValueError(e)
+        raise ValueError(e)
     except Exception, e: #pragma nocover
-        raise DValueError('Bad _limit param: %s ' % e)
+        raise ValueError('Bad _limit param: %s ' % e)
 
     return start, limit
 
@@ -221,7 +220,7 @@ def validate_url(url, method='GET'):
     try:
         return Session().send(Request(method, url).prepare()).status_code
     except Exception:
-        raise DValueError('URL not reachable `%s`' % url)
+        raise ValueError('URL not reachable `%s`' % url)
 
 
 def is_url(text, validate=False):
@@ -298,7 +297,7 @@ def extract_domain(url, _raise=True):
 
     except TypeError as e:
         if _raise:
-            raise DValueError(e)
+            raise ValueError(e)
 
 def clean_postal_code(code):
     return code.partition('-')[0]

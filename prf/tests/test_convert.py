@@ -10,7 +10,7 @@ class TestConvert():
 
         wrapped = parametrize(func)
 
-        with pytest.raises(DKeyError):
+        with pytest.raises(KeyError):
             wrapped(dictset(), None)
 
         assert 10 == wrapped(dictset(), None, default=10)
@@ -18,7 +18,7 @@ class TestConvert():
     def test_bool(self):
         d_ = dict(a=1, b=True, c=False, d='true', e='false', f='BLABLA', g=None)
 
-        with pytest.raises(DKeyError):
+        with pytest.raises(KeyError):
             asbool(dict(), 'a')
 
         assert asbool(d_, 'a') is True
@@ -29,16 +29,16 @@ class TestConvert():
         assert asbool(d_, 'e') is False
         assert asbool(d_, 'g') is False
 
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             asbool(d_, 'f')
 
-        with pytest.raises(DKeyError):
+        with pytest.raises(KeyError):
             asbool(d_, 'NOTHERE')
 
         assert asbool(d_, 'NOTHERE', default=False) is False
 
     def test_list(self):
-        with pytest.raises(DKeyError):
+        with pytest.raises(KeyError):
             aslist(dict(), 'a')
 
         assert aslist(dict(a=''), 'a') == []
@@ -46,7 +46,7 @@ class TestConvert():
         assert aslist(dict(a='a1,a2'), 'a') == ['a1', 'a2']
         assert aslist(dict(a='a,'), 'a') == ['a']
 
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             aslist(dict(a=''), 'a', raise_on_empty=True)
 
         d_ = dict(a='a', b='')
@@ -59,19 +59,19 @@ class TestConvert():
         assert aslist(dict(a='a,'), 'a', remove_empty=False) == ['a', '']
 
     def test_int(self):
-        with pytest.raises(DKeyError):
+        with pytest.raises(KeyError):
             asint(dict(), 'a')
 
         assert asint(dict(a='1'), 'a') == 1
 
     def test_float(self):
-        with pytest.raises(DKeyError):
+        with pytest.raises(KeyError):
             asfloat(dict(), 'a')
 
         assert asfloat(dict(a='1.1'), 'a') == 1.1
 
     def test_dict(self):
-        with pytest.raises(DKeyError):
+        with pytest.raises(KeyError):
             asdict(dict(), 'a')
 
         assert asdict(dict(a='a'), 'a') == {'a':''}
@@ -94,10 +94,10 @@ class TestConvert():
     def test_datetime(self):
         from datetime import datetime
 
-        with pytest.raises(DKeyError):
+        with pytest.raises(KeyError):
             asdt(dict(), 'a')
 
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             asdt(dict(a='asdfasdf'), 'a')
 
         assert asdt(dict(a='2000-01-01T01:01:01'), 'a') == datetime(2000,01,01,01,01,01)
