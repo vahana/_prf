@@ -61,6 +61,12 @@ class TestDataset(PrfTestCase):
             lambda: namespace_storage_module('namespace_storage_module', _set=True)
         )
 
+    def test_getattr_document(self):
+        self.create_collection('prf-test2', 'col1')
+        load_documents()
+        d = prf.dataset.prftest2.col1
+        assert d._meta['db_alias'] == 'prf-test2'
+
     def test_get_document_meta(self):
         assert not get_document_meta('default', 'col1')
         self.create_collection('default', 'col1')

@@ -16,6 +16,7 @@ from prf.utils.utils import maybe_dotted
 log = logging.getLogger(__name__)
 DS_COLL_PREFIX = ''
 DATASET_MODULE_NAME = 'prf.dataset'
+DATASET_NAMES_MAP = {}
 
 
 class DatasetStorageModule(ModuleType):
@@ -24,9 +25,9 @@ class DatasetStorageModule(ModuleType):
         cls = ModuleType.__getattribute__(self, attr, *args, **kwargs)
         if isinstance(cls, (type, ClassType)) and issubclass(cls, DynamicBase):
             cls._collection = None
-            cls._meta['db_alias'] = ns
+            # Don't use .get(), we should crash of it doesn't exist
+            cls._meta['db_alias'] = DATASET_NAMES_MAP[ns]
         return cls
-
 
 
 def set_dataset_module(name):
@@ -168,28 +169,27 @@ def safe_name(name):
 
 
 def namespace_storage_module(namespace, _set=False):
-    namespace = safe_name(namespace)
+    safe_namespace = safe_name(namespace)
     datasets_module = sys.modules[DATASET_MODULE_NAME]
     if _set:
         # If we're requesting to set and the target exists but isn't a dataset storage module
         # then we're reasonably sure we're doing something wrong
-        if hasattr(datasets_module, namespace):
-            if not isinstance(getattr(datasets_module, namespace), DatasetStorageModule):
-                raise AttributeError('%s.%s already exists, not overriding.' % (DATASET_MODULE_NAME, namespace))
+        if hasattr(datasets_module, safe_namespace):
+            if not isinstance(getattr(datasets_module, safe_namespace), DatasetStorageModule):
+                raise AttributeError('%s.%s already exists, not overriding.' % (DATASET_MODULE_NAME, safe_namespace))
         else:
-            setattr(datasets_module, namespace, DatasetStorageModule(namespace))
-    return getattr(datasets_module, namespace, None)
+            DATASET_NAMES_MAP[safe_namespace] = namespace
+            setattr(datasets_module, safe_namespace, DatasetStorageModule(safe_namespace))
+    return getattr(datasets_module, safe_namespace, None)
 
 
 def get_document(namespace, name, _raise=True):
     namespace_module = namespace_storage_module(namespace)
     cls_name = safe_name(name)
-    cls = None
     if _raise:
-        cls = getattr(namespace_module, cls_name)
+        return getattr(namespace_module, cls_name)
     else:
-        cls = getattr(namespace_module, cls_name, None)
-    return cls
+        return getattr(namespace_module, cls_name, None)
 
 
 def set_document(namespace, name, cls):
