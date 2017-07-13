@@ -1,8 +1,6 @@
 import pytest
 from datetime import datetime
-from prf.utils import dictset
-from slovar.errors import DKeyError, DValueError
-
+from prf.utils import dictset, dkdict
 
 class TestDictSet():
     def test_asbool(self):
@@ -22,3 +20,8 @@ class TestDictSet():
 
     def test_asdt(self):
         assert dictset(a='2000-01-01T01:01:01').asdt('a') == datetime(2000,01,01,01,01,01)
+
+    def test_dkdict(self):
+        params = dkdict(a=1)
+        with pytest.raises(dkdict.DKeyError):
+            params.b

@@ -1,6 +1,6 @@
-from prf.utils.dictset import dictset
+from prf.utils.dictset import dictset, dkdict, DKeyError, DValueError
 from slovar import process_fields
-from prf.utils.utils import (DKeyError, DValueError, JSONEncoder, json_dumps,
+from prf.utils.utils import (JSONEncoder, json_dumps,
                              process_limit, snake2camel, camel2snake,
                              resolve, maybe_dotted, issequence, prep_params,
                              with_metaclass, normalize_domain, resolve_host_to,

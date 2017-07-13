@@ -16,19 +16,19 @@ class TestUtils(object):
         assert split_strip('a,  b,') == ['a','b']
 
     def test_process_limit(self):
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             process_limit(None, None, None)
 
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             process_limit(0, 0, 0)
 
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             process_limit(-1, None, 1)
 
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             process_limit(None, -1, 1)
 
-        with pytest.raises(DValueError):
+        with pytest.raises(ValueError):
             process_limit(None, 'aaa', 'dsfsadf')
 
         assert (0, 0) == process_limit(None, None, 0)

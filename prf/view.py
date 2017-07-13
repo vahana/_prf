@@ -13,9 +13,8 @@ import prf.exc
 from prf.utils import dictset, issequence, json_dumps, urlencode
 from prf.serializer import DynamicSchema
 from prf import resource
-from prf.utils import process_fields
+from prf.utils import process_fields, dkdict
 from prf.utils.qs import typecast
-from prf.utils.params import paramdict
 
 log = logging.getLogger(__name__)
 
@@ -144,7 +143,7 @@ class BaseView(object):
                         "Expecting JSON. Received: '%s'. Request: %s %s"
                             % (request.body, request.method, request.url))
 
-        _params = paramdict(typecast(_params))
+        _params = dkdict(typecast(_params))
         return _params
 
     def process_variables(self):
