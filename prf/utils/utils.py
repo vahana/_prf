@@ -113,6 +113,30 @@ def issequence(arg):
         or hasattr(arg, '__iter__')
 
 
+def prep_params(params):
+    # import here to avoid circular import
+    from prf.utils import dictset
+
+    specials = dictset()
+
+    specials._sort = split_strip(params.pop('_sort', []))
+    specials._fields = split_strip(params.pop('_fields', []))
+    specials._count = '_count' in params
+    params.pop('_count', None)
+
+    _limit = params.pop('_limit', 1)
+    _page = params.pop('_page', None)
+    _start = params.pop('_start', None)
+
+    specials._start, specials._limit = process_limit(_start, _page, _limit)
+
+    for each in params.keys():
+        if each.startswith('_'):
+            specials[each] = params.pop(each)
+
+    return dictset(params), specials
+
+
 def with_metaclass(meta, *bases):
     """Defines a metaclass.
 

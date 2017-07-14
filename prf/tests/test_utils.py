@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 from prf.utils.utils import *
-from prf.utils import process_fields
+from prf.utils import process_fields, prep_params
 from prf import dictset
 
 class TestUtils(object):
