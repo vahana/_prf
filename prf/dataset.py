@@ -33,8 +33,7 @@ def set_dataset_module(name):
 def connect_dataset_aliases(config):
     from prf.mongodb import mongo_connect
 
-    ds = (config.prf_settings().aslist('dataset.namespaces', '')
-          or config.prf_settings().aslist('dataset.ns', ''))
+    ds = config.dataset_namespaces()
     if len(ds) == 1 and ds[0] == 'auto':
         ds = [str(x) for x in mongo.connection.get_connection().database_names()]
     for namespace in ds:
@@ -44,8 +43,12 @@ def connect_dataset_aliases(config):
         })
         mongo_connect(connect_settings)
 
+def dataset_namespaces(config):
+    return (config.prf_settings().aslist('dataset.namespaces', '')
+            or config.prf_settings().aslist('dataset.ns', ''))
 
 def includeme(config):
+    config.add_directive('dataset_namespaces', dataset_namespaces)
     set_dataset_module(config.prf_settings().get('dataset.module'))
     connect_dataset_aliases(config)
 
