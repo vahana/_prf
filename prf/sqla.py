@@ -11,8 +11,9 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import event
 
-from prf.utils import dictset, split_strip, process_limit, prep_params,\
+from prf.utils import dictset, split_strip, process_limit,\
                       maybe_dotted
+from prf.utils.qs import prep_params
 import prf.exc
 
 log = logging.getLogger(__name__)
