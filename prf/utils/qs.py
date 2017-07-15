@@ -1,7 +1,7 @@
 import logging
 from bson import ObjectId
 
-from prf.utils import dictset, process_limit, split_strip
+from prf.utils import dictset, process_limit, split_strip, DValueError
 
 log = logging.getLogger(__name__)
 
@@ -94,7 +94,7 @@ def typecast(params):
                     raise ValueError
 
             except ValueError:
-                raise dictset.DValueError('`near` operator takes pair of'
+                raise DValueError('`near` operator takes pair of'
                                 ' numeric elements. Got `%s` instead' % coords)
 
             params[key] = coords
@@ -120,6 +120,6 @@ def typecast(params):
             if callable(method):
                 params[new_key] = method(key, pop=True)
         except (KeyError, AttributeError) as e:
-            raise dictset.DValueError('Unknown typecast operator `%s`' % op)
+            raise DValueError('Unknown typecast operator `%s`' % op)
 
     return params

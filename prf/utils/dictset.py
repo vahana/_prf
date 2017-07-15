@@ -1,11 +1,9 @@
 from slovar import slovar as basedictset
 from prf.utils.convert import *
 from prf.utils.utils import json_dumps
-from prf.utils.errors import DKeyError, DValueError
+from prf.utils.errors import DKeyError
 
 class dictset(basedictset):
-    DKeyError = DKeyError
-    DValueError = DValueError
 
     def asbool(self, *arg, **kw):
         return asbool(self, *arg, **kw)

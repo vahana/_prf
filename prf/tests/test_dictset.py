@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from prf.utils import dictset, dkdict
+from prf.utils import dictset, dkdict, DKeyError
 
 class TestDictSet():
     def test_asbool(self):
@@ -23,5 +23,5 @@ class TestDictSet():
 
     def test_dkdict(self):
         params = dkdict(a=1)
-        with pytest.raises(dkdict.DKeyError):
+        with pytest.raises(DKeyError):
             params.b

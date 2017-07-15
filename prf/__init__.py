@@ -5,7 +5,7 @@ from pyramid import httpexceptions
 from pyramid.security import  NO_PERMISSION_REQUIRED
 
 import prf.exc
-from prf.utils import maybe_dotted, dictset
+from prf.utils import maybe_dotted, dictset, DKeyError, DValueError
 from prf.utility_views import AccountView, APIView
 
 APP_NAME = __package__.split('.')[0]
@@ -136,8 +136,8 @@ def includeme(config):
 
     process_tweens(config)
 
-    add_error_view(config, dictset.DKeyError, error='Missing param: %s')
-    add_error_view(config, dictset.DValueError, error='Bad value: %s')
+    add_error_view(config, DKeyError, error='Missing param: %s')
+    add_error_view(config, DValueError, error='Bad value: %s')
 
     # replace html versions of pyramid http exceptions with json versions
     add_error_view(config, httpexceptions.HTTPUnauthorized, prf.exc.HTTPUnauthorized)
