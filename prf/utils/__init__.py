@@ -1,4 +1,4 @@
-from prf.utils.dictset import dictset, dkdict, DKeyError, DValueError
+from prf.utils.dictset import dictset, dkdict
 from slovar import process_fields
 from prf.utils.utils import (JSONEncoder, json_dumps,
                              process_limit, snake2camel, camel2snake,
@@ -9,3 +9,4 @@ from prf.utils.utils import (JSONEncoder, json_dumps,
                              clean_postal_code, format_phone, normalize_phone, dl2ld,
                              ld2dd, qs2dict, str2dt, str2rdt, TODAY, NOW
                             )
+from prf.utils.errors import DKeyError, DValueError

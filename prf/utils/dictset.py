@@ -1,12 +1,7 @@
 from slovar import slovar as basedictset
 from prf.utils.convert import *
 from prf.utils.utils import json_dumps
-
-class DKeyError(KeyError):
-    pass
-
-class DValueError(ValueError):
-    pass
+from prf.utils.errors import DKeyError, DValueError
 
 class dictset(basedictset):
     DKeyError = DKeyError
