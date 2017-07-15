@@ -53,36 +53,6 @@ class dictset(basedictset):
             val = dictset(val)
         self[key] = val
 
-    def copy(self):
-        return dictset(super(dictset, self).copy())
-
-    def extract(self, *args, **kwargs):
-        return dictset(super(dictset, self).extract(*args, **kwargs))
-
-    def get_by_prefix(self, *args, **kwargs):
-        return dictset(super(dictset, self).get_by_prefix(*args, **kwargs))
-
-    def subset(self, *args, **kwargs):
-        return dictset(super(dictset, self).subset(*args, **kwargs))
-
-    def get_tree(self, *args, **kwargs):
-        return dictset(super(dictset, self).get_tree(*args, **kwargs))
-
-    def transform(self, *args, **kwargs):
-        return dictset(super(dictset, self).transform(*args, **kwargs))
-
-    def flat(self, *args, **kwargs):
-        return dictset(super(dictset, self).flat(*args, **kwargs))
-
-    def unflat(self, *args, **kwargs):
-        return dictset(super(dictset, self).unflat(*args, **kwargs))
-
-    def update_with(self, *args, **kwargs):
-        return dictset(super(dictset, self).update_with(*args, **kwargs))
-
-    def pop_many(self, *args, **kwargs):
-        return dictset(super(dictset, self).pop_many(*args, **kwargs))
-
 
 class dkdict(dictset):
     def raise_getattr_exc(self, error):
