@@ -1,9 +1,8 @@
 dependencies:
   post:
-    - ls -la ~/
     - rm -rf ~/virtualenvs
+    - python setup.py develop
     - pip install -r requirements.test
-    - which python
 
 test:
   override:
