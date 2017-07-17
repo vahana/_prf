@@ -1,6 +1,11 @@
+machine:
+  inference:
+    post:
+      - rm -rf ~/virtualenvs
+
 dependencies:
   post:
-    - pip install --upgrade -r requirements.test
+    - pip install -r requirements.test
     - which python
 
 test:
