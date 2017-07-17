@@ -1,7 +1,7 @@
 dependencies:
   post:
     - ls -la ~/
-    - rm -rf ~/.virtualenv
+    - rm -rf ~/virtualenvs
     - pip install -r requirements.test
     - which python
 
