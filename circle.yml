@@ -1,10 +1,7 @@
-machine:
-  inference:
-    post:
-      - rm -rf ~/virtualenvs
-
 dependencies:
   post:
+    - ls -la ~/
+    - rm -rf ~/.virtualenv
     - pip install -r requirements.test
     - which python
 
