@@ -28,16 +28,21 @@ class DynamicSchema(object):
 
     def dump(self, objs):
         flat = self.context.get('flat')
+        pop_empty = self.context.get('pop_empty')
 
         def to_dict(obj):
             if isinstance(obj, dict):
                 d_ = dictset(obj).extract(self.context.get('fields'))
-                return d_ if not flat else d_.flat(keep_lists=0)
             if hasattr(obj, 'to_dict'):
                 d_ = obj.to_dict(self.context.get('fields'))
-                return d_ if not flat else d_.flat(keep_lists=0)
             else:
-                return obj
+                return d_
+
+            if pop_empty:
+                d_ = d_.flat(keep_lists=True).pop_by_values([[], {}, '']).unflat()
+            if flat:
+                d_ = d_.flat(keep_lists=0)
+            return d_
 
         try:
             if self.many:

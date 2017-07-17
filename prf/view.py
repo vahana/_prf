@@ -185,9 +185,10 @@ class BaseView(object):
     def serialize(self, obj, many):
         fields = self._params.get('_fields')
         flat = self._params.asbool('_flat', default=False)
+        pop_empty = self._params.asbool('_pop_empty', default=False)
 
         serializer = self._serializer(
-                            context={'request':self.request, 'fields':fields, 'flat': flat},
+                            context={'request':self.request, 'fields':fields, 'flat': flat, 'pop_empty': pop_empty},
                             many=many, strict=True,
                             **process_fields(fields).subset('only,exclude'))
 
@@ -200,7 +201,10 @@ class BaseView(object):
         fields = self._params.get('_fields')
 
         def process_dict(d_):
-            return dictset(d_).extract(fields)
+            d_ = dictset(d_).extract(fields)
+            if self._params.asbool('_pop_empty', default=False):
+                d_ = d_.flat(keep_lists=True).pop_by_values([[], {}, '']).unflat()
+            return d_
 
         _total = None
 
