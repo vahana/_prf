@@ -1,6 +1,6 @@
 dependencies:
   post:
-    - pip install -r requirements.test
+    - pip install --upgrade -r requirements.test
     - which python
 
 test:
