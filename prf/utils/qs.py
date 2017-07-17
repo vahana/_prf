@@ -24,7 +24,6 @@ def prep_params(params):
         _join=None,
         _unwind=None,
         _where=None,
-        _pop_empty=None,
     )
 
     specials._sort = params.aslist('_sort', default=[], pop=True)
@@ -32,7 +31,6 @@ def prep_params(params):
     specials._flat = '_flat' in params; params.pop('_flat', False)
     specials._count = '_count' in params; params.pop('_count', False)
     specials._explain = '_explain' in params; params.pop('_explain', False)
-    specials._pop_empty = '_pop_empty' in params; params.pop('_pop_empty', False)
 
     specials._start, specials._limit = process_limit(
                                         params.pop('_start', None),
