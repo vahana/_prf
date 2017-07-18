@@ -7,8 +7,8 @@ from prf import dictset
 class TestUtils(object):
 
     def test_JSONEncoder(self):
-        assert "2000-01-01T01:01:01Z" in json_dumps(
-            dict(a=datetime(2000,01,01,01,01,01,01)))
+        assert "1685-03-31T01:01:01" in json_dumps(
+            dict(a=datetime(1685,03,31,01,01,01,01)))
 
     def test_split_strip(self):
         assert split_strip('') == []

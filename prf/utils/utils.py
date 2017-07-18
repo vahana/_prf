@@ -15,7 +15,7 @@ log = logging.getLogger(__name__)
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, (datetime, date)):
-            return obj.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
+            return obj.isoformat().split(".")[0]
         try:
             return super(JSONEncoder, self).default(obj)
         except TypeError:
