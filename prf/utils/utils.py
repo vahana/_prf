@@ -2,6 +2,7 @@ import re
 import json
 import dateutil
 import logging
+import urllib3
 from urlparse import urlparse, parse_qs
 from datetime import date, datetime
 import requests
@@ -157,14 +158,6 @@ def with_metaclass(meta, *bases):
     return metaclass('temporary_class', None, {})
 
 
-def normalize_domain(url):
-    if not url:
-        return url
-
-    elements = urlparse(url)
-    return (elements.netloc+elements.path).split('www.')[-1]
-
-
 def resolve_host_to(url, newhost):
     '''
     substitute the host in `url` with `newhost`
@@ -298,6 +291,27 @@ def extract_domain(url, _raise=True):
     except TypeError as e:
         if _raise:
             raise ValueError(e)
+
+def cleanup_url(url, _raise=True):
+    if not url:
+        if _raise:
+            raise ValueError('bad url `%s`' % url)
+        return ''
+
+    parsed = urllib3.util.parse_url(url)
+    host = parsed.host
+
+    if not host:
+        if _raise:
+            raise ValueError('missing host in %s' % url)
+        else:
+            return ''
+
+    if host.startswith('www.'):
+        host = host[4:]
+
+    path = (parsed.path or '').strip('/')
+    return ('%s/%s' % (host, path)).strip('/')
 
 def clean_postal_code(code):
     return code.partition('-')[0]

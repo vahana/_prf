@@ -114,3 +114,20 @@ class TestUtils(object):
                 _group = 'x,y'
             )
         )
+
+    def test_cleanup_url(self):
+        from prf.utils import cleanup_url
+
+        with pytest.raises(ValueError):
+            cleanup_url('')
+
+        with pytest.raises(ValueError):
+            cleanup_url('/xyz/')
+
+        assert 'abc' == cleanup_url('abc')
+        assert 'abc.com/xyz' == cleanup_url('abc.com/xyz/')
+        assert 'abc.com/xyz' == cleanup_url('abc.com/xyz?a=2&b=3')
+
+        assert '' == cleanup_url('', _raise=False)
+        assert '' == cleanup_url('/xyz/', _raise=False)
+
