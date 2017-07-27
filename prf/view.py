@@ -99,8 +99,7 @@ class BaseView(object):
         self._model_class = None
         self.returns_many = False
         self.post_as_get = False
-
-        self._params = self.process_params(request)
+        self.__params = self.process_params(request)
         # self.process_variables()
         self.set_renderer()
         self.init()
@@ -113,6 +112,14 @@ class BaseView(object):
     def resource(self):
         rname = self.request.matched_route.name
         return self.request.resource_map.get(rname)
+
+    @property
+    def _params(self):
+        return self.__params
+
+    @_params.setter
+    def _params(self, val):
+        self.__params = dkdict(val)
 
     def set_renderer(self):
         # no accept headers, use default

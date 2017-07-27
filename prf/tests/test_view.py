@@ -1,6 +1,6 @@
 from prf.view import BaseView
 from prf.request import PRFRequest
-from prf.utils import dictset
+from prf.utils import dictset, dkdict
 from prf.tests.prf_testcase import PrfTestCase
 
 
@@ -41,3 +41,15 @@ class TestView(PrfTestCase):
         d = c(a=1, b=[], c={'d': 2, 'e': ''})
         result = view._process(d, False)
         assert result['data'] == {'a': 1, 'b': [], 'c': {'d': 2, 'e': ''}}
+
+    def test_params_prop(self):
+        import pytest
+
+        request = self.request(params={'a':1})
+        view = BaseView({}, request)
+        assert type(view._params) == dkdict
+        view._params = {'b':1}
+        assert type(view._params) == dkdict
+
+        with pytest.raises(ValueError):
+            view._params = 'whatever the fuck I want'
