@@ -1,5 +1,7 @@
 dependencies:
   post:
+    - rm -rf ~/virtualenvs
+    - python setup.py develop
     - pip install -r requirements.test
 
 test:
