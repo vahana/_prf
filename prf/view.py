@@ -119,7 +119,10 @@ class BaseView(object):
 
     @_params.setter
     def _params(self, val):
-        self.__params = dkdict(val)
+        if isinstance(val, dkdict):
+            self.__params = val
+        else:
+            self.__params = dkdict(val)
 
     def set_renderer(self):
         # no accept headers, use default

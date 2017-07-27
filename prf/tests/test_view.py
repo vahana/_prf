@@ -48,6 +48,7 @@ class TestView(PrfTestCase):
         request = self.request(params={'a':1})
         view = BaseView({}, request)
         assert type(view._params) == dkdict
+
         view._params = {'b':1}
         assert type(view._params) == dkdict
 
