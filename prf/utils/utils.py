@@ -380,3 +380,12 @@ def TODAY():
 
 def NOW():
     return datetime.now().strftime('%Y_%m_%dT%H_%M_%S')
+
+def raise_or_log(_raise=False):
+    if _raise:
+        import sys
+        _type, value, _ = sys.exc_info()
+        raise _type(value)
+    else:
+        import traceback
+        log.error(traceback.format_exc())

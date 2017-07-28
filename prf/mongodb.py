@@ -606,11 +606,7 @@ class BaseMixin(object):
                 return query_set.explain()
 
             return query_set
-        except AttributeError as e:
-            #sometimes mongoengine throws AttributeError: 'NoneType' object has no attribute 'find' inside `mongoengine/queryset/base.py`
-            #TODO: find the cause. More info in https://www.pivotaltracker.com/story/show/149515935
-            log.error(e)
-            return []
+
         finally:
            log.debug('OUT: collection: %s, query: %.512s',
                                         cls.__name__, query_set._query)
