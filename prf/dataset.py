@@ -385,7 +385,8 @@ class DatasetDoc(DynamicBase):
     def create_indexes(cls, name=None):
         try:
             if name is None:
-                cls.ensure_indexes()
+                # cls.ensure_indexes()
+                pass
             else:
                 cls.ensure_index(name)
         except Exception as e:
