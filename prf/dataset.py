@@ -384,7 +384,12 @@ class DatasetDoc(DynamicBase):
     def create_indexes(cls, name=None):
         try:
             if name is None:
-                cls.ensure_indexes()
+                # Support for mongoengine with connection manager
+                try:
+                    from mongoengine.connections_manager import ConnectionManager
+                    cls.ensure_indexes(cls._get_collection())
+                except ImportError:
+                    cls.ensure_indexes()
             else:
                 cls.ensure_index(name)
         except Exception as e:
