@@ -155,9 +155,8 @@ def load_documents():
     _namespaces = set()
 
     for namespace, _, _cls in names:
-        doc = define_document(_cls)
-        doc._meta['db_alias'] = namespace
         # log.debug('Registering collection %s.%s', namespace, _cls)
+        doc = define_document(_cls, namespace=namespace)
         set_document(namespace, _cls, doc)
         _namespaces.add(namespace)
 
