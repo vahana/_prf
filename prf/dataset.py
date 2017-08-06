@@ -155,9 +155,8 @@ def load_documents():
     _namespaces = set()
 
     for namespace, _, _cls in names:
-        doc = define_document(_cls)
-        doc._meta['db_alias'] = namespace
         # log.debug('Registering collection %s.%s', namespace, _cls)
+        doc = define_document(_cls, namespace=namespace)
         set_document(namespace, _cls, doc)
         _namespaces.add(namespace)
 
@@ -385,14 +384,7 @@ class DatasetDoc(DynamicBase):
     def create_indexes(cls, name=None):
         try:
             if name is None:
-                # Support for mongoengine with connection manager
-                try:
-                    from mongoengine.connections_manager import ConnectionManager
-                    cls.ensure_indexes(cls._get_collection())
-                except ImportError:
-                    cls.ensure_indexes()
-            else:
-                cls.ensure_index(name)
+                cls.ensure_indexes()
         except Exception as e:
             raise prf.exc.HTTPBadRequest(str(e))
 
