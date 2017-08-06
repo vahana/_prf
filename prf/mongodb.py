@@ -194,16 +194,6 @@ class Aggregator(object):
         if self.post_match:
             self._agg.append({'$match': self.post_match})
 
-        if self.specials._fields:
-            _prj = {'_id':0}
-            _prj[self.specials._unwind] = 1
-            for each in process_fields(self.specials._fields)['only']:
-                _prj[each] = 1
-
-            self._agg.append(
-                {'$project': _prj}
-            )
-
         if self.specials.asbool('_count', False):
             return self.aggregate_count(collection)
 
