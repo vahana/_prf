@@ -323,7 +323,7 @@ class DatasetDoc(DynamicBase):
         aggr = Aggregator(cls.objects(**params)._query, specials)
         aggr._join_cond = other_query
 
-        return aggr.join(cls._collection)
+        return aggr.join(cls._get_collection())
 
 
     @classmethod
@@ -400,9 +400,9 @@ class DatasetDoc(DynamicBase):
     def drop_index(cls, name=None):
         try:
             if name is None:
-                cls._collection.drop_indexes()
+                cls._get_collection().drop_indexes()
             else:
-                cls._collection.drop_index(name)
+                cls._get_collection().drop_index(name)
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
 
