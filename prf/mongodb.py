@@ -418,7 +418,7 @@ class Aggregator(object):
         return self
 
     def aggregate(self, collection):
-        log.debug(self._agg)
+        log.debug('AGG: %s', self._agg)
         try:
             return [dictset(e) for e in
                     collection.aggregate(self._agg, cursor={}, allowDiskUse=True)]
