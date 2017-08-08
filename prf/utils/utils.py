@@ -298,7 +298,13 @@ def cleanup_url(url, _raise=True):
             raise ValueError('bad url `%s`' % url)
         return ''
 
-    parsed = urllib3.util.parse_url(url)
+    try:
+        parsed = urllib3.util.parse_url(url)
+    except Exception as e:
+        if _raise:
+            raise e
+        return ''
+
     host = parsed.host
 
     if not host:
