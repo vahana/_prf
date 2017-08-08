@@ -509,15 +509,15 @@ class BaseMixin(object):
 
     @classmethod
     def get_group(cls, queryset, specials):
-        return Aggregator(queryset._query, specials).group(cls._collection)
+        return Aggregator(queryset._query, specials).group(cls._get_collection())
 
     @classmethod
     def get_join(cls, queryset, specials):
-        return Aggregator(queryset._query, specials).join(cls._collection)
+        return Aggregator(queryset._query, specials).join(cls._get_collection())
 
     @classmethod
     def get_unwind(cls, queryset, specials):
-        return Aggregator(queryset._query, specials).unwind(cls._collection)
+        return Aggregator(queryset._query, specials).unwind(cls._get_collection())
 
     @classmethod
     def _ix(cls, specials, total):
