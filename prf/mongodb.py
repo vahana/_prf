@@ -91,7 +91,7 @@ def mongodb_exc_tween(handler, registry):
                 raise prf.exc.HTTPConflict(detail='Resource already exists.',
                             request=request, exception=e)
             else:
-                raise prf.exc.HTTPBadRequest('Not Unique', request=request)
+                raise prf.exc.HTTPBadRequest(e, request=request)
 
         except (mongo.OperationError,
                 mongo.ValidationError,
