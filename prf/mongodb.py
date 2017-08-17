@@ -562,8 +562,7 @@ class BaseMixin(object):
             elif specials._unwind:
                 return cls.get_unwind(query_set, specials)
 
-            #count ignores the _start, so lets adjust it
-            _total = query_set.count() - specials._start
+            _total = query_set.count()
 
             if specials._count:
                 return _total
@@ -571,7 +570,12 @@ class BaseMixin(object):
             if specials._sort:
                 query_set = query_set.order_by(*specials._sort)
 
+            if specials._ix is not None:
+                cls._ix(specials, _total)
+
             if specials._end is None:
+                if specials._start == 0:
+                    return query_set
                 query_set = query_set[specials._start:]
             else:
                 query_set = query_set[specials._start:specials._end]
