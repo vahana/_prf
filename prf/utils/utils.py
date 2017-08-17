@@ -10,6 +10,8 @@ from functools import partial
 
 from slovar.operations.strings import split_strip, str2dt, str2rdt
 
+from prf.utils.errors import DValueError
+
 log = logging.getLogger(__name__)
 
 
@@ -32,7 +34,7 @@ def process_limit(start, page, limit):
         limit = int(limit)
 
         if start is not None and page is not None:
-            raise ValueError('Can not specify _start and _page at the same time')
+            raise DValueError('Can not specify _start and _page at the same time')
 
         if start is not None:
             start = int(start)
@@ -42,11 +44,11 @@ def process_limit(start, page, limit):
             start = 0
 
         if limit < -1 or start < 0:
-            raise ValueError('_limit/_page or _limit/_start can not be < 0')
+            raise DValueError('_limit/_page or _limit/_start can not be < 0')
     except (ValueError, TypeError), e:
-        raise ValueError(e)
+        raise DValueError(e)
     except Exception, e: #pragma nocover
-        raise ValueError('Bad _limit param: %s ' % e)
+        raise DValueError('Bad _limit param: %s ' % e)
 
     return start, limit
 
@@ -67,7 +69,7 @@ def resolve(name, module=None):
     name = name.split('.')
     if not name[0]:
         if module is None:
-            raise ValueError('relative name without base module')
+            raise DValueError('relative name without base module')
         module = module.split('.')
         name.pop(0)
         while not name[0]:
@@ -213,7 +215,7 @@ def validate_url(url, method='GET'):
     try:
         return Session().send(Request(method, url).prepare()).status_code
     except Exception:
-        raise ValueError('URL not reachable `%s`' % url)
+        raise DValueError('URL not reachable `%s`' % url)
 
 
 def is_url(text, validate=False):
@@ -290,12 +292,12 @@ def extract_domain(url, _raise=True):
 
     except TypeError as e:
         if _raise:
-            raise ValueError(e)
+            raise DValueError(e)
 
 def cleanup_url(url, _raise=True):
     if not url:
         if _raise:
-            raise ValueError('bad url `%s`' % url)
+            raise DValueError('bad url `%s`' % url)
         return ''
 
     try:
@@ -309,7 +311,7 @@ def cleanup_url(url, _raise=True):
 
     if not host:
         if _raise:
-            raise ValueError('missing host in %s' % url)
+            raise DValueError('missing host in %s' % url)
         else:
             return ''
 
@@ -332,7 +334,7 @@ def format_phone(number, country_code, _raise=True):
             msg = 'Phone number `%s` for country `%s` might might be invalid'\
                                  % (number, country_code)
             if _raise:
-                raise ValueError(msg)
+                raise DValueError(msg)
             else:
                 log.warn(msg)
                 ok = False
@@ -342,7 +344,7 @@ def format_phone(number, country_code, _raise=True):
 
     except pn.NumberParseException as e:
         if _raise:
-            raise ValueError(e)
+            raise DValueError(e)
 
     return False, None
 
@@ -352,7 +354,7 @@ def normalize_phone(number, country_code='US', _raise=True):
     try:
         phone = pn.parse(number, country_code)
         if not pn.is_valid_number(phone) and _raise:
-                raise ValueError('Invalid phone number `%s` for country `%s`'
+                raise DValueError('Invalid phone number `%s` for country `%s`'
                                     % (number, country_code))
         else:
             return None
@@ -361,7 +363,7 @@ def normalize_phone(number, country_code='US', _raise=True):
 
     except pn.NumberParseException as e:
         if _raise:
-            raise ValueError(e)
+            raise DValueError(e)
 
 
 def dl2ld(dl):
