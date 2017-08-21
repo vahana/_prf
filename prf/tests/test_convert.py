@@ -97,8 +97,8 @@ class TestConvert():
         with pytest.raises(KeyError):
             asdt(dict(), 'a')
 
-        with pytest.raises(ValueError):
-            asdt(dict(a='asdfasdf'), 'a')
+
+        assert asdt(dict(a='asdfasdf'), 'a') == None
 
         assert asdt(dict(a='2000-01-01T01:01:01'), 'a') == datetime(2000,01,01,01,01,01)
 

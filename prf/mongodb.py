@@ -738,7 +738,8 @@ class BaseMixin(object):
         if _limit == -1:
             _limit = cls.get_collection(_limit=_limit, _count=1, **params)
 
-        log.debug('page_size=%s, _limit=%s', page_size, _limit)
+        log.debug('page_size=%s, _start=%s, _limit=%s',
+                                            page_size, _start, _limit)
 
         pgr = pager(_start, page_size, _limit)
         for start, count in pgr():
