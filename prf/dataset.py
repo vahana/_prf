@@ -137,7 +137,7 @@ def define_document(name, meta=None, namespace='default', redefine=False):
     name = str(name)
 
     if '.' in name:
-        name, _, namespace = name.partition('.')
+        namespace, _,name = name.partition('.')
 
     if not meta:
         meta = {}
@@ -223,8 +223,8 @@ class DSDocumentMetaclass(TopLevelDocumentMetaclass):
 
         pk_ = attrs_meta.aslist('pk', pop=True, default=[])
 
-        current_meta = get_document_meta(attrs_meta.get('db_alias', 'default'), name)
-
+        # current_meta = get_document_meta(attrs_meta.get('db_alias', 'default'), name)
+        current_meta = None
         if current_meta:
             new_indexes = []
             for each in current_meta['indexes']:
@@ -272,7 +272,7 @@ class DSDocumentMetaclass(TopLevelDocumentMetaclass):
         attrs['meta'] = attrs_meta
         new_class = super_new.__new__(cls, name, bases, attrs)
         new_class.set_collection_name()
-        new_class.create_indexes()
+        # new_class.create_indexes()
         new_class._pk = pk_
         new_class._versioned = bool(pk_)
         return new_class

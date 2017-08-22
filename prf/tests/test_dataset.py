@@ -88,6 +88,6 @@ class TestDataset(PrfTestCase):
         d = define_document('col1', namespace='default', redefine=True)
         assert cls != d
 
-        set_document('default', 'abc', cls)
-        d = define_document('abc.default')
+        set_document('abc', 'xyz',cls)
+        d = define_document('abc.xyz')
         assert cls  == d
