@@ -134,8 +134,11 @@ def get_document_meta(namespace, doc_name):
 def define_document(name, meta=None, namespace='default', redefine=False):
     if not name:
         raise ValueError('Document class name can not be empty')
-
     name = str(name)
+
+    if '.' in name:
+        name, _, namespace = name.partition('.')
+
     if not meta:
         meta = {}
     meta['ordering'] = ['-id']
