@@ -210,77 +210,7 @@ class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
     density = mongo.IntField()
 
 
-class DSDocumentMetaclass(TopLevelDocumentMetaclass):
-
-    def __new__(cls, name, bases, attrs):
-        super_new = super(DSDocumentMetaclass, cls)
-        attrs_meta = dictset(attrs.get('meta', {}))
-        attrs_meta.setdefault('indexes', [])
-        versioned = attrs_meta.pop('versioned', False)
-
-        if attrs_meta.asbool('abstract', default=False):
-            return super_new.__new__(cls, name, bases, attrs)
-
-        pk_ = attrs_meta.aslist('pk', pop=True, default=[])
-
-        # current_meta = get_document_meta(attrs_meta.get('db_alias', 'default'), name)
-        current_meta = None
-        if current_meta:
-            new_indexes = []
-            for each in current_meta['indexes']:
-
-                if each['name'] == '_id_': # skip this
-                    continue
-
-                new_indexes.append(each)
-                if each['unique']:
-                    if each['name'] == 'pk':
-                        pk_ = [e[1:] if e[0]=='-' else e for e in each['fields']]
-                        break
-
-            current_meta['indexes'] = new_indexes
-            attrs_meta.update(current_meta)
-
-        elif versioned:
-            attrs['v'] = mongo.IntField(default=1)
-            attrs['latest'] = mongo.BooleanField(default=True)
-
-            attrs_meta['indexes'].append('latest')
-            attrs_meta['indexes'].append('v')
-
-            if not pk_:
-                raise prf.exc.HTTPBadRequest(
-                    'must provide `target.pk` for versioned dataset `%s`'
-                    ' or set `target.versioned=False`' % name)
-
-            for each in pk_:
-                attrs_meta['indexes'].append(each)
-
-            pk_.append('v')
-            attrs_meta['indexes'].append({
-                'name': 'pk',
-                'fields': pk_,
-                'unique': True})
-        else:
-            for each in pk_:
-                attrs_meta['indexes'].append({
-                    'fields': pk_,
-                    'unique': True
-                })
-
-
-        attrs['meta'] = attrs_meta
-        new_class = super_new.__new__(cls, name, bases, attrs)
-        new_class.set_collection_name()
-        # new_class.create_indexes()
-        new_class._pk = pk_
-        new_class._versioned = bool(pk_)
-        return new_class
-
-
 class DatasetDoc(DynamicBase):
-    __metaclass__ = DSDocumentMetaclass
-
     meta = {
         'abstract': True,
     }
@@ -366,23 +296,6 @@ class DatasetDoc(DynamicBase):
         cls.objects(v__lt=self.v, **params)\
                    .update(set__latest=False)
 
-    def save_version(self, v=None, **kw):
-        if v is None:
-            latest = self.get_latest()
-            self.v = latest.v + 1 if latest else 1
-        else:
-            self.v = v
-
-        self.latest = True
-
-        try:
-            obj = super(DatasetDoc, self).save(**kw)
-            if self.v > 1:
-                self._unset_latest()
-            return obj
-        except mongo.NotUniqueError as e:
-            return self.save_version(v=self.v+1, **kw)
-
     @classmethod
     def create_indexes(cls, name=None):
         try:
@@ -400,39 +313,3 @@ class DatasetDoc(DynamicBase):
                 cls._get_collection().drop_index(name)
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
-
-    @classmethod
-    def fix_versions(cls, **q):
-        keys = [e for e in cls._pk if e != 'v']
-
-        latest_objects = [dictset(each).extract(keys+['max__as__v']).flat() for each in
-            cls.get_collection(
-                _group=keys, _group_max='v',
-                **q)]
-
-        total = len(latest_objects)
-
-        log.debug('Set latest to False for all')
-
-        cls.objects(**q).update(set__latest=False)
-
-        for each in latest_objects:
-            log.debug('Processing %s: %s' % (total, each))
-            total -=1
-
-            each.pop_by_values(None)
-            if each.keys() == ['v']:
-                log.warning('WTF')
-                continue
-
-            cls.objects(**each).update(set__latest=True)
-
-    @classmethod
-    def get_collection(cls, _q=None, **params):
-        if cls._versioned:
-            params.setdefault('latest', True)
-            if params['latest'] is None:
-                params.pop('latest')
-
-        return super(DatasetDoc, cls).get_collection(_q, **params)
-
