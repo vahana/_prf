@@ -24,9 +24,12 @@ class DatasetStorageModule(ModuleType):
         ns = ModuleType.__getattribute__(self, '__name__')
         cls = ModuleType.__getattribute__(self, attr, *args, **kwargs)
         if isinstance(cls, (type, ClassType)) and issubclass(cls, DynamicBase):
-            cls._collection = None
-            # Don't use .get(), we should crash of it doesn't exist
             cls._meta['db_alias'] = DATASET_NAMES_MAP[ns]
+            try:
+                from mongoengine.connections_manager import ConnectionManager
+                cls._collection = ConnectionManager.get_collection(cls)
+            except ImportError:
+                cls._collection = None
         return cls
 
 
