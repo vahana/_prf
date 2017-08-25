@@ -275,27 +275,6 @@ class DatasetDoc(DynamicBase):
 
         self.log.density = self.get_density()
 
-    def get_params_from_pk(self):
-        return self.to_dict(self._pk).subset('-v').flat()
-
-    def get_latest(self):
-        params = self.get_params_from_pk()
-        if not params:
-            log.warning('pk params empty for %s', params)
-            return
-
-        return self.get(latest=True, **params)
-
-    def _unset_latest(self):
-        cls = self.__class__
-        params = self.get_params_from_pk()
-        if not params:
-            log.warning('pk params empty for %s', params)
-            return
-
-        cls.objects(v__lt=self.v, **params)\
-                   .update(set__latest=False)
-
     @classmethod
     def create_indexes(cls, name=None):
         try:
