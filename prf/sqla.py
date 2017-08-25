@@ -173,9 +173,6 @@ class Base(object):
         if hasattr(self, 'id'):
             parts.append('id=%s' % self.id)
 
-        if hasattr(self, '_version'):
-            parts.append('v=%s' % self._version)
-
         parts.extend(self.repr_parts())
 
         return '<%s: %s>' % (self.__class__.__name__, ', '.join(parts))
