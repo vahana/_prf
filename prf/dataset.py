@@ -142,8 +142,8 @@ def define_document(name, meta=None, namespace='default', redefine=False):
     if '.' in name:
         namespace, _,name = name.partition('.')
 
-    if not meta:
-        meta = {}
+    meta = meta or {}
+    meta['collection'] = name
     meta['ordering'] = ['-id']
     meta['db_alias'] = namespace
 
