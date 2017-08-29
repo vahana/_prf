@@ -384,10 +384,10 @@ def qs2dict(qs):
 
 
 def TODAY():
-    return datetime.now().strftime('%Y_%m_%d')
+    return datetime.now().strftime('%Y-%m-%d')
 
 def NOW():
-    return datetime.now().strftime('%Y_%m_%dT%H_%M_%S')
+    return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
 
 def raise_or_log(_raise=False):
     if _raise:
