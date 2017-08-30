@@ -384,7 +384,7 @@ def qs2dict(qs):
 
 
 def TODAY():
-    return datetime.now().strftime('%Y-%m-%d')
+    return datetime.now().strftime('%Y_%m_%d')
 
 def NOW():
     return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
