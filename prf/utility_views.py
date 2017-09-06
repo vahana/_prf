@@ -148,9 +148,22 @@ class AccountView(BaseView):
         password = self._params.asstr('password')
         next = self._params.get('next', '')
 
-        success, user_id = self._user_model.authenticate(login, password)
+        if '@' in login:
+            user = self._user_model.objects(email=login).first()
+        else:
+            user = self._user_model.objects(username=login).first()
+
+        if not user:
+            raise prf.exc.HTTPUnauthorized("Unknown user '%s'" % login)
+
+        if user.is_expired():
+            user.status = 'expired'
+            raise prf.exc.HTTPUnauthorized("Account expired for '%s'" % login)
+
+        success = user.authenticate(password)
+
         if success:
-            headers = remember(self.request, str(user_id))
+            headers = remember(self.request, str(user.id))
             if next:
                 return prf.exc.HTTPFound(headers=headers, location=next)
             return prf.exc.HTTPOk(headers=headers)

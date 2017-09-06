@@ -6,7 +6,7 @@ from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 
 import prf.exc
-from prf.utils.convert import asbool
+from prf.utils.qs import typecast
 from prf.utils import dictset, maybe_dotted, DKeyError, DValueError
 
 
@@ -64,11 +64,17 @@ class BaseACL(object):
 
 def includeme(config):
     settings = dictset(config.get_settings())
-    auth_params = settings.get_tree('auth',
-                                defaults=dict(hashalg='sha512',
-                                              http_only=True,
-                                              callback=None,
-                                              secret=None))
+    auth_params = settings.extract(['auth.hashlag',
+                                   'auth.http_only:bool',
+                                   'auth.callback',
+                                   'auth.secret',
+                                   'auth.timeout:int',
+                                   'auth.reissue_time:int',
+                                   'auth.max_age:int'],
+                                    defaults={'auth.hashalg':'sha512',
+                                              'auth.http_only':True,
+                                              'auth.callback':None,
+                                              'auth.secret':None}).auth
 
     if not auth_params.callback:
         raise DValueError('Missing auth.callback')
@@ -76,8 +82,7 @@ def includeme(config):
         raise DValueError('Missing auth.secret')
 
     auth_params.callback = maybe_dotted(auth_params.callback)
-    authn_policy = AuthTktAuthenticationPolicy(**auth_params.subset(
-                    ['callback', 'hashalg', 'http_only', 'secret']))
+    authn_policy = AuthTktAuthenticationPolicy(**auth_params)
 
     config.set_authentication_policy(authn_policy)
     config.set_authorization_policy(ACLAuthorizationPolicy())
