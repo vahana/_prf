@@ -1,7 +1,7 @@
 from slovar import slovar as basedictset
 from prf.utils.convert import *
 from prf.utils.utils import json_dumps
-from prf.utils.errors import DKeyError
+from prf.utils.errors import DKeyError, DValueError
 
 class dictset(basedictset):
 
@@ -50,4 +50,7 @@ class dictset(basedictset):
 class dkdict(dictset):
     def raise_getattr_exc(self, error):
         raise DKeyError(error)
+
+    def raise_value_exc(self, error):
+        raise DValueError(error)
 
