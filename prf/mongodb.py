@@ -336,7 +336,7 @@ class Aggregator(object):
                     sfx = 'list'
                     op = '$push'
                 else:
-                    sfx = '%s_%s' % (val, op)
+                    sfx = self.undot('%s_%s' % (val, op))
                     op = '$%s'%op
 
                 if val == '$ROOT':
@@ -344,7 +344,6 @@ class Aggregator(object):
                     continue
 
                 _dd = {}
-
                 if sfx in ['set', 'list']:
                     for _v in split_strip(val):
                         _v,_,n2 = _v.partition('__as__')
