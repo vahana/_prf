@@ -60,7 +60,8 @@ def typecast(params):
     list_ops = ('in', 'nin', 'all')
     int_ops = ('exists', 'size', 'max_distance', 'min_distance', 'empty')
     geo_ops = ('near',)
-    types = ('asbool', 'asint', 'asstr', 'aslist', 'asset', 'asdt', 'asobj')
+    types = ('asbool', 'asint', 'asfloat', 'asstr', 'aslist',
+                'asset', 'asdt', 'asobj')
 
 
     for key in params.keys():

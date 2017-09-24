@@ -36,7 +36,11 @@ def parametrize(func):
                 import sys
                 raise DValueError(sys.exc_value)
             else:
-                result = default
+                if default is None:
+                    return
+                else:
+                    result = default
+
 
         if pop:
             dset.pop(name, None)
