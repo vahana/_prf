@@ -8,8 +8,8 @@ from prf.utils import dictset
 
 class DefaultExc(object):
     @classmethod
-    def HTTPGatewayTimeout(cls, *args, **kw):
-        raise ValueError(msg)
+    def HTTPGatewayTimeout(cls, msg):
+        raise ValueError('HTTPGatewayTimeout: %s' % msg)
     @classmethod
     def exception_response(cls, *args, **kw):
         raise ValueError('%s'%kw)
