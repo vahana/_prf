@@ -5,7 +5,19 @@ from urlparse import urlparse, urljoin
 
 from prf.utils.utils import json_dumps, urlencode, pager
 from prf.utils import dictset
-import prf.exc
+
+class DefaultExc(object):
+    @classmethod
+    def HTTPGatewayTimeout(cls, *args, **kw):
+        raise ValueError(msg)
+    @classmethod
+    def exception_response(cls, *args, **kw):
+        raise ValueError('%s'%kw)
+
+try:
+    import prf.exc as exc_kls
+except ImportError:
+    exc_kls = DefaultExc
 
 log = logging.getLogger(__name__)
 
@@ -21,7 +33,7 @@ class PRFHTTPAdapter(requests.adapters.HTTPAdapter):
         try:
             return super(PRFHTTPAdapter, self).send(*args, **kw)
         except (requests.ConnectionError, requests.Timeout) as e:
-            raise prf.exc.HTTPGatewayTimeout('%s for %s' % (str(e), e.request.url))
+            raise exc_kls.HTTPGatewayTimeout('%s for %s' % (str(e), e.request.url))
 
 
 class Request(object):
@@ -84,7 +96,7 @@ class Request(object):
     def raise_or_log(self, resp):
         if self._raise:
             params = self.json(resp) or {'detail':resp.text}
-            raise prf.exc.exception_response(status_code=resp.status_code,
+            raise exc_kls.exception_response(status_code=resp.status_code,
                                              **params)
 
         log.error(str(self.json(resp)))

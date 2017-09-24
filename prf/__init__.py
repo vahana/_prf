@@ -1,12 +1,8 @@
 import os
 import logging
 from pkg_resources import get_distribution
-from pyramid import httpexceptions
-from pyramid.security import  NO_PERMISSION_REQUIRED
 
-import prf.exc
 from prf.utils import maybe_dotted, dictset, DKeyError, DValueError
-from prf.utility_views import AccountView, APIView
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
@@ -35,6 +31,7 @@ def get_resource_map(request):
 
 
 def add_error_view(config, exc, http_exc=None, error='', error_attr='message'):
+    import prf.exc
     exc = maybe_dotted(exc)
     http_exc = maybe_dotted(http_exc or prf.exc.HTTPBadRequest)
 
@@ -49,6 +46,8 @@ def add_error_view(config, exc, http_exc=None, error='', error_attr='message'):
 
 
 def add_account_views(config, user_model, route_prefix=''):
+    from pyramid.security import  NO_PERMISSION_REQUIRED
+    from prf.utility_views import AccountView
 
     user_model = config.maybe_dotted(user_model)
     AccountView.set_user_model(user_model)
@@ -67,6 +66,9 @@ def add_account_views(config, user_model, route_prefix=''):
 
 
 def add_api_view(config):
+    from pyramid.security import  NO_PERMISSION_REQUIRED
+    from prf.utility_views import APIView
+
     config.add_route('prf_api','/')
     config.add_view(view=APIView, attr='show', route_name='prf_api',
                     request_method='GET',
@@ -138,6 +140,9 @@ def includeme(config):
 
     add_error_view(config, DKeyError, error='Missing param: %s')
     add_error_view(config, DValueError, error='Bad value: %s')
+
+    from pyramid import httpexceptions
+    import prf.exc
 
     # replace html versions of pyramid http exceptions with json versions
     add_error_view(config, httpexceptions.HTTPUnauthorized, prf.exc.HTTPUnauthorized)

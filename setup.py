@@ -8,12 +8,6 @@ CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 
 install_requires = [
-    'pyramid',
-    'marshmallow==1.2.4',
-    'requests',
-    'mongoengine',
-    'waitress',
-    'slovar',
 ]
 
 setup(
