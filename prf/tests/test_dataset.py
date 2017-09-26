@@ -6,7 +6,7 @@ import prf.dataset
 from prf.dataset import (
     get_dataset_names, define_document, load_documents, get_document,
     set_document, get_namespaces, namespace_storage_module, get_document_meta,
-    connect_dataset_aliases
+    connect_dataset_aliases, get_or_define_document
 )
 
 
@@ -91,3 +91,12 @@ class TestDataset(PrfTestCase):
         set_document('abc', 'xyz',cls)
         d = define_document('abc.xyz')
         assert cls  == d
+
+    def test_get_or_define_document(self):
+        a = define_document('something', namespace='impala-test2')
+        set_document('impala-test2', 'something', a)
+        b = get_or_define_document('impala-test2.something')
+        self.assertEqual(a.__name__, b.__name__)
+        self.assertEqual(a._meta['db_alias'], 'impala-test2')
+        self.assertEqual(b._meta['db_alias'], 'impala-test2')
+

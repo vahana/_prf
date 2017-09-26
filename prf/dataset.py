@@ -205,6 +205,20 @@ def set_document(namespace, name, cls):
     setattr(namespace_module, safe_name(name), cls)
 
 
+def get_or_define_document(name, _raise=False, define=False):
+    try:
+        namespace, name = name.split('.')
+    except ValueError:
+        namespace = 'default'
+
+    kls = get_document(namespace, name, _raise=_raise)
+    if not kls and define:
+        kls = define_document(name, namespace=namespace)
+        set_document(namespace, name, kls)
+
+    return kls
+
+
 class Log(BaseMixin, mongo.DynamicEmbeddedDocument):
     created_at = mongo.DateTimeField(default=datetime.utcnow)
     updated_at = mongo.DateTimeField()
