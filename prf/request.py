@@ -2,6 +2,7 @@ import os
 import logging
 import requests
 from urlparse import urlparse, urljoin
+import urllib3
 
 from prf.utils.utils import json_dumps, urlencode, pager
 from prf.utils import dictset
@@ -43,7 +44,17 @@ class Request(object):
                       delay=0, reqs_over_time = None,
                       cookies=None, headers=None):
 
+        parsed_url = urllib3.util.parse_url(base_url)
+
+        if not parsed_url.scheme:
+            parsed_url = parsed_url._replace(scheme='http')
+        if not parsed_url.host:
+            parsed_url = parsed_url._replace(host='localhost')
+
+        base_url = parsed_url.url
+
         self.base_url = base_url.strip('/')
+
         cache_options = dictset(cache_options or {})
         self._raise = _raise
         self.delay = delay
