@@ -36,7 +36,7 @@ class DynamicSchema(object):
             if hasattr(obj, 'to_dict'):
                 d_ = obj.to_dict(self.context.get('fields'))
             else:
-                return d_
+                return obj
 
             if pop_empty:
                 d_ = d_.flat(keep_lists=True).pop_by_values([[], {}, '']).unflat()
