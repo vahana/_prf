@@ -166,7 +166,7 @@ def load_documents():
         set_document(namespace, _cls, doc)
         _namespaces.add(namespace)
 
-    log.info('Loaded namespaces: %s', list(_namespaces))
+    log.debug('Loaded namespaces: %s', list(_namespaces))
 
 def safe_name(name):
     # See https://stackoverflow.com/questions/3303312/how-do-i-convert-a-string-to-a-valid-variable-name-in-python

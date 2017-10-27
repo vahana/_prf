@@ -396,4 +396,4 @@ def raise_or_log(_raise=False):
         raise _type(value)
     else:
         import traceback
-        log.error(traceback.format_exc())
+        traceback.print_exc()
