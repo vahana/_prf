@@ -6,7 +6,7 @@ class TestRequest(PrfTestCase):
     def setUp(self):
         super(TestRequest, self).setUp()
 
-    @mock.patch('__builtin__.open')
+    @mock.patch('builtins.open')
     @mock.patch('prf.request.Request.get')
     def test_download(self, mocked_get, mocked_file):
         api = Request('')

@@ -8,7 +8,7 @@ class TestUtils(object):
 
     def test_JSONEncoder(self):
         assert "1685-03-31T01:01:01" in json_dumps(
-            dict(a=datetime(1685,03,31,01,01,01,01)))
+            dict(a=datetime(1685,0o3,31,0o1,0o1,0o1,0o1)))
 
     def test_split_strip(self):
         assert split_strip('') == []
@@ -69,14 +69,6 @@ class TestUtils(object):
         assert maybe_dotted('prf.view:BaseView') == prf.view.BaseView
 
         maybe_dotted('XYZ', throw=False)
-
-    def test_issequence(self):
-        assert issequence('') is False
-        assert issequence(1) is False
-        assert issequence([]) is True
-        assert issequence(dict) is True
-        assert issequence(set) is True
-        assert issequence(tuple) is True
 
     def test_prep_params(self):
         assert (

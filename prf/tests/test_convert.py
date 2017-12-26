@@ -53,7 +53,7 @@ class TestConvert():
         aslist(d_, 'a', pop=True)
         assert d_ == dict(b='')
 
-        assert aslist(dict(a='a,b,a'), 'a', unique=True) == ['a','b']
+        assert set(aslist(dict(a='a,b,a'), 'a', unique=True)) == set(['a','b'])
 
     def test_list1(self):
         assert aslist(dict(a='a,'), 'a', remove_empty=False) == ['a', '']
@@ -100,5 +100,5 @@ class TestConvert():
 
         assert asdt(dict(a='asdfasdf'), 'a') == None
 
-        assert asdt(dict(a='2000-01-01T01:01:01'), 'a') == datetime(2000,01,01,01,01,01)
+        assert asdt(dict(a='2000-01-01T01:01:01'), 'a') == datetime(2000,0o1,0o1,0o1,0o1,0o1)
 

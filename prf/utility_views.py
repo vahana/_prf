@@ -109,22 +109,22 @@ class SettingsView(BaseView):
 
     def delete_many(self):
         if self.needs_confirmation():
-            return self.settings.keys()
+            return list(self.settings.keys())
 
-        for name, val in self.settings.items():
+        for name, val in list(self.settings.items()):
             self.settings[name] = self.__orig[name]
 
 
 class APIView(BaseView):
 
     def _get_routes(self):
-        root = self.request.registry['prf.root_resources'].values()[0]
+        root = list(self.request.registry['prf.root_resources'].values())[0]
         mapper = root.config.get_routes_mapper()
         return mapper.routes
 
     def show(self):
         return {'api': sorted(['%s'% (r.path)
-                    for r in self._get_routes().values()])}
+                    for r in list(self._get_routes().values())])}
 
 
 class AccountView(BaseView):

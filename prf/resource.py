@@ -19,13 +19,13 @@ class Actions(object):
 
     @classmethod
     def all(cls):
-        return cls.__dict__.keys()
+        return list(cls.__dict__.keys())
 
 def get_view_class(view, resource):
     '''Returns the dotted path to the default view class.'''
 
     view = maybe_dotted(view)
-    if isinstance(view, types.TypeType):
+    if isinstance(view, type):
         return view
 
     _, prefix_name = get_parent_elements(resource)

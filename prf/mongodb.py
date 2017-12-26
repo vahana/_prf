@@ -12,6 +12,7 @@ from prf.utils import dictset, split_strip, pager,\
                       to_dunders, process_fields, qs2dict
 from prf.utils.qs import prep_params, typecast
 from prf.renderers import _JSONEncoder
+import collections
 
 
 log = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ class TopLevelDocumentMetaclass(TLDMetaclass):
             for signal in mongo.signals.__all__:
                 if hasattr(new_klass, signal):
                     method = getattr(new_klass, signal)
-                    if callable(method):
+                    if isinstance(method, collections.Callable):
                         getattr(mongo.signals, signal).connect(method, sender=new_klass)
 
         return new_klass
@@ -163,7 +164,7 @@ class Aggregator(object):
 
         self.count_cond = self.group_count_cond()
 
-        for name,val in self.specials.items():
+        for name,val in list(self.specials.items()):
             if name.startswith('_group_count'):
                 self.specials.asint(name)
                 continue
@@ -181,7 +182,7 @@ class Aggregator(object):
         self.specials.aslist('_join_fields', default=[])
 
         self.after_match = dictset()
-        for key,val in self.match_query.items():
+        for key,val in list(self.match_query.items()):
             if key == _join_as or key.startswith('%s.' % _join_as):
                 self.after_match[key]=val
                 self.match_query.pop(key)
@@ -195,11 +196,11 @@ class Aggregator(object):
     def setup_unwind(self):
         self.post_match = dictset()
 
-        for name, val in self.match_query.items():
+        for name, val in list(self.match_query.items()):
             if name.startswith(self.specials._unwind):
                 self.post_match[name] = val
 
-        self.match_query.pop_many(self.post_match.keys())
+        self.match_query.pop_many(list(self.post_match.keys()))
 
     def unwind(self, collection):
 
@@ -228,7 +229,7 @@ class Aggregator(object):
         if count_cond:
             if isinstance(count_cond, dict):
                 count_cond = dict(
-                    [[k,int(v)] for k,v in count_cond.items()])
+                    [[k,int(v)] for k,v in list(count_cond.items())])
             else:
                 count_cond = int(count_cond)
 
@@ -271,7 +272,7 @@ class Aggregator(object):
             self._agg.append({'$unwind': '$%s'%_join_as})
 
             true_case = []
-            for field, value in self._join_cond.items():
+            for field, value in list(self._join_cond.items()):
                 if not field.startswith(_join_as):
                     field = '.'.join([_join_as, field])
                 true_case.append({'$eq': ['$%s'%field, value]})
@@ -390,7 +391,7 @@ class Aggregator(object):
         proj_keys = {}
         for each in self._agg:
             if '$group' in each:
-                proj_keys = each['$group'].keys()
+                proj_keys = list(each['$group'].keys())
 
         for each in proj_keys:
             if each == '_id':
@@ -486,9 +487,9 @@ class BaseMixin(object):
 
         reverse = not bool(specials._sort and specials._sort[0].startswith('-'))
         for each in  sorted(
-            queryset.item_frequencies(specials._frequencies,
+            list(queryset.item_frequencies(specials._frequencies,
             normalize=specials.asbool('_fq_normalize', default=False)
-        ).items(),
+        ).items()),
         key=lambda x:x[1],
         reverse=reverse)[specials._start:specials._limit]:
             yield({each[0]:each[1]})
@@ -554,12 +555,12 @@ class BaseMixin(object):
         log.debug('IN: cls: %s, params: %.512s', cls.__name__, params)
         params, specials = prep_params(params)
 
-        if isinstance(_q, basestring) or not _q:
+        if isinstance(_q, str) or not _q:
             query_set = cls.objects
         else: # needs better way to check if its a proper query object
             query_set = cls.objects(_q)
 
-        cls.check_indexes_exist(params.keys()+
+        cls.check_indexes_exist(list(params.keys())+
                 [e[1:] if e.startswith('-') else e for e in specials._sort])
 
         query_set = query_set(**params)
@@ -671,7 +672,7 @@ class BaseMixin(object):
     def update_with(self, _dict, **kw):
         self_dict = self.to_dict().update_with(_dict, **kw)
 
-        for key, val in self_dict.unflat().items():
+        for key, val in list(self_dict.unflat().items()):
             setattr(self, key, val)
 
         return self
@@ -738,7 +739,7 @@ class BaseMixin(object):
     def contains(self, other, exclude=None):
         if not isinstance(other, dict):
             other = other.to_dict(exclude)
-        return not other or self.to_dict(other.keys()) == other
+        return not other or self.to_dict(list(other.keys())) == other
 
     def save_safe(self):
         try:
@@ -776,7 +777,7 @@ class BaseMixin(object):
         update = {}
         renames = {}
 
-        for current, new in fields.items():
+        for current, new in list(fields.items()):
             params['%s__exists' % current] = 1
             if not new:
                 update['unset__%s' % current] = 1
@@ -793,7 +794,7 @@ class BaseMixin(object):
     def _get_indexes(cls):
         _indexes = []
         try:
-            for each in cls._get_collection().index_information().values():
+            for each in list(cls._get_collection().index_information().values()):
                 key = each['key'][0][0]
                 if key == '_id':
                     key = 'id'
@@ -851,9 +852,7 @@ class BaseMixin(object):
         return len(self.to_dict(fields).flat(keep_lists=1))
 
 
-class Base(BaseMixin, mongo.Document):
-    __metaclass__ = TopLevelDocumentMetaclass
-
+class Base(BaseMixin, mongo.Document, metaclass=TopLevelDocumentMetaclass):
     meta = {'abstract': True}
 
     def update(self, *arg, **kw):
@@ -861,9 +860,7 @@ class Base(BaseMixin, mongo.Document):
         return result
 
 
-class DynamicBase(BaseMixin, mongo.DynamicDocument):
-    __metaclass__ = TopLevelDocumentMetaclass
-
+class DynamicBase(BaseMixin, mongo.DynamicDocument, metaclass=TopLevelDocumentMetaclass):
     meta = {'abstract': True}
 
     def update(self, *arg, **kw):

@@ -21,7 +21,7 @@ class TestExc(object):
         out = prf.exc.create_response(fake_resp(200), {})
         assert fake_log_exception.call_count == 0
         # Temporarily pop timestamp, we need to freeze time to test it
-        d = json.loads(out.body)
+        d = json.loads(out.text)
         d.pop('timestamp')
 
         assert {
@@ -63,7 +63,7 @@ class TestExc(object):
         in_resp.status_code = 400
         out = prf.exc.create_response(in_resp, {})
 
-        assert 'error_id' in json.loads(out.body)
+        assert 'error_id' in json.loads(out.text)
         assert fake_log_exception.call_count == 1
 
     def test_exception_response(self):

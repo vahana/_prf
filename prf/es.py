@@ -1,5 +1,6 @@
 import logging
-import urllib2
+from six.moves.urllib.parse import urlparse
+
 from bson import ObjectId, DBRef
 
 from elasticsearch.exceptions import ElasticsearchException
@@ -310,7 +311,7 @@ class ES(object):
         try:
             hosts = []
             for each in cls.settings.aslist('urls'):
-                url = urllib2.urlparse.urlparse(each)
+                url = urlparse(each)
                 hosts.append(dict(host=url.hostname, port=url.port))
 
             params = {}
@@ -363,9 +364,9 @@ class ES(object):
             s_ = s_.query('query_string', **q_params)
 
 
-        for key, val in _params.items():
+        for key, val in list(_params.items()):
 
-            if isinstance(val, basestring) and ',' in val:
+            if isinstance(val, str) and ',' in val:
                 val = _params.aslist(key)
 
             key, op = self.dot_key(key)
@@ -423,7 +424,7 @@ class ES(object):
             elif _filter:
                 _filters = _filters & _filter if _filters else _filter
 
-        for path, nestedQ in _nested.items():
+        for path, nestedQ in list(_nested.items()):
             q = Q('nested', path=path, query=nestedQ)
             _filters = _filters & q if _filters else q
 

@@ -19,7 +19,7 @@ class TestDictSet():
         assert dictset(a='a:1').asdict('a') == {'a':'1'}
 
     def test_asdt(self):
-        assert dictset(a='2000-01-01T01:01:01').asdt('a') == datetime(2000,01,01,01,01,01)
+        assert dictset(a='2000-01-01T01:01:01').asdt('a') == datetime(2000,0o1,0o1,0o1,0o1,0o1)
 
     def test_dkdict(self):
         params = dkdict(a=1)

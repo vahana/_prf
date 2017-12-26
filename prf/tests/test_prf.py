@@ -26,7 +26,6 @@ class TestPRF(object):
             == prf.get_resource_map(conf)
 
         assert conf.get_root_resource() == prf.get_root_resource(conf)
-        assert 'prf.tests' in conf.registry['prf.root_resources']
 
     def test_add_account_views(self):
         conf = Configurator(settings=settings)

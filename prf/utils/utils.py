@@ -3,7 +3,9 @@ import json
 import dateutil
 import logging
 import urllib3
-from urlparse import urlparse, parse_qs
+import six
+
+from urllib.parse import urlparse, parse_qs, parse_qsl
 from datetime import date, datetime
 import requests
 from functools import partial
@@ -22,7 +24,7 @@ class JSONEncoder(json.JSONEncoder):
         try:
             return super(JSONEncoder, self).default(obj)
         except TypeError:
-            return unicode(obj)  # fallback to unicode
+            return str(obj)  # fallback to unicode
 
 
 def json_dumps(body):
@@ -45,9 +47,9 @@ def process_limit(start, page, limit):
 
         if limit < -1 or start < 0:
             raise DValueError('_limit/_page or _limit/_start can not be < 0')
-    except (ValueError, TypeError), e:
+    except (ValueError, TypeError) as e:
         raise DValueError(e)
-    except Exception, e: #pragma nocover
+    except Exception as e: #pragma nocover
         raise DValueError('Bad _limit param: %s ' % e)
 
     return start, limit
@@ -93,7 +95,7 @@ def resolve(name, module=None):
 def maybe_dotted(module, throw=True):
 
     def _import(module):
-        if isinstance(module, basestring):
+        if isinstance(module, str):
             module, _, cls = module.partition(':')
             module = resolve(module)
             if cls:
@@ -106,14 +108,8 @@ def maybe_dotted(module, throw=True):
     else:
         try:
             return _import(module)
-        except ImportError, e:
+        except ImportError as e:
             log.error('%s not found. %s' % (module, e))
-
-
-def issequence(arg):
-    """Return True if `arg` acts as a list and does not look like a string."""
-    return not hasattr(arg, 'strip') and hasattr(arg, '__getitem__')\
-        or hasattr(arg, '__iter__')
 
 
 def prep_params(params):
@@ -133,7 +129,7 @@ def prep_params(params):
 
     specials._start, specials._limit = process_limit(_start, _page, _limit)
 
-    for each in params.keys():
+    for each in list(params.keys()):
         if each.startswith('_'):
             specials[each] = params.pop(each)
 
@@ -185,7 +181,7 @@ def sanitize_url(url, to_remove=None):
     if not to_remove:
         return urlparse(url)._replace(query='').geturl()
 
-    if isinstance(to_remove, basestring):
+    if isinstance(to_remove, str):
         to_remove = [to_remove]
 
     elements = urlparse(url)
@@ -228,30 +224,30 @@ def is_url(text, validate=False):
 
 
 def chunks(_list, chunk_size):
-    for ix in xrange(0, len(_list), chunk_size):
+    for ix in range(0, len(_list), chunk_size):
         yield _list[ix:ix+chunk_size]
 
 
 def encoded_dict(in_dict):
     out_dict = {}
-    for k, v in in_dict.iteritems():
+    for k, v in list(in_dict.items()):
 
         if isinstance(v, dict):
             out_dict[k] = encoded_dict(v)
         elif isinstance(v, list):
             for ix in range(len(v)):
-                v[ix] = unicode(v[ix]).encode('utf-8')
+                v[ix] = str(v[ix]).encode('utf-8')
             out_dict[k] = v
         else:
-            out_dict[k] = unicode(v).encode('utf-8')
+            out_dict[k] = str(v).encode('utf-8')
 
     return out_dict
 
 
 def urlencode(query, doseq=False):
-    import urllib
+    import urllib.request, urllib.parse, urllib.error
     try:
-        return urllib.urlencode(encoded_dict(query), doseq)
+        return urllib.parse.urlencode(encoded_dict(query), doseq)
     except UnicodeEncodeError as e:
         log.error(e)
 
@@ -259,7 +255,7 @@ def urlencode(query, doseq=False):
 def pager(start, page, total):
     def _pager(start,page,total):
         if total != -1:
-            for each in chunks(range(0, total), page):
+            for each in chunks(list(range(0, total)), page):
                 _page = len(each)
                 yield (start, _page)
                 start += _page
@@ -369,8 +365,8 @@ def normalize_phone(number, country_code='US', _raise=True):
 def dl2ld(dl):
     "dict of lists to list of dicts"
 
-    return [{key:value[index] for key, value in dl.items()}
-            for index in range(len(dl.values()[0]))]
+    return [{key:value[index] for key, value in list(dl.items())}
+            for index in range(len(list(dl.values())[0]))]
 
 def ld2dd(ld, key):
     'list of dicts to dict of dicts'
@@ -378,7 +374,7 @@ def ld2dd(ld, key):
 
 
 def qs2dict(qs):
-    from urlparse import parse_qsl
+    from urllib.parse import parse_qsl
     from prf.utils import dictset
     return dictset(parse_qsl(qs,keep_blank_values=True))
 

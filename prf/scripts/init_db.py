@@ -35,17 +35,17 @@ class InitDB(object):
 
         if self.options.drop:
             if database_exists(self.db.url):
-                in_ = raw_input('Are you sure you want to drop?(y/n): ')
+                in_ = eval(input('Are you sure you want to drop?(y/n): '))
                 if in_ == 'y':
                     drop_database(self.db.url)
                 else:
-                    print 'Canceled'
+                    print('Canceled')
                     return
             else:
-                print 'Nothing to drop'
+                print('Nothing to drop')
 
         if database_exists(self.db.url):
-            print '%s db exists already. Use --drop to drop and recreate' % self.db.url
+            print(('%s db exists already. Use --drop to drop and recreate' % self.db.url))
             return
 
         create_database(self.db.url)
@@ -57,4 +57,4 @@ class InitDB(object):
         alembic_cfg = Config(self.config)
         command.stamp(alembic_cfg, 'head')
 
-        print 'DB initialized' + ((' (new)' if self.options.drop else ''))
+        print(('DB initialized' + ((' (new)' if self.options.drop else ''))))

@@ -1,6 +1,6 @@
 import uuid
 from marshmallow import Schema, fields
-from prf.utils import dictset, issequence
+from prf.utils import dictset
 import prf.exc
 
 

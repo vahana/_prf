@@ -1,3 +1,4 @@
+import six
 from prf.utils.utils import split_strip, str2dt, qs2dict
 from prf.utils.errors import DKeyError,DValueError
 
@@ -34,7 +35,7 @@ def parametrize(func):
         except:
             if _raise:
                 import sys
-                raise DValueError(sys.exc_value)
+                raise DValueError(sys.exc_info()[1])
             else:
                 if default is None:
                     return
@@ -78,13 +79,13 @@ def asbool(dset, value):
 def aslist(dset, value, sep=',', remove_empty=True, unique=False):
     if isinstance(value, list):
         _lst = value
-    elif isinstance(value, basestring):
+    elif isinstance(value, str):
         _lst = split_strip(value, sep, remove_empty)
     else:
         _lst = [value]
 
     if remove_empty:
-        _lst = (filter(bool, _lst))
+        _lst = (list(filter(bool, _lst)))
 
     if unique:
         _lst = list(set(_lst))
@@ -111,18 +112,18 @@ def asstr(dset, value):
 
 @parametrize
 def asunicode(dset, value):
-    return unicode(value)
+    return str(value)
 
 
 @parametrize
 def asrange(dset, value, typecast=str, sep='-'):
     if isinstance(value, list):
         list_ = value
-    elif isinstance(value, basestring):
+    elif isinstance(value, str):
         rng = split_strip(value, sep)
         if len(rng) !=2:
             raise DValueError('bad range')
-        list_ = range(int(rng[0]), int(rng[1])+1)
+        list_ = list(range(int(rng[0]), int(rng[1])+1))
 
     else:
         list_ = [value]

@@ -1,16 +1,17 @@
 import re
 import json
 import logging
-import urllib
+import urllib.request, urllib.parse, urllib.error
 from datetime import datetime
 import uuid
 
-from urlparse import urlparse
+from six.moves.urllib.parse import urlparse
+
 from pyramid.request import Request
 from pyramid.response import Response
 
 import prf.exc
-from prf.utils import dictset, issequence, json_dumps, urlencode
+from prf.utils import dictset, json_dumps, urlencode
 from prf.serializer import DynamicSchema
 from prf import resource
 from prf.utils import process_fields, dkdict
@@ -148,7 +149,7 @@ class BaseView(object):
             if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
                 try:
                     _params.update(request.json)
-                except ValueError, e:
+                except ValueError as e:
                     raise prf.exc.HTTPBadRequest(
                         "Expecting JSON. Received: '%s'. Request: %s %s"
                             % (request.body, request.method, request.url))
@@ -178,8 +179,8 @@ class BaseView(object):
 
             return param
 
-        for key, val in flat_params.items():
-            if not isinstance(val, basestring):
+        for key, val in list(flat_params.items()):
+            if not isinstance(val, str):
                 continue
 
             flat_params[key] = process_each(val)
@@ -335,7 +336,7 @@ class BaseView(object):
                 try:
                     url = urlparse(self.request.current_route_url())._replace(query='')
                     id_name = self._id_name or 'id'
-                    val = urllib.quote(str(each[id_name]))
+                    val = urllib.parse.quote(str(each[id_name]))
 
                     if self.returns_many == True: # show action returned a collection
                         _id = '?%s=%s' % (id_name, val)

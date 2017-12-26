@@ -67,7 +67,7 @@ def create_response(resp, params):
         params['error_id'] = uuid.uuid4()
         log_exception(resp, params)
 
-    resp.body = json_dumps(sensor(params))
+    resp.text = json_dumps(sensor(params))
     return resp
 
 

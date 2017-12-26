@@ -2,6 +2,7 @@ import logging
 from bson import ObjectId
 
 from prf.utils import dictset, process_limit, split_strip, DValueError
+import collections
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ def prep_params(params):
 
     specials._asdict = params.pop('_asdict', False)
 
-    for each in params.keys():
+    for each in list(params.keys()):
         if each.startswith('_'):
             specials[each] = params.pop(each)
 
@@ -64,7 +65,7 @@ def typecast(params):
                 'asset', 'asdt', 'asobj')
 
 
-    for key in params.keys():
+    for key in list(params.keys()):
         if params[key] == 'null':
             params[key] = None
             continue
@@ -76,7 +77,7 @@ def typecast(params):
         suf = []
         op = ''
 
-        for ix in xrange(len(parts)-1, -1, -1):
+        for ix in range(len(parts)-1, -1, -1):
             part = parts[ix]
             if part in list_ops+int_ops+geo_ops+types:
                 op = part
@@ -119,7 +120,7 @@ def typecast(params):
 
         try:
             method = getattr(params, op)
-            if callable(method):
+            if isinstance(method, collections.Callable):
                 params[new_key] = method(key, pop=True)
         except (KeyError, AttributeError) as e:
             raise DValueError('Unknown typecast operator `%s`' % op)

@@ -1,7 +1,7 @@
 import os
 import logging
 import requests
-from urlparse import urlparse, urljoin
+from urllib.parse import urlparse, urljoin
 import urllib3
 
 from prf.utils.utils import json_dumps, urlencode, pager
@@ -172,7 +172,7 @@ class Request(object):
         log.debug('%s', urls)
 
         reqs = []
-        if isinstance(urls, basestring):
+        if isinstance(urls, str):
             urls = [urls]
 
         if urls:

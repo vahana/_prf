@@ -47,7 +47,7 @@ def sqla_exc_tween(handler, registry):
             #call request.db to setup the finished callback cleanup
             request.db
             return handler(request)
-        except sqla_exc.SQLAlchemyError, e:
+        except sqla_exc.SQLAlchemyError as e:
             raise sqla2http(e)
 
     return tween
@@ -189,7 +189,7 @@ class Base(object):
         return self
 
     def update(self, params, commit=False, flush=False):
-        for key, value in params.items():
+        for key, value in list(params.items()):
             setattr(self, key, value)
 
         return self.save(commit=commit, flush=flush)
@@ -232,7 +232,7 @@ class Base(object):
         try:
             obj = cls.Session().query(cls).filter_by(**params).one()
             return obj
-        except orm_exc.NoResultFound, e:
+        except orm_exc.NoResultFound as e:
             msg = "'%s(%s)' resource not found" % (cls.__name__, params)
             if _raise:
                 raise prf.exc.HTTPNotFound(msg)

@@ -15,7 +15,7 @@ def dict2tab(data, fields=None, format_='csv'):
         if isinstance(val, (datetime, date)):
             return val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
         else:
-            return unicode(val)
+            return str(val)
 
     headers = []
     fields = fields or []
@@ -40,7 +40,7 @@ def dict2tab(data, fields=None, format_='csv'):
 
     except:
         log.debug('Headers:%s, Fields:%s, Format:%s', headers, fields, format_)
-        raise HTTPBadRequest('dict2tab error: %r'%sys.exc_value)
+        raise HTTPBadRequest('dict2tab error: %r'%sys.exc_info()[1])
 
 
 class TabRenderer(object):
