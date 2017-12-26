@@ -41,13 +41,25 @@ class TestUtils(object):
         assert (10, 10) == process_limit(None, 1, 10)
         assert (20, 10) == process_limit(None, 2, 10)
 
-    @pytest.mark.skip('process_fields doesn\'t seem to behave like this anymore')
     def test_process_fields(self):
-        assert ([], []) == process_fields(None)
-        assert ([], []) == process_fields('')
-        assert (['a'], []) == process_fields('a')
-        assert (['a'], ['b']) == process_fields('a, -b')
-        assert ([], ['b']) == process_fields('-b')
+        assert process_fields('') == process_fields(None)
+        _d = process_fields('a')
+        assert _d['only'] == ['a']
+
+        _d = process_fields('a, -b')
+        assert _d['only'] == ['a']
+        assert _d['exclude'] == ['b']
+
+        _d = process_fields('a__as__b')
+        assert _d['only'] == ['a']
+        assert _d['show_as'] == {'a': 'b'}
+
+        _d = process_fields('a.x')
+        assert _d['only'] == ['a']
+        assert _d['nested'] == {'a.x': 'a'}
+
+        _d = process_fields('*')
+        assert _d['star'] == True
 
     def test_snake2camel(self):
         assert snake2camel('a_b') == 'AB'

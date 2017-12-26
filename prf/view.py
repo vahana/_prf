@@ -5,8 +5,6 @@ import urllib.request, urllib.parse, urllib.error
 from datetime import datetime
 import uuid
 
-from six.moves.urllib.parse import urlparse
-
 from pyramid.request import Request
 from pyramid.response import Response
 
@@ -91,7 +89,6 @@ class BaseView(object):
     _default_renderer = 'json'
     _serializer = DynamicSchema
     _acl = None
-    _id_name = None
     _model = None
 
     def __init__(self, context, request):
@@ -334,8 +331,8 @@ class BaseView(object):
         try:
             for each in collection:
                 try:
-                    url = urlparse(self.request.current_route_url())._replace(query='')
-                    id_name = self._id_name or 'id'
+                    url = urllib.parse.urlparse(self.request.current_route_url())._replace(query='')
+                    id_name = self.resource.id_name
                     val = urllib.parse.quote(str(each[id_name]))
 
                     if self.returns_many == True: # show action returned a collection

@@ -51,17 +51,18 @@ def get_parent_elements(resource):
         if not res or (res and not res.path):
             return ''
 
-        id_full = res.id_name if res.id_name else '%s_%s' %\
-                                             (res.member_name, DEFAULT_ID_NAME)
-        return res.path if res.is_singular else '%s/{%s}' % (res.path, id_full)
+        id_full = res.id_name or '%s_%s' % (res.member_name, DEFAULT_ID_NAME)
+
+        path = res.path if res.is_singular else '%s/{%s}' % (res.path, id_full)
+        return path
 
     path_prefix = '/'.join(filter(bool,
-                            [resource.config.route_prefix,
+                            [
                              get_path_pattern(resource.parent),
                              resource.prefix]))
 
     name_prefix = ':'.join(filter(bool,
-                            [resource.config.route_prefix,
+                            [
                              resource.parent.uid,
                              resource.prefix]))
     if name_prefix:
@@ -76,10 +77,10 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path_prefix = kwargs.pop('path_prefix', '')
     name_prefix = kwargs.pop('name_prefix', '')
 
-    view._id_name = kwargs.pop('id_name', view._id_name) or DEFAULT_ID_NAME
+    _id_name = kwargs.pop('id_name', DEFAULT_ID_NAME)
     view._acl = kwargs.pop('acl', view._acl)
 
-    id_slug = ('/{%s}' % view._id_name if collection_name else '')
+    id_slug = ('/{%s}' % _id_name if collection_name else '')
     path = os.path.join(path_prefix, (collection_name or member_name))
 
     _auth = config.registry.get('prf.auth', False)
@@ -215,12 +216,12 @@ class Resource(object):
         child_resource = Resource(self.config, member_name=member_name,
                                   collection_name=collection_name,
                                   parent=parent,
-                                  prefix=prefix)
+                                  prefix=prefix,
+                                  id_name=kwargs.get('id_name'))
 
         child_view = get_view_class(kwargs.pop('view', None), child_resource)
         child_resource.view = child_view
 
-        child_resource.id_name = kwargs.get('id_name', child_view._id_name)
 
         child_view._serializer = maybe_dotted(
                             kwargs.pop('serializer', child_view._serializer))
@@ -237,7 +238,7 @@ class Resource(object):
 
         # add the routes for the resource
         path = add_action_routes(self.config, child_view, member_name,
-                          collection_name, **kwargs)
+                                                collection_name, **kwargs)
 
         child_resource.add_to_resource_map(path)
         parent.children.append(child_resource)

@@ -92,7 +92,7 @@ def GET_tunneling(handler, registry):
             request.method = method
 
             if method in ['POST', 'PUT', 'PATCH']:
-                request.body = json.dumps(request.GET.mixed())
+                request.text = json.dumps(request.GET.mixed())
                 request.content_type = 'application/json'
                 # request.POST.update(request.GET)
 

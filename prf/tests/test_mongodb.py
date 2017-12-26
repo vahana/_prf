@@ -9,20 +9,3 @@ class TestMongoDB(PrfTestCase):
         super(TestMongoDB, self).setUp()
         self.drop_databases()
 
-
-    @unittest.skip("rewrite create_collection")
-    def test_get_document_cls(self):
-        cls = self.create_collection('default', 'col1')
-        cls2 = self.create_collection('prf-test2', 'col2')
-        cls3 = self.create_collection('default', 'col3')
-        cls4 = self.create_collection('prf-test2', 'col3')
-
-        dcls = get_document_cls('col1')
-        dcls2 = get_document_cls('col2')
-        dcls3 = get_document_cls('col3')
-        assert cls == dcls
-        assert cls2 == dcls2
-        assert dcls2._meta['db_alias'] == 'prf-test2'
-        # This is broken behavior with collision on collection names across dbs,
-        # get_document_cls will return the most recently defined class with that name.
-        assert dcls3 == cls4

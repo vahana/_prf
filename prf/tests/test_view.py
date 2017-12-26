@@ -23,12 +23,10 @@ class TestView(PrfTestCase):
         assert result['data'] == [{'a': 1, 'c': {'d': 2}}]
 
 
-    @unittest.skip("rewrite create_collection")
     def test_pop_empty_model(self):
         request = self.request(params={'_pop_empty': 1})
         view = BaseView({}, request)
-        c = self.create_collection('default', 'col1')
-        d = c(a=1, b=[], c={'d': 2, 'e': ''})
+        d = dictset(a=1, b=[], c={'d': 2, 'e': ''})
         result = view._process(d, False)
         assert result['data'] == {'a': 1, 'c': {'d': 2}}
 
@@ -38,12 +36,10 @@ class TestView(PrfTestCase):
         result = view._process([{'a': 1, 'b': [], 'c': {'d': 2, 'e': ''}}], True)
         assert result['data'] == [{'a': 1, 'b': [], 'c': {'d': 2, 'e': ''}}]
 
-    @unittest.skip("rewrite create_collection")
     def test_no_pop_empty_model(self):
         request = self.request()
         view = BaseView({}, request)
-        c = self.create_collection('default', 'col1')
-        d = c(a=1, b=[], c={'d': 2, 'e': ''})
+        d = dictset(a=1, b=[], c={'d': 2, 'e': ''})
         result = view._process(d, False)
         assert result['data'] == {'a': 1, 'b': [], 'c': {'d': 2, 'e': ''}}
 

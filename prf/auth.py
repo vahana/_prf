@@ -22,13 +22,16 @@ class BaseACL(object):
         self.init()
 
     @property
-    def view(self):
+    def resource(self):
         if not self.request.matched_route:
             raise DKeyError('no matched route for request')
 
         rname = self.request.matched_route.name
-        resource = self.request.resource_map[rname]
-        return resource.view
+        return self.request.resource_map[rname]
+
+    @property
+    def view(self):
+        return self.resource.view
 
     def init(self):
         pass
@@ -51,7 +54,7 @@ class BaseACL(object):
         if not self.view._model:
             raise DValueError('`%s._model` can not be None'\
                               % self.view)
-        return self.view._model.get_resource(**{self.view._id_name:key})
+        return self.view._model.get_resource(**{self.resource.id_name:key})
 
     def __getitem__(self, key):
         item = self.get_item(key)

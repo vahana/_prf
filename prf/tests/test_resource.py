@@ -32,10 +32,9 @@ class TestResource(PrfTestCase):
         anc = two.get_ancestors()
         assert anc[0] == one
 
-    @pytest.mark.skip('Can\'t add the same view twice anymore')
     def test_add(self):
         root = Resource(self.conf)
-        two = root.add('two', view=BaseView)
+        two = root.add('two', view=BaseView, id_name='two')
 
         assert two.parent == root
         assert two.member_name == 'two'
@@ -43,13 +42,15 @@ class TestResource(PrfTestCase):
         assert two.uid == 'twos'
         assert two.is_singular is False
 
-        three = two.add('tree', 'trix', view=BaseView)
+        three = two.add('tree', 'trix', view=BaseView, id_name='three')
         assert three.parent == two
         assert three.member_name == 'tree'
         assert three.collection_name == 'trix'
         assert three.uid == 'twos:trix'
         assert three.is_singular is False
         assert three in two.children
+
+        four = three.add('four', view=BaseView)
 
         sing = two.add('sing', collection_name=None, view=BaseView)
         assert sing.is_singular is True
@@ -58,16 +59,13 @@ class TestResource(PrfTestCase):
         assert pref.uid == 'pref:fives'
 
     def test_add_id_name(self):
-        class UserView(BaseView):
-            _id_name = 'username'
-
         root = Resource(self.conf)
-        two = root.add('two', view=UserView)
+        two = root.add('two', view=BaseView, id_name='username')
         assert two.id_name == 'username'
 
         #same id_name for nested resource must raise
         with pytest.raises(ConfigurationExecutionError):
-            two.add('tree', view=UserView)
+            two.add('tree', view=BaseView, id_name='username')
 
     @mock.patch('prf.resource.maybe_dotted')
     def test_get_view_class(self, fake_maybe_dotted):
@@ -79,14 +77,22 @@ class TestResource(PrfTestCase):
         assert get_view_class('prf.view.BaseView', root) == BaseView
         fake_maybe_dotted.reset_mock()
 
-    @pytest.mark.skip('Can\'t add 2 identical views')
-    def test_get_uri_elements(self):
+    def test_get_parent_elements(self):
+        root = Resource(self.conf)
+        ppref, npref = get_parent_elements(
+                root.add('one', view=BaseView).add('two', view=BaseView).add('three', view=BaseView))
+
+        assert ppref == 'ones/{one_id}/twos/{two_id}'
+        assert npref == 'ones:twos:'
+
+    @pytest.mark.skip('route_prefix is broken')
+    def test_get_parent_elements_w_route_prefix(self):
         self.conf.route_prefix = 'route_prefix'
         root = Resource(self.conf)
         ppref, npref = get_parent_elements(
-                root.add('one', view=BaseView).add('two', view=BaseView))
+                root.add('one', view=BaseView).add('two', view=BaseView).add('three', view=BaseView))
 
-        assert ppref == 'ones/{one_id}'
-        assert npref == 'route_prefix:one:'
+        assert ppref == 'route_prefix/ones/{one_id}/twos/{two_id}'
+        assert npref == 'route_prefix:ones:'
 
 
