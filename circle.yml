@@ -12,4 +12,4 @@ dependencies:
 
 test:
   override:
-    - pytest -vv prf/tests
+    - py.test -vv prf/tests

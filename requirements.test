@@ -1,3 +1,5 @@
+-e git+git@github.com:vahana/slovar.git@2to3#egg=slovar
+
 pyramid
 requests
 requests_cache
@@ -17,5 +19,4 @@ python-dateutil
 WebTest
 mongomock
 tablib
-slovar
 -e .
