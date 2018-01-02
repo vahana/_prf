@@ -63,9 +63,9 @@ class TestResource(PrfTestCase):
         two = root.add('two', view=BaseView, id_name='username')
         assert two.id_name == 'username'
 
-        #same id_name for nested resource must raise
-        with pytest.raises(ConfigurationExecutionError):
-            two.add('tree', view=BaseView, id_name='username')
+        three = two.add('tree', view=BaseView, id_name='username')
+
+        assert three.path == 'twos/{two_username}/trees'
 
     @mock.patch('prf.resource.maybe_dotted')
     def test_get_view_class(self, fake_maybe_dotted):

@@ -51,7 +51,7 @@ def get_parent_elements(resource):
         if not res or (res and not res.path):
             return ''
 
-        id_full = res.id_name or '%s_%s' % (res.member_name, DEFAULT_ID_NAME)
+        id_full = '%s_%s' % (res.member_name, res.id_name)
 
         path = res.path if res.is_singular else '%s/{%s}' % (res.path, id_full)
         return path
@@ -77,7 +77,7 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path_prefix = kwargs.pop('path_prefix', '')
     name_prefix = kwargs.pop('name_prefix', '')
 
-    _id_name = kwargs.pop('id_name', DEFAULT_ID_NAME)
+    _id_name = kwargs.pop('id_name')
     view._acl = kwargs.pop('acl', view._acl)
 
     id_slug = ('/{%s}' % _id_name if collection_name else '')
@@ -148,7 +148,7 @@ class Resource(object):
         self.member_name = member_name
         self.collection_name = collection_name
         self.parent = parent
-        self.id_name = id_name
+        self.id_name = id_name or DEFAULT_ID_NAME
         self.prefix = prefix
         self.http_cache = http_cache
         self.children = children or []
@@ -208,6 +208,8 @@ class Resource(object):
         prefix_from_member, _, member_name = member_name.rpartition('/')
         prefix = kwargs.pop('prefix', prefix_from_member)
 
+        kwargs.setdefault('id_name', DEFAULT_ID_NAME)
+
         if collection_name == '':
             collection_name = member_name + 's'
         elif collection_name is None:
@@ -219,22 +221,21 @@ class Resource(object):
                                   prefix=prefix,
                                   id_name=kwargs.get('id_name'))
 
+        kwargs['path_prefix'], kwargs['name_prefix'] = \
+                            get_parent_elements(child_resource)
+
         child_view = get_view_class(kwargs.pop('view', None), child_resource)
         child_resource.view = child_view
 
+        kwargs.setdefault('renderer', child_view._default_renderer)
 
         child_view._serializer = maybe_dotted(
                             kwargs.pop('serializer', child_view._serializer))
 
         root_resource = self.config.get_root_resource()
-
-        kwargs['path_prefix'], kwargs['name_prefix'] = \
-                            get_parent_elements(child_resource)
-
-        # set some defaults
-        kwargs.setdefault('renderer', child_view._default_renderer)
         kwargs.setdefault('http_cache', root_resource.http_cache)
         kwargs.setdefault('xhr', root_resource.xhr)
+
 
         # add the routes for the resource
         path = add_action_routes(self.config, child_view, member_name,

@@ -56,7 +56,7 @@ class DynamicSchema(object):
                          ('Collection' if self.many else 'Resource', e))
 
 
-@BaseSchema.error_handler
-def handle_errors(schema, errors, obj):
-    raise prf.exc.HTTPBadRequest(errors,
-                                 extra={'model': schema._model.__name__})
+# @BaseSchema.error_handler
+# def handle_errors(schema, errors, obj):
+#     raise prf.exc.HTTPBadRequest(errors,
+#                                  extra={'model': schema._model.__name__})
