@@ -77,10 +77,10 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path_prefix = kwargs.pop('path_prefix', '')
     name_prefix = kwargs.pop('name_prefix', '')
 
-    _id_name = kwargs.pop('id_name')
     view._acl = kwargs.pop('acl', view._acl)
 
-    id_slug = ('/{%s}' % _id_name if collection_name else '')
+    id_name = kwargs.pop('id_name')
+    id_slug = ('/{%s}' % id_name if collection_name else '')
     path = os.path.join(path_prefix, (collection_name or member_name))
 
     _auth = config.registry.get('prf.auth', False)
