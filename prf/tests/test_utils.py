@@ -83,41 +83,60 @@ class TestUtils(object):
         maybe_dotted('XYZ', throw=False)
 
     def test_prep_params(self):
-        assert (
-            {},
-            {
-                '_count': False,
-                '_fields': [],
-                '_limit': 1,
-                '_start': 0,
-                '_sort': []
-            }
-        ) == prep_params(dictset())
+        _specials = [
+            '_asdict',
+            '_count',
+            '_distinct',
+            '_end',
+            '_explain',
+            '_fields',
+            '_flat',
+            '_frequencies',
+            '_group',
+            '_ix',
+            '_join',
+            '_limit',
+            '_page',
+            '_scalar',
+            '_sort',
+            '_start',
+            '_unwind',
+            '_where'
+        ]
 
-        assert (
-            {'a': 1, 'b': 3},
-            {
-                '_count': True,
-                '_fields':  ['a', 'b'],
-                '_limit': 10,
-                '_start': 0,
-                '_sort': ['-a', 'b'],
-                '_distinct': 'abc',
-                '_scalar': 'a,b',
-                '_group': 'x,y',
-            }
-        ) == prep_params(
-            dictset(
-                a=1,b=3,
-                _count=1,
-                _fields='a,b',
-                _limit=10,
-                _sort = '-a,b',
-                _distinct = 'abc',
-                _scalar = 'a,b',
-                _group = 'x,y'
-            )
+        pp, sp = prep_params(dictset(_limit=1))
+        assert pp == {}
+        for kk in sp.keys():
+            assert kk in _specials
+
+        pp, sp = prep_params(
+            dictset({
+                'a':'1',
+                'b':2,
+                'c.c':3,
+                'd__d':5,
+                'e__asint': '6',
+
+                '_count':1,
+                '_fields':'a,b',
+                '_limit':10,
+                '_sort':'-a,b',
+                '_distinct':'abc',
+                '_scalar':'a,b',
+                '_group':'x,y'
+            })
         )
+
+        assert sp['_fields'] == ['a', 'b']
+        assert sp['_sort'] == ['-a', 'b']
+
+        assert pp['a'] == '1'
+        assert pp['b'] == 2
+        assert pp['c__c'] == 3
+        assert 'c.c' not in pp
+        assert pp['d__d'] == 5
+        assert pp['e'] == 6
+
 
     def test_cleanup_url(self):
         from prf.utils import cleanup_url

@@ -6,7 +6,6 @@ from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 
 import prf.exc
-from prf.utils.qs import typecast
 from prf.utils import dictset, maybe_dotted, DKeyError, DValueError
 
 

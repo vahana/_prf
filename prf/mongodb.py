@@ -9,8 +9,7 @@ import pymongo
 
 import prf.exc
 from prf.utils import dictset, split_strip, pager,\
-                      to_dunders, process_fields, qs2dict
-from prf.utils.qs import prep_params, typecast
+                      to_dunders, process_fields, qs2dict, prep_params, typecast
 from prf.renderers import _JSONEncoder
 import collections
 

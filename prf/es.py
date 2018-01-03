@@ -9,8 +9,7 @@ from elasticsearch_dsl import Search, Q, A, DocType
 from elasticsearch_dsl.connections import connections
 
 import prf
-from prf.utils import dictset, process_fields, split_strip, pager, chunks
-from prf.utils.qs import prep_params
+from prf.utils import dictset, prep_params, process_fields, split_strip, pager, chunks
 
 log = logging.getLogger(__name__)
 

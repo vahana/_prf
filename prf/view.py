@@ -12,8 +12,7 @@ import prf.exc
 from prf.utils import dictset, json_dumps, urlencode
 from prf.serializer import DynamicSchema
 from prf import resource
-from prf.utils import process_fields, dkdict
-from prf.utils.qs import typecast
+from prf.utils import process_fields, dkdict, typecast
 
 log = logging.getLogger(__name__)
 
