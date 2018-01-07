@@ -57,6 +57,8 @@ class BaseACL(object):
 
     def __getitem__(self, key):
         item = self.get_item(key)
+        if not item:
+            return
         item.__acl__ = self._item_acl(item)
 
         item.__parent__ = self

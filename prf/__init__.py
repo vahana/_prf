@@ -138,16 +138,19 @@ def includeme(config):
 
     process_tweens(config)
 
-    add_error_view(config, DKeyError, error='Missing param: %s')
-    add_error_view(config, DValueError, error='Bad value: %s')
+    if settings.asbool('prf.disable_error_views', False):
+        log.warning('DISABLED ERROR VIEWS')
+    else:
+        add_error_view(config, DKeyError, error='Missing param: %s')
+        add_error_view(config, DValueError, error='Bad value: %s')
 
-    from pyramid import httpexceptions
-    import prf.exc
+        from pyramid import httpexceptions
+        import prf.exc
 
-    # replace html versions of pyramid http exceptions with json versions
-    add_error_view(config, httpexceptions.HTTPUnauthorized, prf.exc.HTTPUnauthorized)
-    add_error_view(config, httpexceptions.HTTPForbidden, prf.exc.HTTPForbidden)
-    add_error_view(config, httpexceptions.HTTPNotFound, prf.exc.HTTPNotFound)
+        # replace html versions of pyramid http exceptions with json versions
+        add_error_view(config, httpexceptions.HTTPUnauthorized, prf.exc.HTTPUnauthorized)
+        add_error_view(config, httpexceptions.HTTPForbidden, prf.exc.HTTPForbidden)
+        add_error_view(config, httpexceptions.HTTPNotFound, prf.exc.HTTPNotFound)
 
     config.add_directive('add_account_views', add_account_views)
     config.add_directive('add_api_view', add_api_view)

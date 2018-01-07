@@ -96,6 +96,11 @@ class BaseView(object):
         self._model_class = None
         self.returns_many = False
         self.post_as_get = False
+
+        self.raise_not_found = self.get_settings().\
+                                    asbool('prf.raise_not_found',
+                                            default=True)
+
         self.__params = self.process_params(request)
         # self.process_variables()
         self.set_renderer()
@@ -242,6 +247,9 @@ class BaseView(object):
         if '_count' in self._params:
             return data
 
+        if not data:
+            return data
+
         if isinstance(data, (list, dict)):
             serialized, _total = self.process_builtins(data, many=many)
         else:
@@ -260,6 +268,16 @@ class BaseView(object):
 
     def _show(self, **kw):
         data = self._process(self.show(**kw), many=self.returns_many)
+
+        if not data:
+            if not self.returns_many:
+                if self.raise_not_found:
+                    raise prf.exc.HTTPNotFound(
+                        "'%s' resource not found" % (self.request.path))
+                return data
+            else:
+                return {}
+
         return data['data'] if self.returns_many == False else data
 
     def _create(self, **kw):
