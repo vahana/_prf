@@ -8,12 +8,14 @@ from prf.tests.prf_testcase import PrfTestCase
 
 class TestView(PrfTestCase):
     def request(self, url='/', method='GET', mime='application/json', params={}):
-        req = PRFRequest(url)
-        req.content_type = mime
-        # Hackery so that request.params.mixed() returns things
+        from pyramid import testing
+        req = testing.DummyRequest(path=url, params=params)
+        req.context = testing.DummyResource()
+        req.content_type=mime
         req.params = dictset({'mixed': lambda: params})
         req.accept = [mime]
         req.method = method
+
         return req
 
     def test_pop_empty_dict(self):
