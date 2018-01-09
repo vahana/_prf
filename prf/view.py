@@ -318,10 +318,10 @@ class BaseView(object):
                             content_type='application/json', method=method)
 
         if req.method == 'GET' and params:
-            req.body = urlencode(params)
+            req.text = urlencode(params)
 
         if req.method == 'POST':
-            req.body = json_dumps(params)
+            req.text = json_dumps(params)
 
         return self.request.invoke_subrequest(req)
 

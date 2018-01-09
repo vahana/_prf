@@ -141,8 +141,8 @@ def includeme(config):
     if settings.asbool('prf.disable_error_views', False):
         log.warning('DISABLED ERROR VIEWS')
     else:
-        add_error_view(config, DKeyError, error='Missing param: %s')
-        add_error_view(config, DValueError, error='Bad value: %s')
+        add_error_view(config, DKeyError, error='Missing param: %s', error_attr='args')
+        add_error_view(config, DValueError, error='Bad value: %s', error_attr='args')
 
         from pyramid import httpexceptions
         import prf.exc
