@@ -244,11 +244,19 @@ class BaseView(object):
             return obj, _total or len(obj)
 
     def _process(self, data, many):
+        def wrap2dict(data, total):
+            return {
+                'total': total,
+                'count': len(data),
+                'data': data,
+                'query': self._params,
+            }
+
         if '_count' in self._params:
             return data
 
         if not data:
-            return data
+            return wrap2dict([], 0)
 
         if isinstance(data, (list, dict)):
             serialized, _total = self.process_builtins(data, many=many)
@@ -256,12 +264,8 @@ class BaseView(object):
             serialized = self.serialize(data, many=many)
             _total = getattr(data, '_total', len(serialized))
 
-        return dictset({
-            'total': _total,
-            'count': len(serialized),
-            'data': self.add_meta(serialized),
-            'query': self._params,
-        })
+        return wrap2dict(self.add_meta(serialized), _total)
+
 
     def _index(self, **kw):
         return self._process(self.index(**kw), many=True)
