@@ -48,9 +48,9 @@ class dictset(basedictset):
 
 
 class dkdict(dictset):
-    def raise_getattr_exc(self, error):
-        raise DKeyError(error.args)
+    def raise_getattr_exc(self):
+        raise DKeyError(error)
 
     def raise_value_exc(self, error):
-        raise DValueError(error.args)
+        raise DValueError(error)
 
