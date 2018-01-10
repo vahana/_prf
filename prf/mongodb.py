@@ -33,7 +33,7 @@ class CommandLogger(pymongo.monitoring.CommandListener):
                      "failed in {0.duration_micros} "
                      "microseconds".format(event))
 
-pymongo.monitoring.register(CommandLogger())
+# pymongo.monitoring.register(CommandLogger())
 
 
 class TopLevelDocumentMetaclass(TLDMetaclass):
