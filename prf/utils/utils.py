@@ -11,7 +11,7 @@ from datetime import date, datetime
 import requests
 from functools import partial
 
-from slovar.operations.strings import split_strip, str2dt, str2rdt
+from slovar.strings import split_strip, str2dt, str2rdt
 
 from prf.utils.errors import DValueError
 

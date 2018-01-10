@@ -2,7 +2,7 @@ import sys
 import logging
 from datetime import datetime, date
 from slovar import slovar
-from slovar.operations.strings import split_strip
+from slovar.strings import split_strip
 from prf.exc import HTTPBadRequest
 
 log = logging.getLogger(__name__)
