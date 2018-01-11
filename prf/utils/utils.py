@@ -373,29 +373,6 @@ def pager(start, page, total):
     return partial(_pager, start, page, total)
 
 
-def extract_domain(url, _raise=True):
-    import tldextract
-    try:
-        parsed = tldextract.extract(url)
-        domain = parsed.registered_domain
-        subdomain = parsed.subdomain
-
-        if subdomain.startswith('www'):
-            #ie [www].abc.com
-            subdomain = subdomain[3:]
-            if subdomain.startswith('.'):
-                #ie [www.abc].xyz.com
-                subdomain = subdomain[1:]
-
-        if subdomain:
-            domain = '%s.%s' % (subdomain, domain)
-
-        return domain
-
-    except TypeError as e:
-        if _raise:
-            raise DValueError(e)
-
 def cleanup_url(url, _raise=True):
     if not url:
         if _raise:
@@ -422,50 +399,6 @@ def cleanup_url(url, _raise=True):
 
     path = (parsed.path or '').strip('/')
     return ('%s/%s' % (host, path)).strip('/')
-
-def clean_postal_code(code):
-    return code.partition('-')[0]
-
-def format_phone(number, country_code, _raise=True):
-    import phonenumbers as pn
-
-    try:
-        phone = pn.parse(number, country_code)
-        ok = True
-        if not pn.is_possible_number(phone):
-            msg = 'Phone number `%s` for country `%s` might might be invalid'\
-                                 % (number, country_code)
-            if _raise:
-                raise DValueError(msg)
-            else:
-                log.warn(msg)
-                ok = False
-
-        return ok, pn.format_number(phone,
-                        pn.PhoneNumberFormat.INTERNATIONAL)
-
-    except pn.NumberParseException as e:
-        if _raise:
-            raise DValueError(e)
-
-    return False, None
-
-def normalize_phone(number, country_code='US', _raise=True):
-    import phonenumbers as pn
-
-    try:
-        phone = pn.parse(number, country_code)
-        if not pn.is_valid_number(phone) and _raise:
-                raise DValueError('Invalid phone number `%s` for country `%s`'
-                                    % (number, country_code))
-        else:
-            return None
-
-        return str(phone.national_number)
-
-    except pn.NumberParseException as e:
-        if _raise:
-            raise DValueError(e)
 
 
 def dl2ld(dl):
