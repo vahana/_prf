@@ -512,7 +512,8 @@ class BaseMixin(object):
             if _sort != specials._distinct:
                 raise prf.exc.HTTPBadRequest('Must sort only on distinct')
 
-        dset = sorted(queryset.distinct(specials._distinct), reverse=reverse)
+        dset = sorted([it for it in queryset.distinct(specials._distinct) if it is not None],
+                        reverse=reverse)
 
         if specials._end is None:
             if specials._start != 0:
