@@ -12,6 +12,7 @@ import requests
 from functools import partial
 
 from slovar.strings import split_strip, str2dt, str2rdt
+from slovar.utils import maybe_dotted
 
 from prf.utils.errors import DValueError
 
@@ -64,53 +65,6 @@ def snake2camel(text):
 def camel2snake(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
-
-
-def resolve(name, module=None):
-    """Resole dotted name to python module
-    """
-    name = name.split('.')
-    if not name[0]:
-        if module is None:
-            raise DValueError('relative name without base module')
-        module = module.split('.')
-        name.pop(0)
-        while not name[0]:
-            module.pop()
-            name.pop(0)
-        name = module + name
-
-    used = name.pop(0)
-    found = __import__(used)
-    for n in name:
-        used += '.' + n
-        try:
-            found = getattr(found, n)
-        except AttributeError:
-            __import__(used)
-            found = getattr(found, n)
-
-    return found
-
-
-def maybe_dotted(module, throw=True):
-
-    def _import(module):
-        if isinstance(module, str):
-            module, _, cls = module.partition(':')
-            module = resolve(module)
-            if cls:
-                return getattr(module, cls)
-
-        return module
-
-    if throw:
-        return _import(module)
-    else:
-        try:
-            return _import(module)
-        except ImportError as e:
-            log.error('%s not found. %s' % (module, e))
 
 
 def prep_params(params):

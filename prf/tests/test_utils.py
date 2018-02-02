@@ -65,23 +65,6 @@ class TestUtils(object):
         assert snake2camel('a_b') == 'AB'
         assert snake2camel('aa_bb') == 'AaBb'
 
-    def test_maybe_dotted(self):
-        with pytest.raises(ImportError):
-            maybe_dotted('aa')
-
-        with pytest.raises(ValueError):
-            maybe_dotted('')
-
-        with pytest.raises(ValueError):
-            maybe_dotted('.view')
-
-        import prf
-        assert maybe_dotted('prf.view') == prf.view
-
-        assert maybe_dotted('prf.view:BaseView') == prf.view.BaseView
-
-        maybe_dotted('XYZ', throw=False)
-
     def test_prep_params(self):
         _specials = [
             '_asdict',

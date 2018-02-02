@@ -69,7 +69,7 @@ def add_api_view(config):
     from pyramid.security import  NO_PERMISSION_REQUIRED
     from prf.utility_views import APIView
 
-    config.add_route('prf_api','/')
+    config.add_route('prf_api','_')
     config.add_view(view=APIView, attr='show', route_name='prf_api',
                     request_method='GET',
                     renderer='json',
