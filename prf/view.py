@@ -89,6 +89,7 @@ class BaseView(object):
     _serializer = DynamicSchema
     _acl = None
     _model = None
+    _conf_keyword = '__CONFIRMATION'
 
     def __init__(self, context, request):
         self.context = context
@@ -330,7 +331,7 @@ class BaseView(object):
         return self.request.invoke_subrequest(req)
 
     def needs_confirmation(self):
-        return self._params.pop('__CONFIRMATION', True)
+        return self._params.pop(self._conf_keyword, True)
 
     def delete_many(self, **kw):
         if not self._model_class:
