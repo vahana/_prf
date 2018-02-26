@@ -126,7 +126,8 @@ class Request(object):
                 url_ps = path_ps._replace(
                             scheme=url_ps.scheme,
                             netloc=url_ps.netloc,
-                            path= '%s/%s' % (url_ps.path, path),
+                            path= '%s/%s' % (url_ps.path, path_ps.path),
+                            query= '%s&%s' % (url_ps.query,path_ps.query)
                     )
             else:
                 url_ps = path_ps
