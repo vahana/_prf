@@ -32,6 +32,10 @@ setup(
     entry_points={
         'paste.app_factory': [
             'main = prf:main',
+        ],
+        'console_scripts':[
+            'prf.mongo_index = prf.scripts.mongo_index:run'
         ]
+
     },
 )
