@@ -40,7 +40,9 @@ class Script(object):
 
             if 'sparse' in parts:
                 params['sparse'] = True
-            if 'background' in parts:
+            if 'no_background' in parts:
+                params['background'] = False
+            else:
                 params['background'] = True
 
             indexes.append(IndexModel(key, **params))
