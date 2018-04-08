@@ -16,12 +16,18 @@ class Script(object):
         parser.add_argument('--host', default='localhost')
         parser.add_argument('--port', default=27017)
         parser.add_argument('--dry', action='store_true')
-        parser.add_argument('-d', '--db', required=True)
+        parser.add_argument('-d', '--db')
         parser.add_argument('-c', '--collection', required=True)
         parser.add_argument('-i', '--index', action='append', required=True, help='Index name in the following format <name>:sparse:background')
 
         self.args = parser.parse_args()
         self.parser = parser
+
+        if '.' in self.args.collection:
+            self.args.db, self.args.collection = self.args.collection.split('.')
+        elif not self.args.db:
+            self.parser.error('Missing db')
+
 
     def run(self):
         con = MongoClient(host=self.args.host, port=self.args.port)
