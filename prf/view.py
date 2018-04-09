@@ -24,7 +24,7 @@ CONSTANTS = {
 }
 
 MAX_NB_PARAMS = 512
-MAX_QS_LENGTH = 2000
+MAX_QS_LENGTH = 8000
 
 
 class ViewMapper(object):
