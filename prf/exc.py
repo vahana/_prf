@@ -134,6 +134,9 @@ def HTTPMethodNotAllowed(*arg, **kw):
 def HTTPNotAcceptable(*arg, **kw):
     return create_response(http_exc.HTTPNotAcceptable(*arg), kw)
 
+def HTTPRequestURITooLong(*arg, **kw):
+    return create_response(http_exc.HTTPRequestURITooLong(*arg), kw)
+
 
 # 50x
 def HTTPServerError(*arg, **kw):

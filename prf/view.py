@@ -23,6 +23,9 @@ CONSTANTS = {
     '_UUID': lambda: uuid.uuid4().get_hex()
 }
 
+MAX_NB_PARAMS = 512
+MAX_QS_LENGTH = 8000
+
 
 class ViewMapper(object):
 
@@ -142,11 +145,11 @@ class BaseView(object):
              'text/xls' in self.request.accept):
             self.request.override_renderer = 'tab'
 
-    @classmethod
-    def process_params(cls, request):
+    def process_params(self, request):
         ctype = request.content_type
 
         _params = dictset(request.params.mixed())
+
         if 'application/json' in ctype:
             if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
                 try:
@@ -157,6 +160,21 @@ class BaseView(object):
                             % (request.body, request.method, request.url))
 
         _params = dkdict(typecast(_params))
+
+        if request.method == 'GET':
+            settings = self.get_settings()
+
+            param_limit = settings.asint('prf.request.max_params', default=MAX_NB_PARAMS)
+            qs_limit = settings.asint('prf.request.max_qs_length', default=MAX_QS_LENGTH)
+
+            if len(_params) > param_limit:
+                raise prf.exc.HTTPRequestURITooLong('Max limit of params is %s. Got %s' %
+                                    (param_limit, len(_params)))
+
+            if len(request.query_string) > qs_limit:
+                raise prf.exc.HTTPRequestURITooLong('Max query string length is %s characters. Got %s' %
+                                    (qs_limit, len(request.query_string)))
+
         return _params
 
     def process_variables(self):

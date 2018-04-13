@@ -50,7 +50,7 @@ class TabRenderer(object):
     def __call__(self, value, system):
         request = system.get('request')
         response = request.response
-        params = system['view'].process_params(request)
+        params = system['view'](None, request).process_params(request)
 
         if 'text/csv' in request.accept:
             response.content_type = 'text/csv'
