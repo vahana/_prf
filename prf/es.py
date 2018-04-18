@@ -259,9 +259,11 @@ class Aggregator(object):
 class ESDoc(object):
     _meta_fields = ['_index', '_type', '_score', '_id']
 
-    def __init__(self, data):
+    def __init__(self, data, specials):
         self.data = dictset(data)
         self._meta = self.data.pop_many(self._meta_fields)
+        if '_show_meta' in specials:
+            self.data['_meta'] = self._meta
 
     def to_dict(self, fields=None):
         return self.data.extract(fields)
@@ -285,7 +287,7 @@ class ES(object):
 
     @classmethod
     def wrap_results(cls, specials, data, total, took):
-        data = [ESDoc(each) for each in data]
+        data = [ESDoc(each, specials) for each in data]
         return wrap_results(specials, data, total, took)
 
     @classmethod
