@@ -560,8 +560,9 @@ class BaseMixin(object):
         else: # needs better way to check if its a proper query object
             query_set = cls.objects(_q)
 
-        cls.check_indexes_exist(list(params.keys())+
-                [e[1:] if e.startswith('-') else e for e in specials._sort])
+        #TODO: move it out of here. put it in get_collection_paged?
+        # cls.check_indexes_exist(list(params.keys())+
+        #         [e[1:] if e.startswith('-') else e for e in specials._sort])
 
         query_set = query_set(**params)
 
@@ -752,6 +753,7 @@ class BaseMixin(object):
         params = dictset(params or {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
+        pager_field= params.pop('pager_field', None)
 
         if _limit == -1:
             _limit = cls.get_collection(_limit=_limit, _count=1, **params)
@@ -759,10 +761,46 @@ class BaseMixin(object):
         log.debug('page_size=%s, _start=%s, _limit=%s',
                                             page_size, _start, _limit)
 
+        def get_start_id(limit):
+            _prm = params.copy()
+            _prm['_fields'] = pager_field
+            _prm['_sort'] = pager_field
+            last_id = None
+
+            pgr = pager(0, 1000, limit)
+            for start, count in pgr():
+                _prm['_limit'] = count
+        
+                if last_id:
+                    _prm['%s__gt' % pager_field] = last_id
+                else:
+                    _prm['_start'] = 0
+
+                results = cls.get_collection(**_prm)
+                last_id = results[len(results)-1][pager_field]
+
+            return last_id
+
+        def process_pagination(start, count, collection):
+            if params.get('_sort') or not pager_field:
+                return params.update_with({'_start':start, '_limit': count})
+
+            if not collection:
+                return params.update_with({'_sort':pager_field, '_start':start, '_limit': count})
+            else:
+                last_id = collection[len(collection)-1][pager_field]
+                return params.update_with({
+                     '_sort': pager_field,
+                     '%s__gt' % pager_field: last_id, 
+                     '_limit': count
+                    })
+
         pgr = pager(_start, page_size, _limit)
+        collection = []
         for start, count in pgr():
-            _params = params.copy().update({'_start':start, '_limit': count})
-            yield cls.get_collection(**_params)
+            _params = process_pagination(start, count, collection)
+            collection = cls.get_collection(**_params)
+            yield collection
 
 
     @classmethod
@@ -811,7 +849,7 @@ class BaseMixin(object):
         for kk in keys:
             parts = kk.split('__')
             if parts[-1] in ['exists', 'in', 'ne', 'size',
-                             'asbool', 'asint', 'aslist', 'asdt']:
+                             'asbool', 'asint', 'aslist', 'asdt', 'gt', 'ln']:
                 parts.pop(-1)
 
             new_keys.append('.'.join(parts))
