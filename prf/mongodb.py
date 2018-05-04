@@ -561,8 +561,8 @@ class BaseMixin(object):
             query_set = cls.objects(_q)
 
         #TODO: move it out of here. put it in get_collection_paged?
-        # cls.check_indexes_exist(list(params.keys())+
-        #         [e[1:] if e.startswith('-') else e for e in specials._sort])
+        cls.check_indexes_exist(list(params.keys())+
+                [e[1:] if e.startswith('-') else e for e in specials._sort])
 
         query_set = query_set(**params)
 
@@ -770,7 +770,7 @@ class BaseMixin(object):
             pgr = pager(0, 1000, limit)
             for start, count in pgr():
                 _prm['_limit'] = count
-        
+
                 if last_id:
                     _prm['%s__gt' % pager_field] = last_id
                 else:
@@ -791,7 +791,7 @@ class BaseMixin(object):
                 last_id = collection[len(collection)-1][pager_field]
                 return params.update_with({
                      '_sort': pager_field,
-                     '%s__gt' % pager_field: last_id, 
+                     '%s__gt' % pager_field: last_id,
                      '_limit': count
                     })
 

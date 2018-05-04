@@ -14,7 +14,7 @@ from prf.utils import dictset, prep_params, process_fields, split_strip, pager, 
 log = logging.getLogger(__name__)
 
 OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in',
-             'startswith', 'exists', 'range']
+             'startswith', 'exists', 'range', 'geobb']
 
 PRECISION_THRESHOLD = 40000
 DEFAULT_AGGS_LIMIT = 20
@@ -366,7 +366,6 @@ class ES(object):
 
 
         for key, val in list(_params.items()):
-
             if isinstance(val, str) and ',' in val:
                 val = _params.aslist(key)
 
@@ -403,6 +402,18 @@ class ES(object):
 
                 _ranges.append(Q('bool', should=_range))
 
+            elif op == 'geobb':
+                points = split_strip(val)
+                if len(points) != 4:
+                    raise prf.exc.HTTPBadRequest('geo bounding box requires 4 values: long,lat,long,lat. Got %s instead.' % points)
+
+                _filter = Q('geo_bounding_box', **{
+                        key: {
+                            'top_left': ','.join(points[:2]),
+                            'bottom_right': ','.join(points[-2:])
+                        }
+                    })
+
             elif val is None:
                 _filter = Q('exists', field=key)
                 if op != 'ne':
@@ -424,6 +435,7 @@ class ES(object):
                 _nested[root_key] = _nested[root_key] & _filter if root_key in _nested else _filter
             elif _filter:
                 _filters = _filters & _filter if _filters else _filter
+
 
         for path, nestedQ in list(_nested.items()):
             q = Q('nested', path=path, query=nestedQ)
