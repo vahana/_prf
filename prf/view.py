@@ -101,7 +101,7 @@ class BaseView(object):
         self.returns_many = False
         self.post_as_get = False
 
-        self.raise_not_found = self.get_settings().\
+        self.raise_not_found = self.get_settings(request).\
                                     asbool('prf.raise_not_found',
                                             default=True)
 
@@ -162,7 +162,7 @@ class BaseView(object):
         _params = dkdict(typecast(_params))
 
         if request.method == 'GET':
-            settings = self.get_settings()
+            settings = self.get_settings(request)
 
             param_limit = settings.asint('prf.request.max_params', default=MAX_NB_PARAMS)
             qs_limit = settings.asint('prf.request.max_qs_length', default=MAX_QS_LENGTH)
@@ -389,10 +389,8 @@ class BaseView(object):
         finally:
             return collection
 
-    def get_settings(self, key=None):
-        if key:
-            return self.request.registry.settings[key]
-        return dictset(self.request.registry.settings)
+    def get_settings(self, request):
+        return dictset(request.registry.settings)
 
 class NoOp(BaseView):
 
