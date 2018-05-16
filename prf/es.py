@@ -63,7 +63,7 @@ def prep_sort(specials, nested=None):
             missing = '_last'
         else:
             order = 'asc'
-            missing = '_first'
+            missing = '_last'
 
         srt = {
                 'order': order,

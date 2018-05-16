@@ -87,6 +87,7 @@ def prep_params(params):
         _join=None,
         _unwind=None,
         _where=None,
+        _or=None,
     )
 
     specials._sort = params.aslist('_sort', default=[], pop=True)
