@@ -93,9 +93,12 @@ def mongo_connect(settings):
     port = settings.asint('mongodb.port', default=27017)
     alias = settings.get('mongodb.alias', 'default')
 
-    mongo.connect(db=db, host=host, port=port, alias=alias)
-
+    mongo.connect(db=db, host=host, port=port, alias=alias, connect=False)
     log.info('MongoDB enabled with db:%s, host:%s, port:%s, alias:%s', db, host, port, alias)
+
+
+def mongo_disconnect(alias):
+    mongo.connection.disconnect(alias)
 
 
 def mongodb_exc_tween(handler, registry):
