@@ -88,10 +88,6 @@ class TestUtils(object):
         ]
 
         pp, sp = prep_params(dictset(_limit=1))
-        assert pp == {}
-        for kk in sp.keys():
-            assert kk in _specials
-
         pp, sp = prep_params(
             dictset({
                 'a':'1',
