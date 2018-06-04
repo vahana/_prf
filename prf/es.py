@@ -13,7 +13,7 @@ from prf.utils import dictset, prep_params, process_fields, split_strip, pager, 
 
 log = logging.getLogger(__name__)
 
-OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in',
+OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in', 'all',
              'startswith', 'exists', 'range', 'geobb']
 
 PRECISION_THRESHOLD = 40000
@@ -334,11 +334,29 @@ class ES(object):
     def __init__(self, name, ):
         self.index, _, self.doc_type = name.partition('/')
 
+
     def get_collection(self, **params):
         params = dictset(params)
         log.debug('(ES) IN: %s, params: %.1024s', self.index, params)
 
         _params, specials = prep_params(params)
+
+        def prefixedQ(key, val):
+            if not isinstance(val, list):
+                val = [val]
+
+            items = []
+
+            for each in val:
+                op = 'term'
+                if each.endswith('*'):
+                    each = each.split('*')[0]
+                    op = 'prefix'
+
+                items.append(Q(op, **{key:each}))
+
+            return items
+
 
         if specials._start > MAX_SKIP:
             raise prf.exc.HTTPBadRequest('Reached max pagination limit')
@@ -414,20 +432,32 @@ class ES(object):
                         }
                     })
 
+            elif op == 'in':
+                _filter = Q('bool', should=prefixedQ(key, val))
+
+                if op == 'ne':
+                    _filter = ~_filter
+
+            elif op == 'all':
+                _filter = Q('bool', must=prefixedQ(key, val))
+
+                if op == 'ne':
+                    _filter = ~_filter
+
+            elif isinstance(val, list):
+                _filter = Q('bool', should=prefixedQ(key, val))
+
+                if op == 'ne':
+                    _filter = ~_filter
+
             elif val is None:
                 _filter = Q('exists', field=key)
                 if op != 'ne':
                     _filter = ~_filter
 
-            elif isinstance(val, list):
-                _filter = Q('bool',
-                    should=[Q("term", **{key:each}) for each in val]
-                )
-                if op == 'ne':
-                    _filter = ~_filter
-
             else:
-                _filter = Q("term", **{key:val})
+                _filter = prefixedQ(key, val)[0]
+
                 if op == 'ne':
                     _filter = ~_filter
 

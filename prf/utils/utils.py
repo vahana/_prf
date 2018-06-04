@@ -356,6 +356,17 @@ def cleanup_url(url, _raise=True):
     return ('%s/%s' % (host, path)).strip('/')
 
 
+def ld2dl(ld):
+    dl = {}
+    for each in ld:
+        for kk,vv in each:
+            if kk in dl:
+                dl[kk].append(vv)
+            else:
+                dl[kk] = [vv]
+    return dl
+
+
 def dl2ld(dl):
     "dict of lists to list of dicts"
 
