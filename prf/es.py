@@ -349,7 +349,7 @@ class ES(object):
 
             for each in val:
                 op = 'term'
-                if each.endswith('*'):
+                if isinstance(each, str) and each.endswith('*'):
                     each = each.split('*')[0]
                     op = 'prefix'
 
@@ -456,7 +456,10 @@ class ES(object):
                     _filter = ~_filter
 
             else:
-                _filter = prefixedQ(key, val)[0]
+                if isinstance(val, str):
+                    _filter = prefixedQ(key, val)[0]
+                else:
+                    _filter = Q('term', **{key:val})
 
                 if op == 'ne':
                     _filter = ~_filter
