@@ -20,7 +20,7 @@ PRECISION_THRESHOLD = 40000
 DEFAULT_AGGS_LIMIT = 20
 DEFAULT_AGGS_NESTED_LIMIT = 1000
 TOP_HITS_MAX_SIZE = 100000
-MAX_SKIP = 10000
+MAX_RESULT_WINDOW = 10000
 
 
 def includeme(config):
@@ -357,9 +357,9 @@ class ES(object):
 
             return items
 
-
-        if specials._start > MAX_SKIP:
-            raise prf.exc.HTTPBadRequest('Reached max pagination limit')
+        pagination_limit = self.settings.asint('max_result_window', default=MAX_RESULT_WINDOW)
+        if specials._start > pagination_limit:
+            raise prf.exc.HTTPBadRequest('Reached max pagination limit of `%s`' % pagination_limit)
 
         s_ = Search(index=self.index, doc_type=self.doc_type)
 
@@ -518,7 +518,8 @@ class ES(object):
             return self.wrap_results(specials, data, resp.hits.total, resp.took)
 
         except Exception as e:
-            raise prf.exc.HTTPBadRequest(e)
+            log.error(e)
+            raise prf.exc.HTTPBadRequest('ES exception raised. See logs (by `error_id`) for more info')
 
         finally:
             # from pprint import pprint as pp;pp(s_.to_dict())
