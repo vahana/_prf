@@ -756,7 +756,7 @@ class BaseMixin(object):
         params = dictset(params or {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
-        pager_field= params.pop('pager_field', None)
+        pager_field= params.pop('_pager_field', None)
 
         if _limit == -1:
             _limit = cls.get_collection(_limit=_limit, _count=1, **params)

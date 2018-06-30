@@ -517,12 +517,12 @@ class ES(object):
             data = self.process_hits(resp.hits.hits)
             return self.wrap_results(specials, data, resp.hits.total, resp.took)
 
-        except Exception as e:
-            log.error(e)
+        except:
+            import sys
+            log.error(sys.exc_info()[1])
             raise prf.exc.HTTPBadRequest('ES exception raised. See logs (by `error_id`) for more info')
 
         finally:
-            # from pprint import pprint as pp;pp(s_.to_dict())
             log.debug('(ES) OUT: %s, query: %.2048s', self.index, s_.to_dict())
 
     def get_collection_paged(self, page_size, **params):
