@@ -331,9 +331,8 @@ class ES(object):
         except KeyError as e:
             raise Exception('Bad or missing settings for elasticsearch. %s' % e)
 
-    def __init__(self, name, ):
+    def __init__(self, name):
         self.index, _, self.doc_type = name.partition('/')
-
 
     def get_collection(self, **params):
         params = dictset(params)
@@ -561,6 +560,7 @@ class ES(object):
             doc_type = obj._meta._type,
             id = obj._meta._id,
             refresh=True,
+            detect_noop=True,
             body = {'doc': data}
         )
 

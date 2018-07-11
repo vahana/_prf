@@ -88,6 +88,7 @@ def prep_params(params):
         _unwind=None,
         _where=None,
         _or=None,
+        _type=None
     )
 
     specials._sort = params.aslist('_sort', default=[], pop=True)
@@ -119,6 +120,9 @@ def prep_params(params):
     if specials._where:
         params['__raw__'] = {'$where': specials._where}
 
+    if specials._type:
+        field,_type = specials._type.split(':')
+        params['__raw__'] = {field:{'$type':_type}}
     return params, specials
 
 

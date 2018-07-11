@@ -7,7 +7,7 @@ from prf.exc import HTTPBadRequest
 
 log = logging.getLogger(__name__)
 
-def dict2tab(data, fields=None, format_='csv'):
+def dict2tab(data, fields=None, format_='csv', skip_headers=False):
     import tablib
 
     def _pop(each, key):
@@ -26,7 +26,7 @@ def dict2tab(data, fields=None, format_='csv'):
         name = (bb or aa).split(':')[0]
         headers.append(name)
 
-    tabdata = tablib.Dataset(headers = headers)
+    tabdata = tablib.Dataset(headers = None if skip_headers else headers)
     try:
         for each in data:
             row = []

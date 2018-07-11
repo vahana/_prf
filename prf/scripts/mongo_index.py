@@ -48,6 +48,8 @@ class Script(object):
                 params['sparse'] = True
             if 'no_background' in parts:
                 params['background'] = False
+            if 'unique' in parts:
+                params['unique'] = True
             else:
                 params['background'] = True
 
