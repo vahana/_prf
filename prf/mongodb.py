@@ -639,7 +639,7 @@ class BaseMixin(object):
 
     def unique_fields(self):
         return [e['fields'][0][0] for e in self._unique_with_indexes()] \
-            + [self._meta['_id_field']]
+            + [self._meta['_pager_field']]
 
     @classmethod
     def get_or_create(cls, **params):
