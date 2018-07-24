@@ -8,6 +8,7 @@ from elasticsearch.serializer import JSONSerializer
 from elasticsearch_dsl import Search, Q, A, DocType
 from elasticsearch_dsl.connections import connections
 
+from slovar import slovar
 import prf
 from prf.utils import dictset, prep_params, process_fields, split_strip, pager, chunks
 
@@ -38,18 +39,6 @@ class Serializer(JSONSerializer):
             return str(obj)
 
         return super(Serializer, self).default(obj)
-
-
-def wrap_results(specials, data, total, took):
-    return {
-        'data': data,
-        'total': total,
-        'start': specials._start,
-        'count': specials._limit,
-        'fields': specials._fields,
-        'sort': specials._sort,
-        'took': took
-    }
 
 def prep_sort(specials, nested=None):
     sort = specials._sort
@@ -82,6 +71,39 @@ def prep_sort(specials, nested=None):
         new_sort.append({each: srt})
 
     return new_sort
+
+
+class ESDoc(object):
+    _meta_fields = ['_index', '_type', '_score', '_id']
+
+    def __init__(self, data, specials):
+        self.data = dictset(data)
+        self._meta = self.data.pop_many(self._meta_fields)
+        if '_show_meta' in specials:
+            self.data['_meta'] = self._meta
+
+    def to_dict(self, fields=None):
+        return self.data.extract(fields)
+
+    def __getattr__(self, key):
+        if key in self.data:
+            return self.data[key]
+
+        raise AttributeError()
+
+
+class Results(list):
+    def __init__(self, specials, data, total, took):
+        if specials._group:
+            list.__init__(self, [data])
+        elif specials._distinct:
+            list.__init__(self, data)
+        else:
+            list.__init__(self, [ESDoc(each, specials) for each in data])
+        self.specials = specials
+        self.total = total
+        self.took = took
+
 
 class Aggregator(object):
 
@@ -144,9 +166,9 @@ class Aggregator(object):
                 else:
                     data.append(bucket.key)
 
-            return wrap_results(self.specials, data,
-                                    resp.aggregations.total.value,
-                                    resp.took)
+            return Results(self.specials, data,
+                            resp.aggregations.total.value,
+                            resp.took)
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
@@ -244,10 +266,10 @@ class Aggregator(object):
                     hits = hits
                 )
 
-            return wrap_results(self.specials,
-                                    data,
-                                    aggs.total.value,
-                                    resp.took)
+            return Results(self.specials,
+                                data,
+                                aggs.total.value,
+                                resp.took)
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
@@ -256,26 +278,9 @@ class Aggregator(object):
             log.debug('(ES) OUT: %s, query: %.512s', self.index, self.search_obj.to_dict())
 
 
-class ESDoc(object):
-    _meta_fields = ['_index', '_type', '_score', '_id']
-
-    def __init__(self, data, specials):
-        self.data = dictset(data)
-        self._meta = self.data.pop_many(self._meta_fields)
-        if '_show_meta' in specials:
-            self.data['_meta'] = self._meta
-
-    def to_dict(self, fields=None):
-        return self.data.extract(fields)
-
-    def __getattr__(self, key):
-        if key in self.data:
-            return self.data[key]
-
-        raise AttributeError()
-
-
 class ES(object):
+    def __call__(self):
+        return self
 
     @classmethod
     def dot_key(cls, key, suffix=''):
@@ -284,11 +289,6 @@ class ES(object):
             key = _key
         key = key.replace('__', '.')
         return ('%s.%s' % (key, suffix) if suffix else key), (op if op in OPERATORS else '')
-
-    @classmethod
-    def wrap_results(cls, specials, data, total, took):
-        data = [ESDoc(each, specials) for each in data]
-        return wrap_results(specials, data, total, took)
 
     @classmethod
     def process_hits(cls, hits):
@@ -333,6 +333,12 @@ class ES(object):
 
     def __init__(self, name):
         self.index, _, self.doc_type = name.partition('/')
+
+    def drop_collection(self):
+        ES.api.indices.delete(self.index, ignore=[400, 404])
+
+    def unregister(self):
+        pass
 
     def get_collection(self, **params):
         params = dictset(params)
@@ -510,16 +516,11 @@ class ES(object):
                     if len(data) == specials._limit:
                         break
 
-                return self.wrap_results(specials, data, s_.count(), 0)
+                return Results(specials, data, s_.count(), 0)
 
             resp = s_.execute()
             data = self.process_hits(resp.hits.hits)
-            return self.wrap_results(specials, data, resp.hits.total, resp.took)
-
-        except:
-            import sys
-            log.error(sys.exc_info()[1])
-            raise prf.exc.HTTPBadRequest('ES exception raised. See logs (by `error_id`) for more info')
+            return Results(specials, data, resp.hits.total, resp.took)
 
         finally:
             log.debug('(ES) OUT: %s, query: %.2048s', self.index, s_.to_dict())
@@ -537,19 +538,19 @@ class ES(object):
         pgr = pager(_start, page_size, _limit)
         for start, count in pgr():
             _params = params.copy().update({'_start':start, '_limit': count})
-            yield self.get_collection(**_params)['data']
+            yield self.get_collection(**_params)
 
     def get_resource(self, **params):
         results = self.get_collection(_limit=1, **params)
         try:
-            return results['data'][0]
+            return results[0]
         except IndexError:
             raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.index, params))
 
     def get(self, **params):
         results = self.get_collection(_limit=1, **params)
-        if results['data']:
-            return results['data'][0]
+        if results:
+            return results[0]
         else:
             return None
 

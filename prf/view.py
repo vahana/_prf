@@ -237,7 +237,7 @@ class BaseView(object):
                 d_ = d_.flat(keep_lists=True).pop_by_values([[], {}, '']).unflat()
             return d_
 
-        _total = None
+        _total = getattr(obj, 'total', None)
 
         if many and 'data' in obj:
             if 'total' in obj:
