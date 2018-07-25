@@ -1,11 +1,12 @@
 import logging
-from pymongo.errors import PyMongoError
+from pprint import pformat
 from datetime import datetime
+
+import pymongo
+from pymongo.errors import PyMongoError
 from bson import ObjectId, DBRef
 import mongoengine as mongo
 from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
-
-import pymongo
 
 import prf.exc
 from prf.utils import dictset, split_strip, pager,\
@@ -439,7 +440,7 @@ class Aggregator(object):
         return self
 
     def aggregate(self, collection):
-        log.debug('AGG: %s', self._agg)
+        log.debug('AGG: %s', pformat(self._agg))
         try:
             return [dictset(e) for e in
                     collection.aggregate(self._agg, cursor={}, allowDiskUse=True)]

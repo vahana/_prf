@@ -1,5 +1,6 @@
 import logging
 from six.moves.urllib.parse import urlparse
+from pprint import pformat
 
 from bson import ObjectId, DBRef
 
@@ -7,6 +8,7 @@ from elasticsearch.exceptions import ElasticsearchException
 from elasticsearch.serializer import JSONSerializer
 from elasticsearch_dsl import Search, Q, A, DocType
 from elasticsearch_dsl.connections import connections
+from elasticsearch_dsl import aggs as AGGS
 
 from slovar import slovar
 import prf
@@ -73,6 +75,9 @@ def prep_sort(specials, nested=None):
     return new_sort
 
 
+# def flatten_buckets(buckets):
+
+
 class ESDoc(object):
     _meta_fields = ['_index', '_type', '_score', '_id']
 
@@ -110,10 +115,22 @@ class Aggregator(object):
     def __init__(self, specials, search_obj, index):
         self.specials = specials
         self.specials.aslist('_group', default=[])
-        self.specials.aslist('_group_list', default=[])
+        self.metrics = []
+
+        if self.specials._start or self.specials._page:
+            raise prf.exc.HTTPBadRequest('_start/_page not supported in _group')
+
+        for name,val in list(self.specials.items()):
+            if name.startswith('_group_'):
+                op = name[7:]
+                self.metrics.append([op, val])
 
         self.search_obj = search_obj
         self.index=index
+
+    @staticmethod
+    def undot(name):
+        return name.replace('.', '__')
 
     def get_size(self):
         if self.specials._limit == -1:
@@ -129,6 +146,66 @@ class Aggregator(object):
             return resp.aggregations.total.value
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
+
+    def do_group(self):
+        if '_show_hits' not in self.specials:
+            self.search_obj = self.search_obj[0:0]
+
+        top_field = self.process_field(self.specials._group[0])
+
+        cardinality = A('cardinality',
+                         field = top_field.field,
+                         precision_threshold=PRECISION_THRESHOLD)
+
+        self.search_obj.aggs.bucket('total', cardinality)
+
+        if self.specials._count:
+            resp = self.search_obj.execute()
+            return resp.aggregations.total.value
+
+        top_terms = self.build_agg_item(self.specials._group[0])
+        if top_field.op_type == 'terms':
+            top_terms._params['collect_mode']\
+                 = self.specials.asstr('_collect_mode', default="breadth_first")
+
+        aggs = top_terms
+        for each in self.specials._group[1:]:
+            field = self.process_field(each)
+            field.params.size = DEFAULT_AGGS_NESTED_LIMIT
+            aggs = aggs.bucket(field.bucket_name,
+                    A(field.op_type,
+                      field = field.field,
+                      **field.params))
+
+        for (op, val) in self.metrics:
+            bname = '%s_%s' % (self.undot(val), op)
+            aggs.metric(bname, op, field=val)
+
+        self.search_obj.aggs.bucket(top_field.bucket_name, top_terms)
+
+        if self.specials._count:
+            return self.do_count(self.search_obj)
+
+        try:
+            resp = self.search_obj.execute()
+            aggs = dictset(resp.aggregations._d_)
+            hits = ES.process_hits(resp.hits.hits)
+
+            data = dictset(
+                    aggs = dictset(resp.aggregations._d_),
+                    hits = hits
+                )
+
+            return Results(self.specials,
+                                data,
+                                aggs.total.value,
+                                resp.took)
+
+        except Exception as e:
+            raise prf.exc.HTTPBadRequest(e)
+
+        finally:
+            log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(self.search_obj.to_dict()))
 
     def do_distinct(self):
 
@@ -186,7 +263,7 @@ class Aggregator(object):
         _field.params = dictset()
 
         _field.params['size'] = self.get_size()
-        _field.bucket_name = field
+        _field.bucket_name = self.undot(field)
         _field.field, _ = ES.dot_key(field)
         _field.op_type = 'terms'
 
@@ -220,62 +297,6 @@ class Aggregator(object):
             return A('date_range',
                      field = field.field,
                      **field.params)
-
-    def do_group(self):
-        if '_show_hits' not in self.specials:
-            self.search_obj = self.search_obj[0:0]
-
-        top_field = self.process_field(self.specials._group[0])
-
-        cardinality = A('cardinality',
-                         field = top_field.field,
-                         precision_threshold=PRECISION_THRESHOLD)
-
-        self.search_obj.aggs.bucket('total', cardinality)
-
-        if self.specials._count:
-            resp = self.search_obj.execute()
-            return resp.aggregations.total.value
-
-        top_terms = self.build_agg_item(self.specials._group[0])
-        if top_field.op_type == 'terms':
-            top_terms._params['collect_mode']\
-                 = self.specials.asstr('_collect_mode', default="breadth_first")
-
-        aggs = top_terms
-        for each in self.specials._group[1:]:
-            field = self.process_field(each)
-            field.params.size = DEFAULT_AGGS_NESTED_LIMIT
-            aggs = aggs.bucket(field.bucket_name,
-                    A(field.op_type,
-                      field = field.field,
-                      **field.params))
-
-        self.search_obj.aggs.bucket(top_field.bucket_name, top_terms)
-
-        if self.specials._count:
-            return self.do_count(self.search_obj)
-
-        try:
-            resp = self.search_obj.execute()
-            aggs = dictset(resp.aggregations._d_)
-            hits = ES.process_hits(resp.hits.hits)
-
-            data = dictset(
-                    aggs = dictset(resp.aggregations._d_),
-                    hits = hits
-                )
-
-            return Results(self.specials,
-                                data,
-                                aggs.total.value,
-                                resp.took)
-
-        except Exception as e:
-            raise prf.exc.HTTPBadRequest(e)
-
-        finally:
-            log.debug('(ES) OUT: %s, query: %.512s', self.index, self.search_obj.to_dict())
 
 
 class ES(object):
@@ -342,7 +363,7 @@ class ES(object):
 
     def get_collection(self, **params):
         params = dictset(params)
-        log.debug('(ES) IN: %s, params: %.1024s', self.index, params)
+        log.debug('(ES) IN: %s, params: %s', self.index, pformat(params))
 
         _params, specials = prep_params(params)
 
@@ -523,7 +544,7 @@ class ES(object):
             return Results(specials, data, resp.hits.total, resp.took)
 
         finally:
-            log.debug('(ES) OUT: %s, query: %.2048s', self.index, s_.to_dict())
+            log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(s_.to_dict()))
 
     def get_collection_paged(self, page_size, **params):
         params = dictset(params or {})
