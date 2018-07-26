@@ -87,6 +87,7 @@ class Request(object):
             self.session.headers.update(headers)
 
     def login(self, url, login, password):
+        log.debug('Logging with user `%s` to `%s`' % (login, url))
         resp = Request(url).post(data={'login':login,
                             'password':password})
 
@@ -262,6 +263,21 @@ class Request(object):
 
 
 class PRFRequest(Request):
+    def __init__(self, *arg, **kw):
+        kw_auth = kw.pop('auth', None)
+        super(PRFRequest, self).__init__(*arg, **kw)
+        self.auth = slovar()
+
+        if kw_auth:
+            auth = slovar()
+            parts = urllib3.util.parse_url(kw_auth)
+            auth.login, _, auth.password = parts.auth.partition(':')
+            auth.url = parts._replace(auth=None).url
+            if auth:
+                self.login(**auth)
+
+            self.auth = auth
+
     def get_paginated(self, page_size, **kw):
         params = kw.pop('params', {})
         _start = int(params.pop('_start', 0))
@@ -289,11 +305,6 @@ class PRFRequest(Request):
                 if resp.json()['count'] == 0:
                     break
                 yield resp
-
-            # for resp in self.mget(params=_params, **kw):
-            #     if resp.json()['count'] == 0:
-            #         break
-            #     yield resp
 
     def get_data(self, resp):
         if not self.is_json_ct(resp):
