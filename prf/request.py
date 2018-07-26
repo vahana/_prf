@@ -292,11 +292,11 @@ class PRFRequest(Request):
     def validate_response_data(self, resp):
 
         if not self.is_json_ct(resp):
-            raise prf.exc.HTTPBadRequest('Content-Type returned is not json: %s' % resp.text)
+            raise exc_kls.HTTPBadRequest('Content-Type returned is not json: %s' % resp.text)
 
         data = resp.json()
         if ('_count' in resp.url and not isinstance(data, int)) or \
             ('_count' not in resp.url and 'data' not in data):
-                raise prf.exc.HTTPBadRequest('Does not appear to be valid PRF backend. url = %s' % resp.url)
+                raise exc_kls.HTTPBadRequest('Does not appear to be valid PRF backend. url = %s' % resp.url)
 
         return data
