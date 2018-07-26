@@ -39,6 +39,10 @@ class PRFHTTPAdapter(requests.adapters.HTTPAdapter):
 
 class Request(object):
 
+    @staticmethod
+    def is_json_ct(resp):
+        return resp.headers['Content-Type'] == 'application/json'
+
     def __init__(self, base_url='', cache_options=None,
                       _raise=False,
                       delay=0, reqs_over_time = None,
@@ -284,3 +288,15 @@ class PRFRequest(Request):
                 if resp.json()['count'] == 0:
                     break
                 yield resp
+
+    def validate_response_data(self, resp):
+
+        if not self.is_json_ct(resp):
+            raise prf.exc.HTTPBadRequest('Content-Type returned is not json: %s' % resp.text)
+
+        data = resp.json()
+        if ('_count' in resp.url and not isinstance(data, int)) or \
+            ('_count' not in resp.url and 'data' not in data):
+                raise prf.exc.HTTPBadRequest('Does not appear to be valid PRF backend. url = %s' % resp.url)
+
+        return data
