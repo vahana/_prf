@@ -289,14 +289,18 @@ class PRFRequest(Request):
                     break
                 yield resp
 
-    def validate_response_data(self, resp):
-
+    def get_data(self, resp):
         if not self.is_json_ct(resp):
             raise exc_kls.HTTPBadRequest('Content-Type returned is not json: %s' % resp.text)
 
+        is_count = '_count' in resp.url
+
         data = resp.json()
-        if ('_count' in resp.url and not isinstance(data, int)) or \
-            ('_count' not in resp.url and 'data' not in data):
+        if (is_count and not isinstance(data, int)) or \
+            (not is_count and 'data' not in data):
                 raise exc_kls.HTTPBadRequest('Does not appear to be valid PRF backend. url = %s' % resp.url)
 
-        return data
+        if is_count:
+            return data
+        else:
+            return data['data']
