@@ -4,8 +4,8 @@ import requests
 from urllib.parse import urlparse, urljoin
 import urllib3
 
+from slovar import slovar
 from prf.utils.utils import json_dumps, urlencode, pager
-from prf.utils import dictset
 
 class DefaultExc(object):
     @classmethod
@@ -59,7 +59,7 @@ class Request(object):
 
         self.base_url = base_url.strip('/')
 
-        cache_options = dictset(cache_options or {})
+        cache_options = slovar(cache_options or {})
         self._raise = _raise
         self.delay = delay
         self.reqs_over_time = reqs_over_time or [] # [3,60] - 3 requests in 60 seconds
@@ -96,13 +96,13 @@ class Request(object):
         try:
             json = resp.json()
             if isinstance(json, dict):
-                return dictset(resp.json())
+                return slovar(resp.json())
             else:
-                return dictset(data=json)
+                return slovar(data=json)
 
         except Exception as e:
             log.error('Failed to convert to json: %s - %s' % (e, err))
-            return dictset()
+            return slovar()
 
     def is_json(self, data):
         return isinstance(data, (tuple, list, dict)) \
@@ -284,10 +284,16 @@ class PRFRequest(Request):
                     '_limit': count,
                 })
 
-            for resp in self.mget(params=_params, **kw):
+            for pp in _params:
+                resp = self.get(params=pp, **kw)
                 if resp.json()['count'] == 0:
                     break
                 yield resp
+
+            # for resp in self.mget(params=_params, **kw):
+            #     if resp.json()['count'] == 0:
+            #         break
+            #     yield resp
 
     def get_data(self, resp):
         if not self.is_json_ct(resp):
@@ -303,4 +309,7 @@ class PRFRequest(Request):
         if is_count:
             return data
         else:
-            return data['data']
+            if isinstance(data['data'], list):
+                return [slovar(it) for it in data['data']]
+            else:
+                return slovar(data['data'])
