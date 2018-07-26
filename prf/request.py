@@ -299,6 +299,9 @@ class PRFRequest(Request):
         if not self.is_json_ct(resp):
             raise exc_kls.HTTPBadRequest('Content-Type returned is not json: %s' % resp.text)
 
+        if not resp.ok:
+            self.raise_or_log(resp)
+
         is_count = '_count' in resp.url
 
         data = resp.json()
