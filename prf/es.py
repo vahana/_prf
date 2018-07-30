@@ -263,7 +263,7 @@ class Aggregator(object):
         _field.params = dictset()
 
         _field.params['size'] = self.get_size()
-        _field.bucket_name = self.undot(field)
+        _field.bucket_name = field
         _field.field, _ = ES.dot_key(field)
         _field.op_type = 'terms'
 
