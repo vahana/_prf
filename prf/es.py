@@ -99,12 +99,7 @@ class ESDoc(object):
 
 class Results(list):
     def __init__(self, specials, data, total, took):
-        if specials._group:
-            list.__init__(self, [data])
-        elif specials._distinct:
-            list.__init__(self, data)
-        else:
-            list.__init__(self, [ESDoc(each, specials) for each in data])
+        list.__init__(self, [ESDoc(each, specials) for each in data])
         self.specials = specials
         self.total = total
         self.took = took
@@ -196,10 +191,7 @@ class Aggregator(object):
                     hits = hits
                 )
 
-            return Results(self.specials,
-                                data,
-                                aggs.total.value,
-                                resp.took)
+            return data
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
@@ -243,9 +235,7 @@ class Aggregator(object):
                 else:
                     data.append(bucket.key)
 
-            return Results(self.specials, data,
-                            resp.aggregations.total.value,
-                            resp.took)
+            return data
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
