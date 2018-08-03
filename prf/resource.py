@@ -203,10 +203,15 @@ class Resource(object):
         :return: ResourceMap object
         """
 
-        parent = self
-
         prefix_from_member, _, member_name = member_name.rpartition('/')
         prefix = kwargs.pop('prefix', prefix_from_member)
+
+        #if there was resource declared that matches with this prefix set it to be a parent
+        parent = self.resource_map.get(prefix)
+        if parent:
+            prefix = None
+        else:
+            parent = self
 
         kwargs.setdefault('id_name', DEFAULT_ID_NAME)
 

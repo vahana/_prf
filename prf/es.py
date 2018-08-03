@@ -75,9 +75,6 @@ def prep_sort(specials, nested=None):
     return new_sort
 
 
-# def flatten_buckets(buckets):
-
-
 class ESDoc(object):
     _meta_fields = ['_index', '_type', '_score', '_id']
 
