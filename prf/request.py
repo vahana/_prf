@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import requests
 from urllib.parse import urlparse, urljoin
@@ -151,6 +152,9 @@ class Request(object):
         url = self.prepare_url(path, params)
         log.debug('%s', url)
 
+        if self.delay:
+            time.sleep(self.delay)
+
         resp = self.session.get(url, **kw)
         if not resp.ok:
             return self.raise_or_log(resp)
@@ -163,6 +167,7 @@ class Request(object):
         kwargs={}
         if self.delay:
             kwargs['delay'] = self.delay
+
         elif self.reqs_over_time:
             kwargs['reqs_over_time'] = self.reqs_over_time
 
@@ -200,6 +205,9 @@ class Request(object):
         if self.is_json(data):
             data = json_dumps(data)
 
+        if self.delay:
+            time.sleep(self.delay)
+
         resp = self.session.post(url, data=data, **kw)
         if not resp.ok:
             return self.raise_or_log(resp)
@@ -222,6 +230,9 @@ class Request(object):
         if self.is_json(data):
             data = json_dumps(data)
 
+        if self.delay:
+            time.sleep(self.delay)
+
         resp = self.session.put(url, data=data, **kw)
         if not resp.ok:
             return self.raise_or_log(resp)
@@ -238,6 +249,9 @@ class Request(object):
     def delete(self, path='', **kw):
         url = self.prepare_url(path)
         log.debug(url)
+
+        if self.delay:
+            time.sleep(self.delay)
 
         resp = self.session.delete(url, **kw)
         if not resp.ok:
