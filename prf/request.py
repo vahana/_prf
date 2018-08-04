@@ -47,7 +47,8 @@ class Request(object):
     def __init__(self, base_url='', cache_options=None,
                       _raise=False,
                       delay=0, reqs_over_time = None,
-                      cookies=None, headers=None):
+                      cookies=None, headers=None,
+                      max_retries=None):
 
         parsed_url = urllib3.util.parse_url(base_url)
 
@@ -76,8 +77,8 @@ class Request(object):
         else:
             self.session = requests.Session()
 
-        self.session.mount('http://', PRFHTTPAdapter())
-        self.session.mount('https://', PRFHTTPAdapter())
+        self.session.mount('http://', PRFHTTPAdapter(max_retries=max_retries))
+        self.session.mount('https://', PRFHTTPAdapter(max_retries=max_retries))
 
         self.session.headers['content-type'] =  'application/json'
 
