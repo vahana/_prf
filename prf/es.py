@@ -17,7 +17,7 @@ from prf.utils import dictset, prep_params, process_fields, split_strip, pager, 
 log = logging.getLogger(__name__)
 
 OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in', 'all',
-             'startswith', 'exists', 'range', 'geobb']
+             'startswith', 'exists', 'range', 'geobb', 'size']
 
 PRECISION_THRESHOLD = 40000
 DEFAULT_AGGS_LIMIT = 20
@@ -75,23 +75,12 @@ def prep_sort(specials, nested=None):
     return new_sort
 
 
-class ESDoc(object):
-    _meta_fields = ['_index', '_type', '_score', '_id']
-
-    def __init__(self, data, specials):
-        self.data = dictset(data)
-        self._meta = self.data.pop_many(self._meta_fields)
-        if '_show_meta' in specials:
-            self.data['_meta'] = self._meta
-
-    def to_dict(self, fields=None):
-        return self.data.extract(fields)
-
-    def __getattr__(self, key):
-        if key in self.data:
-            return self.data[key]
-
-        raise AttributeError()
+class ESDoc(slovar):
+    def __init__(self, data={}, specials={}):
+        super(slovar, self).__init__(data)
+        # self._meta = slovar(data).pop_many(['_index', '_type', '_score', '_id'])
+        # if '_show_meta' in specials:
+        #     self['_meta'] = self._meta
 
 
 class Results(list):
@@ -202,7 +191,7 @@ class Aggregator(object):
             'size': self.get_size(),
         }
 
-        field, _ = ES.dot_key(self.specials._distinct)
+        field, _ = ES.process_key(self.specials._distinct)
 
         if self.specials._sort and self.specials._sort[0].startswith('-'):
             order = { "_term" : "desc" }
@@ -251,7 +240,7 @@ class Aggregator(object):
 
         _field.params['size'] = self.get_size()
         _field.bucket_name = field
-        _field.field, _ = ES.dot_key(field)
+        _field.field, _ = ES.process_key(field)
         _field.op_type = 'terms'
 
         if '__as__' in field:
@@ -291,12 +280,24 @@ class ES(object):
         return self
 
     @classmethod
-    def dot_key(cls, key, suffix=''):
-        _key, div, op = key.rpartition('__')
-        if div and op in OPERATORS:
-            key = _key
-        key = key.replace('__', '.')
-        return ('%s.%s' % (key, suffix) if suffix else key), (op if op in OPERATORS else '')
+    def process_key(cls, key, suffix=''):
+        ops = []
+        key_parts = []
+
+        for each in key.split('__'):
+            if each in OPERATORS:
+                ops.append(each)
+            else:
+                key_parts.append(each)
+
+
+        return '.'.join(key_parts), ops
+
+        # _key, div, op = key.rpartition('__')
+        # if div and op in OPERATORS:
+        #     key = _key
+        # key = key.replace('__', '.')
+        # return ('%s.%s' % (key, suffix) if suffix else key), (op if op in OPERATORS else '')
 
     @classmethod
     def process_hits(cls, hits):
@@ -400,7 +401,9 @@ class ES(object):
             if isinstance(val, str) and ',' in val:
                 val = _params.aslist(key)
 
-            key, op = self.dot_key(key)
+            key, ops = self.process_key(key)
+            op = ops[0] if len(ops) > 1 else ops
+
             root_key = key.split('.')[0]
 
             _filter = None
