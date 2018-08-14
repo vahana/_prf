@@ -281,23 +281,11 @@ class ES(object):
 
     @classmethod
     def process_key(cls, key, suffix=''):
-        ops = []
-        key_parts = []
-
-        for each in key.split('__'):
-            if each in OPERATORS:
-                ops.append(each)
-            else:
-                key_parts.append(each)
-
-
-        return '.'.join(key_parts), ops
-
-        # _key, div, op = key.rpartition('__')
-        # if div and op in OPERATORS:
-        #     key = _key
-        # key = key.replace('__', '.')
-        # return ('%s.%s' % (key, suffix) if suffix else key), (op if op in OPERATORS else '')
+        _key, div, op = key.rpartition('__')
+        if div and op in OPERATORS:
+            key = _key
+        key = key.replace('__', '.')
+        return ('%s.%s' % (key, suffix) if suffix else key), (op if op in OPERATORS else '')
 
     @classmethod
     def process_hits(cls, hits):
@@ -401,9 +389,7 @@ class ES(object):
             if isinstance(val, str) and ',' in val:
                 val = _params.aslist(key)
 
-            key, ops = self.process_key(key)
-            op = ops[0] if len(ops) > 1 else ops
-
+            key, op = self.process_key(key)
             root_key = key.split('.')[0]
 
             _filter = None
