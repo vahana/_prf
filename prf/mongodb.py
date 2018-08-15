@@ -651,6 +651,10 @@ class BaseMixin(object):
             defaults.update(params)
             return (cls(**defaults).save(), True)
 
+    @classmethod
+    def get_total(cls, **params):
+        return cls.get_collection(_count=1, **params)
+
     def repr_parts(self):
         return []
 

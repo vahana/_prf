@@ -75,17 +75,9 @@ def prep_sort(specials, nested=None):
     return new_sort
 
 
-class ESDoc(slovar):
-    def __init__(self, data={}, specials={}):
-        super(slovar, self).__init__(data)
-        # self._meta = slovar(data).pop_many(['_index', '_type', '_score', '_id'])
-        # if '_show_meta' in specials:
-        #     self['_meta'] = self._meta
-
-
 class Results(list):
     def __init__(self, specials, data, total, took):
-        list.__init__(self, [ESDoc(each, specials) for each in data])
+        list.__init__(self, [slovar(each) for each in data])
         self.specials = specials
         self.total = total
         self.took = took
@@ -550,6 +542,9 @@ class ES(object):
             return results[0]
         else:
             return None
+
+    def get_total(self, **params):
+        return self.get_collection(_count=1, **params)
 
     def save(self, obj, data):
         data = dictset(data).unflat()
