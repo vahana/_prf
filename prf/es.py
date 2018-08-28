@@ -90,7 +90,7 @@ class ESDoc(object):
 
 class Results(list):
     def __init__(self, index, doc_type, specials, data, total, took):
-        list.__init__(self, [ESDoc(index, doc_type, each) for each in data])
+        list.__init__(self, [slovar(each) for each in data])
         self.specials = specials
         self.total = total
         self.took = took
