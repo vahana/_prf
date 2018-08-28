@@ -69,7 +69,6 @@ def drop_collections(name_prefix):
             log.warning('dropping `%s` collection' % name)
             db.drop_collection(name)
 
-
 def includeme(config):
     mongo_connect(config.prf_settings())
 
@@ -458,6 +457,7 @@ class Aggregator(object):
 class BaseMixin(object):
 
     Q = mongo.Q
+    _pk_field = 'id'
 
     @classmethod
     def process_empty_op(cls, name, value):
@@ -661,8 +661,8 @@ class BaseMixin(object):
     def __repr__(self):
         parts = ['%s:' % self.__class__.__name__]
 
-        if hasattr(self, 'id'):
-            parts.append('id=%s' % self.id)
+        if hasattr(self, self._pk_field):
+            parts.append('%s=%s' % (self._pk_field, getattr(self, self._pk_field)))
 
         parts.extend(self.repr_parts())
         return '<%s>' % ', '.join(parts)
@@ -809,7 +809,6 @@ class BaseMixin(object):
             _params = process_pagination(start, count, collection)
             collection = cls.get_collection(**_params)
             yield collection
-
 
     @classmethod
     def unregister(cls):

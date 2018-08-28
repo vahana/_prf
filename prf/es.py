@@ -74,10 +74,23 @@ def prep_sort(specials, nested=None):
 
     return new_sort
 
+class ESDoc(object):
+    def __init__(self, index, doc_type, data):
+        self.data = slovar(data)
+        self.index = index
+        self.doc_type = doc_type
+
+    def to_dict(self, fields=[]):
+        return self.data.extract(fields)
+
+    def __repr__(self):
+        parts = ['%s:' % self.index]
+        return '<%s>' % ', '.join(parts)
+
 
 class Results(list):
-    def __init__(self, specials, data, total, took):
-        list.__init__(self, [slovar(each) for each in data])
+    def __init__(self, index, doc_type, specials, data, total, took):
+        list.__init__(self, [ESDoc(index, doc_type, each) for each in data])
         self.specials = specials
         self.total = total
         self.took = took
@@ -505,11 +518,11 @@ class ES(object):
                     if len(data) == specials._limit:
                         break
 
-                return Results(specials, data, s_.count(), 0)
+                return Results(self.index, self.doc_type, specials, data, s_.count(), 0)
 
             resp = s_.execute()
             data = self.process_hits(resp.hits.hits)
-            return Results(specials, data, resp.hits.total, resp.took)
+            return Results(self.index, self.doc_type, specials, data, resp.hits.total, resp.took)
 
         finally:
             log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(s_.to_dict()))
