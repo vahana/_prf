@@ -68,9 +68,9 @@ def camel2snake(name):
 
 
 def prep_params(params):
-    from prf.utils import dictset
+    from slovar import slovar
 
-    specials = dictset(
+    specials = slovar(
         _sort=None,
         _fields=None,
         _count=None,
@@ -127,9 +127,8 @@ def prep_params(params):
 
 
 def typecast(params):
-    from prf.utils import dictset
-
-    params = dictset(params)
+    from slovar import slovar
+    params = slovar(params)
 
     list_ops = ('in', 'nin', 'all')
     int_ops = ('exists', 'size', 'max_distance', 'min_distance', 'empty')
@@ -384,8 +383,8 @@ def ld2dd(ld, key):
 
 def qs2dict(qs):
     from urllib.parse import parse_qsl
-    from prf.utils import dictset
-    return dictset(parse_qsl(qs,keep_blank_values=True))
+    from slovar import slovar
+    return slovar(parse_qsl(qs,keep_blank_values=True))
 
 
 def TODAY():

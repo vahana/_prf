@@ -11,7 +11,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import event
 
-from prf.utils import dictset, split_strip, process_limit, prep_params,\
+from prf.utils import split_strip, process_limit, prep_params,\
                       maybe_dotted
 import prf.exc
 

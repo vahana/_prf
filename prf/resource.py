@@ -1,7 +1,7 @@
 import os
 import logging
 import types
-from prf.utils import snake2camel, maybe_dotted, dictset
+from prf.utils import snake2camel, maybe_dotted
 
 log = logging.getLogger(__name__)
 

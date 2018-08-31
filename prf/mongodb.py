@@ -8,8 +8,9 @@ from bson import ObjectId, DBRef
 import mongoengine as mongo
 from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
 
+from slovar import slovar
 import prf.exc
-from prf.utils import dictset, split_strip, pager,\
+from prf.utils import split_strip, pager,\
                       to_dunders, process_fields, qs2dict, prep_params, typecast
 from prf.renderers import _JSONEncoder
 import collections
@@ -41,7 +42,7 @@ class TopLevelDocumentMetaclass(TLDMetaclass):
 
     def __new__(cls, name, bases, attrs):
         super_new = super(TopLevelDocumentMetaclass, cls)
-        attrs_meta = dictset(attrs.get('meta', {}))
+        attrs_meta = slovar(attrs.get('meta', {}))
         new_klass = super_new.__new__(cls, name, bases, attrs)
 
         if attrs_meta.pop('enable_signals', False):
@@ -87,7 +88,7 @@ Field2Default = {
 
 
 def mongo_connect(settings):
-    settings = dictset(settings)
+    settings = slovar(settings)
     db = settings['mongodb.db']
     host = settings.get('mongodb.host', 'localhost')
     port = settings.asint('mongodb.port', default=27017)
@@ -144,7 +145,7 @@ class Aggregator(object):
     def __init__(self, query, specials):
         self._agg = []
         self.specials = specials
-        self.match_query = dictset(query)
+        self.match_query = slovar(query)
         self.accumulators = []
 
         if specials.get('_group'):
@@ -183,20 +184,20 @@ class Aggregator(object):
         _join_as = self.specials.asstr('_join_as', default=_join)
         self.specials.aslist('_join_fields', default=[])
 
-        self.after_match = dictset()
+        self.after_match = slovar()
         for key,val in list(self.match_query.items()):
             if key == _join_as or key.startswith('%s.' % _join_as):
                 self.after_match[key]=val
                 self.match_query.pop(key)
 
-        self._join_cond = typecast(dictset([e.split(':') for e in
+        self._join_cond = typecast(slovar([e.split(':') for e in
             self.specials.aslist('_join_cond', default=[])]))
 
         self.specials._join = _join
         self.specials.aslist('_join_on', default=[_join_on, _join_on])
 
     def setup_unwind(self):
-        self.post_match = dictset()
+        self.post_match = slovar()
 
         for name, val in list(self.match_query.items()):
             if name.startswith(self.specials._unwind):
@@ -441,7 +442,7 @@ class Aggregator(object):
     def aggregate(self, collection):
         log.debug('AGG: %s', pformat(self._agg))
         try:
-            return [dictset(e) for e in
+            return [slovar(e) for e in
                     collection.aggregate(self._agg, cursor={}, allowDiskUse=True)]
         except PyMongoError as e:
             raise prf.exc.HTTPBadRequest(e)
@@ -526,7 +527,7 @@ class BaseMixin(object):
             dset = dset[specials._start: specials._end]
 
         if specials._fields:
-            dset = [dictset({specials._fields[0]: e}) for e in dset]
+            dset = [slovar({specials._fields[0]: e}) for e in dset]
 
         return dset
 
@@ -555,7 +556,7 @@ class BaseMixin(object):
 
     @classmethod
     def get_collection(cls, _q=None, **params):
-        params = dictset(params)
+        params = slovar(params)
         log.debug('IN: cls: %s, params: %.512s', cls.__name__, params)
         params, specials = prep_params(params)
 
@@ -684,13 +685,13 @@ class BaseMixin(object):
         return self
 
     def to_dict(self, fields=None):
-        _d = dictset(self.to_mongo().to_dict())
+        _d = slovar(self.to_mongo().to_dict())
 
         if '_id' in _d:
             _d['id']=_d.pop('_id')
 
         if fields:
-            _d = dictset(_d).extract(fields)
+            _d = slovar(_d).extract(fields)
 
         return _d
 
@@ -713,25 +714,25 @@ class BaseMixin(object):
 
         def to_dict(_d, fields):
             if isinstance(_d, dict):
-                return dictset(_d).subset(fields)
+                return slovar(_d).subset(fields)
             else:
                 return _d.to_dict(fields=fields)
 
-        params = dictset(params)
+        params = slovar(params)
         _fields = params.aslist('_fields', default=[])
 
         if len(_fields) == 1: #if one field, assign the value directly
-            _d = dictset()
+            _d = slovar()
             for e in cls.get_collection(**params):
                 _d[e[keyname]] = getattr(e, _fields[0])
             return _d
         else:
-            return dictset([[e[keyname], to_dict(e, _fields)]
+            return slovar([[e[keyname], to_dict(e, _fields)]
                         for e in cls.get_collection(**params)])
 
     @classmethod
     def to_distincts(cls, fields, reverse=False):
-        _d = dictset()
+        _d = slovar()
         fields = split_strip(fields)
         for fld in fields:
             _d[fld] = sorted(cls.objects.distinct(fld), reverse=reverse)
@@ -758,7 +759,7 @@ class BaseMixin(object):
 
     @classmethod
     def get_collection_paged(cls, page_size, **params):
-        params = dictset(params or {})
+        params = slovar(params or {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
         pager_field= params.pop('_pager_field', None)

@@ -8,11 +8,13 @@ import uuid
 from pyramid.request import Request
 from pyramid.response import Response
 
+from slovar import slovar
+
 import prf.exc
-from prf.utils import dictset, json_dumps, urlencode
+from prf.utils import json_dumps, urlencode
 from prf.serializer import DynamicSchema
 from prf import resource
-from prf.utils import process_fields, dkdict, typecast
+from prf.utils import process_fields, typecast
 
 log = logging.getLogger(__name__)
 
@@ -125,10 +127,10 @@ class BaseView(object):
 
     @_params.setter
     def _params(self, val):
-        if isinstance(val, dkdict):
+        if isinstance(val, slovar):
             self.__params = val
         else:
-            self.__params = dkdict(val)
+            self.__params = slovar(val)
 
     def set_renderer(self):
         # no accept headers, use default
@@ -148,7 +150,7 @@ class BaseView(object):
     def process_params(self, request):
         ctype = request.content_type
 
-        _params = dictset(request.params.mixed())
+        _params = slovar(request.params.mixed())
 
         if 'application/json' in ctype:
             if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
@@ -159,7 +161,7 @@ class BaseView(object):
                         "Expecting JSON. Received: '%s'. Request: %s %s"
                             % (request.body, request.method, request.url))
 
-        _params = dkdict(typecast(_params))
+        _params = slovar(typecast(_params))
 
         if request.method == 'GET':
             settings = self.get_settings(request)
@@ -232,7 +234,7 @@ class BaseView(object):
         fields = self._params.get('_fields')
 
         def process_dict(d_):
-            d_ = dictset(d_).extract(fields)
+            d_ = slovar(d_).extract(fields)
             if self._params.asbool('_pop_empty', default=False):
                 d_ = d_.flat(keep_lists=True).pop_by_values([[], {}, '']).unflat()
             return d_
@@ -248,6 +250,8 @@ class BaseView(object):
 
         if isinstance(obj, dict):
             _d = process_dict(obj)
+            if self._params.get('_flat'):
+                _d = _d.flat()
             return _d, _total or len(_d)
 
         elif isinstance(obj, list):
@@ -390,7 +394,7 @@ class BaseView(object):
             return collection
 
     def get_settings(self, request):
-        return dictset(request.registry.settings)
+        return slovar(request.registry.settings)
 
 class NoOp(BaseView):
 

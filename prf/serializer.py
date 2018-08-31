@@ -1,6 +1,7 @@
 import uuid
 from marshmallow import Schema, fields
-from prf.utils import dictset
+
+from slovar import slovar
 import prf.exc
 
 
@@ -32,7 +33,7 @@ class DynamicSchema(object):
 
         def to_dict(obj):
             if isinstance(obj, dict):
-                d_ = dictset(obj).extract(self.context.get('fields'))
+                d_ = slovar(obj).extract(self.context.get('fields'))
             if hasattr(obj, 'to_dict'):
                 d_ = obj.to_dict(self.context.get('fields'))
             else:
@@ -50,7 +51,7 @@ class DynamicSchema(object):
             else:
                 objs = to_dict(objs)
 
-            return dictset(data=objs)
+            return slovar(data=objs)
         except AttributeError as e:
             raise prf.exc.HTTPBadRequest('%s can not be serialized: %s.' %\
                          ('Collection' if self.many else 'Resource', e))

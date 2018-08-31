@@ -1,8 +1,9 @@
 import pytest
 from datetime import datetime
+from slovar import slovar
+
 from prf.utils.utils import *
 from prf.utils import process_fields
-from prf import dictset
 
 class TestUtils(object):
 
@@ -87,9 +88,9 @@ class TestUtils(object):
             '_where'
         ]
 
-        pp, sp = prep_params(dictset(_limit=1))
+        pp, sp = prep_params(slovar(_limit=1))
         pp, sp = prep_params(
-            dictset({
+            slovar({
                 'a':'1',
                 'b':2,
                 'c.c':3,

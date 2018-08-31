@@ -1,8 +1,8 @@
 import unittest
+from slovar import slovar
 
 from prf.view import BaseView
 from prf.request import PRFRequest
-from prf.utils import dictset, dkdict
 from prf.tests.prf_testcase import PrfTestCase
 
 
@@ -12,7 +12,7 @@ class TestView(PrfTestCase):
         req = testing.DummyRequest(path=url, params=params)
         req.context = testing.DummyResource()
         req.content_type=mime
-        req.params = dictset({'mixed': lambda: params})
+        req.params = slovar({'mixed': lambda: params})
         req.accept = [mime]
         req.method = method
 
@@ -28,7 +28,7 @@ class TestView(PrfTestCase):
     def test_pop_empty_model(self):
         request = self.request(params={'_pop_empty': 1})
         view = BaseView({}, request)
-        d = dictset(a=1, b=[], c={'d': 2, 'e': ''})
+        d = slovar(a=1, b=[], c={'d': 2, 'e': ''})
         result = view._process(d, False)
         assert result['data'] == {'a': 1, 'c': {'d': 2}}
 
@@ -41,7 +41,7 @@ class TestView(PrfTestCase):
     def test_no_pop_empty_model(self):
         request = self.request()
         view = BaseView({}, request)
-        d = dictset(a=1, b=[], c={'d': 2, 'e': ''})
+        d = slovar(a=1, b=[], c={'d': 2, 'e': ''})
         result = view._process(d, False)
         assert result['data'] == {'a': 1, 'b': [], 'c': {'d': 2, 'e': ''}}
 
@@ -50,10 +50,10 @@ class TestView(PrfTestCase):
 
         request = self.request(params={'a':1})
         view = BaseView({}, request)
-        assert type(view._params) == dkdict
+        assert type(view._params) == slovar
 
         view._params = {'b':1}
-        assert type(view._params) == dkdict
+        assert type(view._params) == slovar
 
         with pytest.raises(ValueError):
             view._params = 'whatever the fuck I want'

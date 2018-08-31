@@ -12,7 +12,7 @@ from elasticsearch_dsl import aggs as AGGS
 
 from slovar import slovar
 import prf
-from prf.utils import dictset, prep_params, process_fields, split_strip, pager, chunks
+from prf.utils import prep_params, process_fields, split_strip, pager, chunks
 
 log = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ MAX_RESULT_WINDOW = 10000
 
 
 def includeme(config):
-    Settings = dictset(config.registry.settings)
+    Settings = slovar(config.registry.settings)
     ES.setup(Settings)
     config.add_error_view(ElasticsearchException, error='%128s', error_attr='args')
 
@@ -76,29 +76,34 @@ def prep_sort(specials, nested=None):
 
 
 class ESDoc(object):
-    def __init__(self, index, doc_type, data):
-        self.data = slovar(data)
-        self.index = index
-        self.doc_type = doc_type
-
-    def to_dict(self, fields=[]):
-        return self.data.extract(fields)
+    def __init__(self, data, index, doc_type):
+        self._data = slovar(data)
+        self._index = index
+        self._doc_type = doc_type
 
     def __repr__(self):
-        parts = ['%s:' % self.index]
+        parts = ['%s:' % self._index]
         return '<%s>' % ', '.join(parts)
 
     def __getattr__(self, key):
-        if key in self.data:
-            return self.data[key]
+        if key in self._data:
+            return self._data[key]
 
-        raise AttributeError()
+        super().__getattr__(key)
+
+    def __setattr__(self, key, val):
+        if key in ['_data', '_index', '_doc_type']:
+            super().__setattr__(key, val)
+        else:
+            self._data[key] = val
+
+    def to_dict(self, fields=None):
+        return self._data.extract(fields)
 
 
 class Results(list):
     def __init__(self, index, doc_type, specials, data, total, took):
-        list.__init__(self, [ESDoc(index, doc_type, each) for each in data])
-        # list.__init__(self, [slovar(each) for each in data])
+        list.__init__(self, [ESDoc(each, index=index, doc_type=doc_type) for each in data])
         self.specials = specials
         self.total = total
         self.took = took
@@ -182,11 +187,11 @@ class Aggregator(object):
 
         try:
             resp = self.search_obj.execute()
-            aggs = dictset(resp.aggregations._d_)
+            aggs = slovar(resp.aggregations._d_)
             hits = ES.process_hits(resp.hits.hits)
 
-            data = dictset(
-                    aggs = dictset(resp.aggregations._d_),
+            data = slovar(
+                    aggs = slovar(resp.aggregations._d_),
                     hits = hits
                 )
 
@@ -248,8 +253,8 @@ class Aggregator(object):
             raise prf.exc.HTTPBadRequest('`%s` results: %s' % (total, msg))
 
     def process_field(self, field):
-        _field = dictset()
-        _field.params = dictset()
+        _field = slovar()
+        _field.params = slovar()
 
         _field.params['size'] = self.get_size()
         _field.bucket_name = field
@@ -304,7 +309,7 @@ class ES(object):
     def process_hits(cls, hits):
         data = []
         for each in hits:
-            _d = dictset(each['_source'])
+            _d = slovar(each['_source'])
             _d = _d.update({
                 '_score':each['_score'],
                 '_type':each['_type'],
@@ -344,6 +349,9 @@ class ES(object):
     def __init__(self, name):
         self.index, _, self.doc_type = name.partition('/')
 
+    def get_meta(self):
+        return ES.api.indices.get_mapping(self.index, self.doc_type)
+
     def drop_collection(self):
         ES.api.indices.delete(self.index, ignore=[400, 404])
 
@@ -351,7 +359,7 @@ class ES(object):
         pass
 
     def get_collection(self, **params):
-        params = dictset(params)
+        params = slovar(params)
         log.debug('(ES) IN: %s, params: %s', self.index, pformat(params))
 
         _params, specials = prep_params(params)
@@ -536,7 +544,7 @@ class ES(object):
             log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(s_.to_dict()))
 
     def get_collection_paged(self, page_size, **params):
-        params = dictset(params or {})
+        params = slovar(params or {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
 
@@ -565,10 +573,11 @@ class ES(object):
             return None
 
     def get_total(self, **params):
+        params.setdefault('_limit', 1)
         return self.get_collection(_count=1, **params)
 
     def save(self, obj, data):
-        data = dictset(data).unflat()
+        data = slovar(data).unflat()
         return ES.api.update(
             index = obj._meta._index,
             doc_type = obj._meta._type,

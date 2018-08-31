@@ -1,4 +1,3 @@
-from prf.utils.dictset import dictset, dkdict
 from slovar import process_fields
 from prf.utils.utils import (JSONEncoder, json_dumps,
                              process_limit, snake2camel, camel2snake,

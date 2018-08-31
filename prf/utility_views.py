@@ -2,9 +2,10 @@ import logging
 from pyramid.view import view_config
 from pyramid.security import remember, forget, NO_PERMISSION_REQUIRED
 
+from slovar import slovar
+
 import prf
 from prf.view import BaseView
-from prf.utils import dictset
 
 log = logging.getLogger(__name__)
 
@@ -83,14 +84,15 @@ class SettingsView(BaseView):
         super(SettingsView, self).__init__(*arg, **kw)
 
         SettingsView.settings = SettingsView.settings \
-            or dictset(self.request.registry.settings)
+            or slovar(self.request.registry.settings)
         self.__orig = self.settings.copy()
+        self._params.setdefault('_flat', 1)
 
     def index(self):
-        return dict(self.settings)
+        return slovar(self.settings).extract(self._params.get('_fields'))
 
     def show(self, id):
-        return self.settings[id]
+        return self.settings.extract(id)
 
     def update(self, id):
         self.settings[id] = self._params['value']

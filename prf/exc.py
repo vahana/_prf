@@ -4,7 +4,7 @@ from datetime import datetime
 import uuid
 from pyramid import httpexceptions as http_exc
 
-from prf.utils import dictset, json_dumps
+from prf.utils import json_dumps
 import prf.exc
 
 logger = logging.getLogger(__name__)

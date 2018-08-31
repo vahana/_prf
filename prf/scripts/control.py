@@ -4,7 +4,7 @@ import subprocess
 from pyramid.paster import get_appsettings, setup_logging
 from pyramid.scripts.common import parse_vars
 
-from prf.utils import dictset
+from slovar import slovar
 from prf.scripts.common import package_name, pid_arg, config_uri
 
 
@@ -26,7 +26,7 @@ def start(argv=sys.argv):
     options = parse_vars(argv[2:])
 
     setup_logging(config)
-    settings = dictset(get_appsettings(config, pname, options=options))
+    settings = slovar(get_appsettings(config, pname, options=options))
 
     pargs = [config]
     if settings.asbool('daemonize', False):
@@ -40,7 +40,7 @@ def shell(argv=sys.argv):
     options = parse_vars(argv[2:])
 
     setup_logging(config)
-    settings = dictset(get_appsettings(config, pname, options=options))
+    settings = slovar(get_appsettings(config, pname, options=options))
     return call_pshell([config] + argv[2:])
 
 

@@ -2,7 +2,8 @@ import os
 import logging
 from pkg_resources import get_distribution
 
-from prf.utils import maybe_dotted, dictset, DKeyError, DValueError
+from slovar import slovar
+from prf.utils import maybe_dotted, DKeyError, DValueError
 
 APP_NAME = __package__.split('.')[0]
 _DIST = get_distribution(APP_NAME)
@@ -83,7 +84,7 @@ def set_default_acl(config, acl_model):
 
 def process_tweens(config):
     import pyramid
-    for tween in dictset(config.registry.settings).aslist('tweens', sep='\n', default=''):
+    for tween in slovar(config.registry.settings).aslist('tweens', sep='\n', default=''):
         config.add_tween(tween)
 
 
@@ -110,8 +111,8 @@ def prf_settings(config):
         except IndexError:
             raise ValueError('No config file provided')
 
-        return dictset(config.registry.settings).update_with(parse_vars(sys.argv[2:]))
-    return dictset(config.registry.settings)
+        return slovar(config.registry.settings).update_with(parse_vars(sys.argv[2:]))
+    return slovar(config.registry.settings)
 
 
 def includeme(config):

@@ -5,8 +5,9 @@ import pyramid.security as pysec
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 
+from slovar import slovar
 import prf.exc
-from prf.utils import dictset, maybe_dotted, DKeyError, DValueError
+from prf.utils import maybe_dotted, DKeyError, DValueError
 
 
 log = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ class BaseACL(object):
 
 
 def includeme(config):
-    settings = dictset(config.get_settings())
+    settings = slovar(config.get_settings())
     auth_params = settings.extract(['auth.hashlag',
                                    'auth.http_only:bool',
                                    'auth.callback',
