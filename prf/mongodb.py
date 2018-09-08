@@ -11,7 +11,7 @@ from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
 from slovar import slovar
 import prf.exc
 from prf.utils import split_strip, pager,\
-                      to_dunders, process_fields, qs2dict, prep_params, typecast
+                      to_dunders, process_fields, qs2dict, prep_params, typecast, Params
 from prf.renderers import _JSONEncoder
 import collections
 
@@ -458,7 +458,7 @@ class Aggregator(object):
 class BaseMixin(object):
 
     Q = mongo.Q
-    _pk_field = 'id'
+    _pk_field = ['id']
 
     @classmethod
     def process_empty_op(cls, name, value):
@@ -556,7 +556,7 @@ class BaseMixin(object):
 
     @classmethod
     def get_collection(cls, _q=None, **params):
-        params = slovar(params)
+        params = Params(params)
         log.debug('IN: cls: %s, params: %.512s', cls.__name__, params)
         params, specials = prep_params(params)
 
@@ -662,8 +662,8 @@ class BaseMixin(object):
     def __repr__(self):
         parts = ['%s:' % self.__class__.__name__]
 
-        if hasattr(self, self._pk_field):
-            parts.append('%s=%s' % (self._pk_field, getattr(self, self._pk_field)))
+        for pk in self._pk_field:
+            parts.append('%s=%s' % (pk, getattr(self, pk)))
 
         parts.extend(self.repr_parts())
         return '<%s>' % ', '.join(parts)

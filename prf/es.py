@@ -12,7 +12,9 @@ from elasticsearch_dsl import aggs as AGGS
 
 from slovar import slovar
 import prf
-from prf.utils import prep_params, process_fields, split_strip, pager, chunks
+from prf.utils import prep_params, process_fields, split_strip, pager, chunks, Params
+from prf.utils.errors import DValueError, DKeyError
+
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +91,7 @@ class ESDoc(object):
         if key in self._data:
             return self._data[key]
 
-        super().__getattr__(key)
+        raise DKeyError(key)
 
     def __setattr__(self, key, val):
         if key in ['_data', '_index', '_doc_type']:
@@ -346,6 +348,10 @@ class ES(object):
         except KeyError as e:
             raise Exception('Bad or missing settings for elasticsearch. %s' % e)
 
+    @classmethod
+    def get_collections(cls, match=''):
+        return ES.api.indices.get_alias(match, ignore_unavailable=True)
+
     def __init__(self, name):
         self.index, _, self.doc_type = name.partition('/')
 
@@ -359,7 +365,7 @@ class ES(object):
         pass
 
     def get_collection(self, **params):
-        params = slovar(params)
+        params = Params(params)
         log.debug('(ES) IN: %s, params: %s', self.index, pformat(params))
 
         _params, specials = prep_params(params)

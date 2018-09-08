@@ -13,10 +13,23 @@ from functools import partial
 
 from slovar.strings import split_strip, str2dt, str2rdt
 from slovar.utils import maybe_dotted
+from slovar import slovar
 
-from prf.utils.errors import DValueError
+from prf.utils.errors import DValueError, DKeyError
 
 log = logging.getLogger(__name__)
+
+
+class Params(slovar):
+    'Subclass of slovar that will raise D* exceptions'
+    def __init__(self, *arg, **kw):
+        super().__init__(*arg, **kw)
+
+    def bad_value_error_klass(self, e):
+        return DValueError(e)
+
+    def missing_key_error_klass(self, e):
+        return DKeyError(e)
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -68,9 +81,7 @@ def camel2snake(name):
 
 
 def prep_params(params):
-    from slovar import slovar
-
-    specials = slovar(
+    specials = Params(
         _sort=None,
         _fields=None,
         _count=None,
@@ -88,7 +99,7 @@ def prep_params(params):
         _unwind=None,
         _where=None,
         _or=None,
-        _type=None
+        _type=None,
     )
 
     specials._sort = params.aslist('_sort', default=[], pop=True)
@@ -127,14 +138,13 @@ def prep_params(params):
 
 
 def typecast(params):
-    from slovar import slovar
-    params = slovar(params)
+    params = Params(params)
 
     list_ops = ('in', 'nin', 'all')
     int_ops = ('exists', 'size', 'max_distance', 'min_distance', 'empty')
     geo_ops = ('near',)
     types = ('asbool', 'asint', 'asfloat', 'asstr', 'aslist',
-                'asset', 'asdt', 'asobj')
+                'asset', 'asdt', 'asobj', 'asdtob')
 
 
     for key in list(params.keys()):
@@ -383,7 +393,6 @@ def ld2dd(ld, key):
 
 def qs2dict(qs):
     from urllib.parse import parse_qsl
-    from slovar import slovar
     return slovar(parse_qsl(qs,keep_blank_values=True))
 
 

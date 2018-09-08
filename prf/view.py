@@ -14,7 +14,7 @@ import prf.exc
 from prf.utils import json_dumps, urlencode
 from prf.serializer import DynamicSchema
 from prf import resource
-from prf.utils import process_fields, typecast
+from prf.utils import process_fields, typecast, Params
 
 log = logging.getLogger(__name__)
 
@@ -127,10 +127,12 @@ class BaseView(object):
 
     @_params.setter
     def _params(self, val):
-        if isinstance(val, slovar):
-            self.__params = val
-        else:
-            self.__params = slovar(val)
+        self.__params = Params(val)
+
+        # if isinstance(val, slovar):
+        #     self.__params = val
+        # else:
+        #     self.__params = slovar(val)
 
     def set_renderer(self):
         # no accept headers, use default
@@ -150,7 +152,7 @@ class BaseView(object):
     def process_params(self, request):
         ctype = request.content_type
 
-        _params = slovar(request.params.mixed())
+        _params = Params(request.params.mixed())
 
         if 'application/json' in ctype:
             if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
@@ -161,7 +163,7 @@ class BaseView(object):
                         "Expecting JSON. Received: '%s'. Request: %s %s"
                             % (request.body, request.method, request.url))
 
-        _params = slovar(typecast(_params))
+        _params = Params(typecast(_params))
 
         if request.method == 'GET':
             settings = self.get_settings(request)
@@ -279,7 +281,7 @@ class BaseView(object):
             return data
 
         if not data:
-            return wrap2dict([], 0)
+            return wrap2dict(data, 0)
 
         if isinstance(data, (list, dict)):
             serialized, _total = self.process_builtins(data, many=many)
@@ -295,7 +297,6 @@ class BaseView(object):
 
     def _show(self, **kw):
         data = self._process(self.show(**kw), many=self.returns_many)
-
         if not data:
             if not self.returns_many:
                 if self.raise_not_found:
@@ -394,7 +395,7 @@ class BaseView(object):
             return collection
 
     def get_settings(self, request):
-        return slovar(request.registry.settings)
+        return Params(request.registry.settings)
 
 class NoOp(BaseView):
 

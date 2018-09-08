@@ -92,7 +92,7 @@ class SettingsView(BaseView):
         return slovar(self.settings).extract(self._params.get('_fields'))
 
     def show(self, id):
-        return self.settings.extract(id)
+        return self.settings.extract(id) or {}
 
     def update(self, id):
         self.settings[id] = self._params['value']
