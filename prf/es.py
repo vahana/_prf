@@ -91,7 +91,7 @@ class ESDoc(object):
         if key in self._data:
             return self._data[key]
 
-        raise DKeyError(key)
+        return super().__getattr__(key)
 
     def __setattr__(self, key, val):
         if key in ['_data', '_index', '_doc_types']:
