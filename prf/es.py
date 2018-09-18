@@ -78,13 +78,13 @@ def prep_sort(specials, nested=None):
 
 
 class ESDoc(object):
-    def __init__(self, data, index, doc_type):
+    def __init__(self, data, index, doc_types):
         self._data = slovar(data)
         self._index = index
-        self._doc_type = doc_type
+        self._doc_types = doc_types
 
     def __repr__(self):
-        parts = ['%s:' % self._index]
+        parts = ['_index: %s' % self._index, '_id: %s' % self._data._id]
         return '<%s>' % ', '.join(parts)
 
     def __getattr__(self, key):
@@ -94,7 +94,7 @@ class ESDoc(object):
         raise DKeyError(key)
 
     def __setattr__(self, key, val):
-        if key in ['_data', '_index', '_doc_type']:
+        if key in ['_data', '_index', '_doc_types']:
             super().__setattr__(key, val)
         else:
             self._data[key] = val
@@ -104,14 +104,15 @@ class ESDoc(object):
 
 
 class Results(list):
-    def __init__(self, index, doc_type, specials, data, total, took):
-        list.__init__(self, [ESDoc(each, index=index, doc_type=doc_type) for each in data])
+    def __init__(self, index, specials, data, total, took):
+        doc_types = ES.get_doc_types(index)
+        list.__init__(self, [ESDoc(each, index=index, doc_types=doc_types) for each in data])
         self.total = total
         self.specials = specials
         self._meta = slovar(
             total = total,
             took = took,
-            doc_type = doc_type,
+            doc_types = doc_types,
             index = index
         )
 
@@ -355,15 +356,19 @@ class ES(object):
 
     def __init__(self, name):
         self.index = name
-        self.doc_type = self.get_doc_types()
 
-    def get_doc_types(self):
-        meta = self.get_meta()
+    @classmethod
+    def get_doc_types(cls, index):
+        meta = cls.get_meta(index)
         if meta:
-            return list(meta[self.index]['mappings'].keys())
+            return list(meta[index]['mappings'].keys())
 
-    def get_meta(self, doc_type=None):
-        return ES.api.indices.get_mapping(self.index, doc_type, ignore_unavailable=True)
+    @classmethod
+    def get_meta(cls, index, doc_type=None):
+        #index can be an alias in which case get_meta fails b/c it tries to look up by index not actual index name
+        #should call into get_alias to get the actual index name first.
+        return None
+        # return ES.api.indices.get_mapping(index, doc_type, ignore_unavailable=True)
 
     def drop_collection(self):
         ES.api.indices.delete(self.index, ignore=[400, 404])
@@ -397,7 +402,7 @@ class ES(object):
         if specials._start > pagination_limit:
             raise prf.exc.HTTPBadRequest('Reached max pagination limit of `%s`' % pagination_limit)
 
-        s_ = Search(index=self.index, doc_type=self.doc_type)
+        s_ = Search(index=self.index)
 
         _ranges = []
         _filters = None
@@ -547,11 +552,11 @@ class ES(object):
                     if len(data) == specials._limit:
                         break
 
-                return Results(self.index, self.doc_type, specials, data, s_.count(), 0)
+                return Results(self.index, specials, data, s_.count(), 0)
 
             resp = s_.execute()
             data = self.process_hits(resp.hits.hits)
-            return Results(self.index, self.doc_type, specials, data, resp.hits.total, resp.took)
+            return Results(self.index, specials, data, resp.hits.total, resp.took)
 
         finally:
             log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(s_.to_dict()))
