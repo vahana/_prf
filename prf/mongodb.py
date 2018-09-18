@@ -70,6 +70,9 @@ def drop_collections(name_prefix):
             log.warning('dropping `%s` collection' % name)
             db.drop_collection(name)
 
+def drop_db(name):
+    return mongo.connect().drop_database(name)
+
 def includeme(config):
     mongo_connect(config.prf_settings())
 
@@ -663,7 +666,7 @@ class BaseMixin(object):
         parts = ['%s:' % self.__class__.__name__]
 
         for pk in self._pk_field:
-            parts.append('%s=%s' % (pk, getattr(self, pk)))
+            parts.append('%s=%s' % (pk, getattr(self, pk, None)))
 
         parts.extend(self.repr_parts())
         return '<%s>' % ', '.join(parts)

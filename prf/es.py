@@ -106,9 +106,14 @@ class ESDoc(object):
 class Results(list):
     def __init__(self, index, doc_type, specials, data, total, took):
         list.__init__(self, [ESDoc(each, index=index, doc_type=doc_type) for each in data])
-        self.specials = specials
         self.total = total
-        self.took = took
+        self.specials = specials
+        self._meta = slovar(
+            total = total,
+            took = took,
+            doc_type = doc_type,
+            index = index
+        )
 
 
 class Aggregator(object):
@@ -348,15 +353,17 @@ class ES(object):
         except KeyError as e:
             raise Exception('Bad or missing settings for elasticsearch. %s' % e)
 
-    @classmethod
-    def get_collections(cls, match=''):
-        return ES.api.indices.get_alias(match, ignore_unavailable=True)
-
     def __init__(self, name):
-        self.index, _, self.doc_type = name.partition('/')
+        self.index = name
+        self.doc_type = self.get_doc_types()
 
-    def get_meta(self):
-        return ES.api.indices.get_mapping(self.index, self.doc_type)
+    def get_doc_types(self):
+        meta = self.get_meta()
+        if meta:
+            return list(meta[self.index]['mappings'].keys())
+
+    def get_meta(self, doc_type=None):
+        return ES.api.indices.get_mapping(self.index, doc_type, ignore_unavailable=True)
 
     def drop_collection(self):
         ES.api.indices.delete(self.index, ignore=[400, 404])

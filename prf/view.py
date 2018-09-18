@@ -230,18 +230,26 @@ class BaseView(object):
         return serializer.dump(obj).data
 
     def process_builtins(self, obj, many):
-        if not isinstance(obj, (list, dict)):
-            return obj, len(obj)
 
-        fields = self._params.get('_fields')
+        def get_meta(meta, total):
+            if meta:
+                return meta
+            return slovar(total = total)
 
         def process_dict(d_):
             d_ = slovar(d_).extract(fields)
-            if self._params.asbool('_pop_empty', default=False):
-                d_ = d_.flat(keep_lists=True).pop_by_values([[], {}, '']).unflat()
+            if '_pop_empty' in self._params:
+                d_ = d_.pop_by_values([[], {}, ''])
             return d_
 
+
+        if not isinstance(obj, (list, dict)):
+            return obj, len(obj), None
+
+        fields = self._params.get('_fields')
+
         _total = getattr(obj, 'total', None)
+        _meta = getattr(obj, '_meta', None)
 
         if many and 'data' in obj:
             if 'total' in obj:
@@ -254,7 +262,7 @@ class BaseView(object):
             _d = process_dict(obj)
             if self._params.get('_flat'):
                 _d = _d.flat()
-            return _d, _total or len(_d)
+            return _d, _total or len(_d), _meta
 
         elif isinstance(obj, list):
             data = []
@@ -262,20 +270,25 @@ class BaseView(object):
                 if isinstance(each, dict):
                     each = process_dict(each)
                 elif hasattr(each, 'to_dict'):
-                    each = each.to_dict(fields)
+                    each = process_dict(each.to_dict(fields))
 
                 data.append(each)
             obj = data
-            return obj, _total or len(obj)
+            return obj, _total or len(data), _meta
 
     def _process(self, data, many):
-        def wrap2dict(data, total):
-            return {
+        def wrap2dict(data, total, meta=None):
+            wrapper = {
                 'total': total,
                 'count': len(data),
-                'data': data,
                 'query': self._params,
             }
+
+            if meta:
+                wrapper['_meta'] = meta
+
+            wrapper['data'] = data
+            return wrapper
 
         if '_count' in self._params:
             return data
@@ -283,13 +296,14 @@ class BaseView(object):
         if not data:
             return wrap2dict(data, 0)
 
+        _meta = slovar()
         if isinstance(data, (list, dict)):
-            serialized, _total = self.process_builtins(data, many=many)
+            serialized, _total, _meta = self.process_builtins(data, many=many)
         else:
             serialized = self.serialize(data, many=many)
             _total = getattr(data, '_total', len(serialized))
 
-        return wrap2dict(self.add_meta(serialized), _total)
+        return wrap2dict(self.add_meta(serialized), _total, _meta)
 
 
     def _index(self, **kw):

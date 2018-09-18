@@ -4,11 +4,18 @@ from datetime import datetime, date
 from slovar import slovar
 from slovar.strings import split_strip
 from prf.exc import HTTPBadRequest
+from prf.utils import maybe_dotted
 
 log = logging.getLogger(__name__)
 
-def dict2tab(data, fields=None, format_='csv', skip_headers=False):
+def default_processor(item):
+    return slovar(item).flat(keep_lists=0)
+
+def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=None):
     import tablib
+
+    if processor:
+        processor = maybe_dotted(processor, throw=True)
 
     def _pop(each, key):
         val = each.pop(key, '')
@@ -21,6 +28,8 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False):
     fields = fields or []
     data = data or []
 
+    processor = processor or default_processor
+
     for each in split_strip(fields):
         aa, _, bb = each.partition('__as__')
         name = (bb or aa).split(':')[0]
@@ -30,7 +39,8 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False):
     try:
         for each in data:
             row = []
-            each = slovar(each).flat(keep_lists=0)
+            each = processor(each)
+
             for col in headers:
                 row.append(_pop(each, col))
 
@@ -39,7 +49,7 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False):
         return getattr(tabdata, format_)
 
     except:
-        log.debug('Headers:%s, Fields:%s, Format:%s', headers, fields, format_)
+        log.ERROR('Headers:%s, Fields:%s, Format:%s\nData:%s', headers, fields, format_, each)
         raise HTTPBadRequest('dict2tab error: %r'%sys.exc_info()[1])
 
 
