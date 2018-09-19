@@ -84,7 +84,7 @@ class ESDoc(object):
         self._doc_types = doc_types
 
     def __repr__(self):
-        parts = ['_index: %s' % self._index, '_id: %s' % self._data._id]
+        parts = ['_index: %s' % self._index, '_id: %s' % self._data.get('_id', 'NA')]
         return '<%s>' % ', '.join(parts)
 
     def __getattr__(self, key):
@@ -361,14 +361,12 @@ class ES(object):
     def get_doc_types(cls, index):
         meta = cls.get_meta(index)
         if meta:
-            return list(meta[index]['mappings'].keys())
+            for vv in meta.values():
+                return list(vv['mappings'].keys())
 
     @classmethod
     def get_meta(cls, index, doc_type=None):
-        #index can be an alias in which case get_meta fails b/c it tries to look up by index not actual index name
-        #should call into get_alias to get the actual index name first.
-        return None
-        # return ES.api.indices.get_mapping(index, doc_type, ignore_unavailable=True)
+        return ES.api.indices.get_mapping(index, doc_type, ignore_unavailable=True)
 
     def drop_collection(self):
         ES.api.indices.delete(self.index, ignore=[400, 404])

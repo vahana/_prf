@@ -237,11 +237,10 @@ class BaseView(object):
             return slovar(total = total)
 
         def process_dict(d_):
-            d_ = slovar(d_).extract(fields)
+            d_ = slovar(d_)
             if '_pop_empty' in self._params:
                 d_ = d_.pop_by_values([[], {}, ''])
             return d_
-
 
         if not isinstance(obj, (list, dict)):
             return obj, len(obj), None
