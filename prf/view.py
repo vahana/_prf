@@ -293,7 +293,7 @@ class BaseView(object):
             return data
 
         if not data:
-            return wrap2dict(data, 0)
+            return wrap2dict([], 0)
 
         _meta = slovar()
         if isinstance(data, (list, dict)):
