@@ -12,7 +12,7 @@ from elasticsearch_dsl import aggs as AGGS
 
 from slovar import slovar
 import prf
-from prf.utils import prep_params, process_fields, split_strip, pager, chunks, Params
+from prf.utils import parse_specials, process_fields, split_strip, pager, chunks, Params
 from prf.utils.errors import DValueError, DKeyError
 
 
@@ -362,7 +362,9 @@ class ES(object):
         meta = cls.get_meta(index)
         if meta:
             for vv in meta.values():
-                return list(vv['mappings'].keys())
+                if not isinstance(vv, dict):
+                    continue
+                return list(vv.get('mappings', {}).keys())
 
     @classmethod
     def get_meta(cls, index, doc_type=None):
@@ -378,7 +380,7 @@ class ES(object):
         params = Params(params)
         log.debug('(ES) IN: %s, params: %s', self.index, pformat(params))
 
-        _params, specials = prep_params(params)
+        _params, specials = parse_specials(params)
 
         def prefixedQ(key, val):
             if not isinstance(val, list):
@@ -396,9 +398,10 @@ class ES(object):
 
             return items
 
-        pagination_limit = self.settings.asint('max_result_window', default=MAX_RESULT_WINDOW)
-        if specials._start > pagination_limit:
-            raise prf.exc.HTTPBadRequest('Reached max pagination limit of `%s`' % pagination_limit)
+        def check_pagination_limit():
+            pagination_limit = self.settings.asint('max_result_window', default=MAX_RESULT_WINDOW)
+            if specials._start > pagination_limit:
+                raise prf.exc.HTTPBadRequest('Reached max pagination limit of `%s`' % pagination_limit)
 
         s_ = Search(index=self.index)
 
@@ -519,6 +522,9 @@ class ES(object):
         if _filters:
             s_ = s_.filter(_filters)
 
+        if specials._count:
+            return s_.count()
+            
         if specials._sort:
             s_ = s_.sort(*prep_sort(specials, _nested))
 
@@ -534,9 +540,6 @@ class ES(object):
                            exclude = ['%s'%e for e in exclude])
 
         try:
-            if specials._count:
-                return s_.count()
-
             if specials._group:
                 return Aggregator(specials, s_, self.index).do_group()
 
@@ -551,6 +554,8 @@ class ES(object):
                         break
 
                 return Results(self.index, specials, data, s_.count(), 0)
+
+            check_pagination_limit()
 
             resp = s_.execute()
             data = self.process_hits(resp.hits.hits)

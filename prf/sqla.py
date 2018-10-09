@@ -11,7 +11,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import event
 
-from prf.utils import split_strip, process_limit, prep_params,\
+from prf.utils import split_strip, process_limit, parse_specials,\
                       maybe_dotted
 import prf.exc
 
@@ -203,12 +203,12 @@ class Base(object):
 
     @classmethod
     def objects(cls, **params):
-        params, specials = prep_params(params)
+        params, specials = parse_specials(params)
         return cls.Session().query(cls).filter_by(**params)
 
     @classmethod
     def get_collection(cls, *args, **params):
-        params, specials = prep_params(params)
+        params, specials = parse_specials(params)
         session = cls.Session()
 
         query = session.query(cls)
@@ -227,7 +227,7 @@ class Base(object):
 
     @classmethod
     def get_resource(cls, _raise=True, **params):
-        params, _ = prep_params(params)
+        params, _ = parse_specials(params)
 
         try:
             obj = cls.Session().query(cls).filter_by(**params).one()

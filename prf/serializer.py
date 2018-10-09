@@ -42,7 +42,7 @@ class DynamicSchema(object):
             if pop_empty:
                 d_ = d_.flat(keep_lists=True).pop_by_values([[], {}, '']).unflat()
             if flat:
-                d_ = d_.flat(keep_lists=0)
+                d_ = d_.flat(keep_lists=not flat=='all')
             return d_
 
         try:

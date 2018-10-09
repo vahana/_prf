@@ -248,7 +248,8 @@ class Request(object):
         return resp
 
     def delete(self, path='', **kw):
-        url = self.prepare_url(path)
+        params = kw.pop('params', {})
+        url = self.prepare_url(path, params)
         log.debug(url)
 
         if self.delay:

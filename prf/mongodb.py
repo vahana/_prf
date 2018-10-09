@@ -11,7 +11,7 @@ from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
 from slovar import slovar
 import prf.exc
 from prf.utils import split_strip, pager,\
-                      to_dunders, process_fields, qs2dict, prep_params, typecast, Params
+                      to_dunders, process_fields, qs2dict, parse_specials, typecast, Params
 from prf.renderers import _JSONEncoder
 import collections
 
@@ -561,7 +561,7 @@ class BaseMixin(object):
     def get_collection(cls, _q=None, **params):
         params = Params(params)
         log.debug('IN: cls: %s, params: %.512s', cls.__name__, params)
-        params, specials = prep_params(params)
+        params, specials = parse_specials(params)
 
         if isinstance(_q, str) or not _q:
             query_set = cls.objects

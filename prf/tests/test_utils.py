@@ -66,7 +66,7 @@ class TestUtils(object):
         assert snake2camel('a_b') == 'AB'
         assert snake2camel('aa_bb') == 'AaBb'
 
-    def test_prep_params(self):
+    def test_parse_specials(self):
         _specials = [
             '_asdict',
             '_count',
@@ -88,8 +88,8 @@ class TestUtils(object):
             '_where'
         ]
 
-        pp, sp = prep_params(slovar(_limit=1))
-        pp, sp = prep_params(
+        pp, sp = parse_specials(slovar(_limit=1))
+        pp, sp = parse_specials(
             slovar({
                 'a':'1',
                 'b':2,

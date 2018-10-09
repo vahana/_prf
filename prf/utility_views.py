@@ -118,6 +118,9 @@ class SettingsView(BaseView):
 
 
 class APIView(BaseView):
+    _default_params = {
+        '_limit': 20
+    }
 
     def _get_routes(self):
         root = list(self.request.registry['prf.root_resources'].values())[0]
@@ -130,7 +133,9 @@ class APIView(BaseView):
 
 
 class AccountView(BaseView):
-
+    _default_params = {
+        '_limit': 20
+    }
     _user_model = None
 
     @classmethod

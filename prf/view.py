@@ -14,7 +14,7 @@ import prf.exc
 from prf.utils import json_dumps, urlencode
 from prf.serializer import DynamicSchema
 from prf import resource
-from prf.utils import process_fields, typecast, Params
+from prf.utils import process_fields, typecast, Params, parse_specials
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +95,9 @@ class BaseView(object):
     _acl = None
     _model = None
     _conf_keyword = '__CONFIRMATION'
+    _default_params = {
+        '_limit': 20
+    }
 
     def __init__(self, context, request):
         self.context = context
@@ -107,7 +110,8 @@ class BaseView(object):
                                     asbool('prf.raise_not_found',
                                             default=True)
 
-        self.__params = self.process_params(request)
+        self.__params, self._specials = self.process_params(request)
+
         # self.process_variables()
         self.set_renderer()
         self.init()
@@ -128,11 +132,6 @@ class BaseView(object):
     @_params.setter
     def _params(self, val):
         self.__params = Params(val)
-
-        # if isinstance(val, slovar):
-        #     self.__params = val
-        # else:
-        #     self.__params = slovar(val)
 
     def set_renderer(self):
         # no accept headers, use default
@@ -155,7 +154,7 @@ class BaseView(object):
         _params = Params(request.params.mixed())
 
         if 'application/json' in ctype:
-            if request.method in ['POST', 'PUT', 'PATCH', 'DELETE']:
+            if request.method in ['POST', 'PUT', 'PATCH']:
                 try:
                     _params.update(request.json)
                 except ValueError as e:
@@ -179,7 +178,10 @@ class BaseView(object):
                 raise prf.exc.HTTPRequestURITooLong('Max query string length is %s characters. Got %s' %
                                     (qs_limit, len(request.query_string)))
 
-        return _params
+
+        _params = _params.merge_with(self._default_params)
+        _, _specials = parse_specials(_params.copy())
+        return _params, _specials
 
     def process_variables(self):
         if self.request.method  == 'GET':
@@ -218,34 +220,20 @@ class BaseView(object):
         raise AttributeError(attr)
 
     def serialize(self, obj, many):
-        fields = self._params.get('_fields')
-        flat = self._params.asbool('_flat', default=False)
-        pop_empty = self._params.asbool('_pop_empty', default=False)
-
-        serializer = self._serializer(
-                            context={'request':self.request, 'fields':fields, 'flat': flat, 'pop_empty': pop_empty},
-                            many=many, strict=True,
-                            **process_fields(fields).subset('only,exclude'))
-
-        return serializer.dump(obj).data
-
-    def process_builtins(self, obj, many):
-
         def get_meta(meta, total):
             if meta:
                 return meta
             return slovar(total = total)
 
-        def process_dict(d_):
-            d_ = slovar(d_)
-            if '_pop_empty' in self._params:
-                d_ = d_.pop_by_values([[], {}, ''])
-            return d_
+        def process_dict(_d):
+            _d = slovar(_d)
+            if self._specials._pop_empty:
+                _d = _d.pop_by_values([[], {}, ''])
 
-        if not isinstance(obj, (list, dict)):
-            return obj, len(obj), None
+            if self._specials._flat:
+                _d = _d.flat(keep_lists= not self._specials._flat=='all')
 
-        fields = self._params.get('_fields')
+            return _d.extract(self._specials._fields)
 
         _total = getattr(obj, 'total', None)
         _meta = getattr(obj, '_meta', None)
@@ -259,8 +247,6 @@ class BaseView(object):
 
         if isinstance(obj, dict):
             _d = process_dict(obj)
-            if self._params.get('_flat'):
-                _d = _d.flat()
             return _d, _total or len(_d), _meta
 
         elif isinstance(obj, list):
@@ -269,11 +255,21 @@ class BaseView(object):
                 if isinstance(each, dict):
                     each = process_dict(each)
                 elif hasattr(each, 'to_dict'):
-                    each = process_dict(each.to_dict(fields))
-
+                    each = process_dict(each.to_dict())
                 data.append(each)
-            obj = data
-            return obj, _total or len(data), _meta
+
+            return data, _total or len(data), _meta
+
+        else:
+            if many:
+                if hasattr(obj, '_total'):
+                    _total = obj._total
+                data = [process_dict(each.to_dict()) for each in obj]
+            else:
+                data = process_dict(obj.to_dict())
+
+            return data, _total or len(data), _meta
+
 
     def _process(self, data, many):
         def wrap2dict(data, total, meta=None):
@@ -289,19 +285,13 @@ class BaseView(object):
             wrapper['data'] = data
             return wrapper
 
-        if '_count' in self._params:
+        if self._specials._count:
             return data
 
         if not data:
             return wrap2dict([], 0)
 
-        _meta = slovar()
-        if isinstance(data, (list, dict)):
-            serialized, _total, _meta = self.process_builtins(data, many=many)
-        else:
-            serialized = self.serialize(data, many=many)
-            _total = getattr(data, '_total', len(serialized))
-
+        serialized, _total, _meta = self.serialize(data, many=many)
         return wrap2dict(self.add_meta(serialized), _total, _meta)
 
 
@@ -334,7 +324,7 @@ class BaseView(object):
         else:
             return prf.exc.HTTPCreated(
                         location=self.request.current_route_url(obj.id),
-                        resource=self.serialize(obj, many=False))
+                        resource=self.serialize(obj, many=False)[0])
 
     def _update(self, **kw):
         return self.update(**kw) or prf.exc.HTTPOk()
@@ -367,7 +357,11 @@ class BaseView(object):
         return self.request.invoke_subrequest(req)
 
     def needs_confirmation(self):
-        return self._params.pop(self._conf_keyword, True)
+        if self._conf_keyword in self._params:
+            self._params.pop(self._conf_keyword)
+            return False
+
+        return True
 
     def delete_many(self, **kw):
         if not self._model_class:

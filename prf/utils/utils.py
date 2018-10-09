@@ -80,7 +80,7 @@ def camel2snake(name):
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-def prep_params(params):
+def parse_specials(params):
     specials = Params(
         _sort=None,
         _fields=None,
@@ -102,22 +102,35 @@ def prep_params(params):
         _type=None,
     )
 
-    specials._sort = params.aslist('_sort', default=[], pop=True)
-    specials._fields = params.aslist('_fields', default=[], pop=True)
+    def short(name):                
+        _n = name[:2]
+        if _n in params:
+            return _n
+        else: 
+            return name
+
+    specials._sort = params.aslist(short('_sort'), default=[], pop=True)
+    specials._fields = params.aslist(short('_fields'), default=[], pop=True)
     specials._flat = '_flat' in params; params.pop('_flat', False)
-    specials._count = '_count' in params; params.pop('_count', False)
+    specials._group = params.aslist(short('_group'), default=[], pop=True)
+
+    specials._count = short('_count') in params; params.pop(short('_count'), False)
+
     specials._explain = '_explain' in params; params.pop('_explain', False)
 
-    specials._start, specials._limit = process_limit(
+    if not specials._count:
+        specials._start, specials._limit = process_limit(
                                         params.pop('_start', None),
                                         params.pop('_page', None),
-                                        params.asint('_limit', pop=True))
+                                        params.asint(short('_limit'), pop=True))
 
-    specials._ix = params.asint('_ix', pop=True, allow_missing=True, _raise=False)
-    specials._end = specials._start+specials._limit\
+        specials._end = specials._start+specials._limit\
                          if specials._limit > -1 else None
 
+    specials._ix = params.asint('_ix', pop=True, allow_missing=True, _raise=False)
+
     specials._asdict = params.pop('_asdict', False)
+    specials._pop_empty = params.pop('_pop_empty', False)
 
     for each in list(params.keys()):
         if each.startswith('_'):
