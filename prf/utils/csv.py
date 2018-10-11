@@ -60,7 +60,7 @@ class TabRenderer(object):
     def __call__(self, value, system):
         request = system.get('request')
         response = request.response
-        params = system['view'](None, request).process_params(request)
+        _, specials = system['view'](None, request).process_params(request)
 
         if 'text/csv' in request.accept:
             response.content_type = 'text/csv'
@@ -71,5 +71,5 @@ class TabRenderer(object):
             raise HTTPBadRequest('Unsupported Accept Header `%s`' % request.accept)
 
         return dict2tab(value.get('data', []),
-                        fields=params.get('_fields'),
+                        fields=specials.get('_fields'),
                         format_=_format)

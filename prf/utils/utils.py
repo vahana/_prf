@@ -80,7 +80,7 @@ def camel2snake(name):
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
-def parse_specials(params):
+def parse_specials(orig_params):
     specials = Params(
         _sort=None,
         _fields=None,
@@ -102,12 +102,14 @@ def parse_specials(params):
         _type=None,
     )
 
-    def short(name):                
+    def short(name):
         _n = name[:2]
         if _n in params:
             return _n
-        else: 
+        else:
             return name
+
+    params = orig_params.copy()
 
     specials._sort = params.aslist(short('_sort'), default=[], pop=True)
     specials._fields = params.aslist(short('_fields'), default=[], pop=True)

@@ -524,7 +524,7 @@ class ES(object):
 
         if specials._count:
             return s_.count()
-            
+
         if specials._sort:
             s_ = s_.sort(*prep_sort(specials, _nested))
 

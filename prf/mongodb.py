@@ -613,7 +613,6 @@ class BaseMixin(object):
 
             if specials._fields:
                 only, exclude = process_fields(specials._fields).mget(['only', 'exclude'])
-
                 if only:
                     query_set = query_set.only(*only)
                 elif exclude:
