@@ -60,10 +60,10 @@ class BaseACL(object):
         item = self.get_item(key)
         if not item:
             return
-        item.__acl__ = self._item_acl(item)
 
+        item.__acl__ = self._item_acl(item)
         item.__parent__ = self
-        item.__name__ = str(key)
+        item.__name__ = item.id_str
         return item
 
 
