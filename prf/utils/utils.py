@@ -120,7 +120,7 @@ def parse_specials(orig_params):
 
     specials._explain = '_explain' in params; params.pop('_explain', False)
 
-    if not specials._count:
+    if not specials._count and params.get('_limit'):
         specials._start, specials._limit = process_limit(
                                         params.pop('_start', None),
                                         params.pop('_page', None),

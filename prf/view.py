@@ -178,8 +178,8 @@ class BaseView(object):
                 raise prf.exc.HTTPRequestURITooLong('Max query string length is %s characters. Got %s' %
                                     (qs_limit, len(request.query_string)))
 
+            _params = _params.merge_with(self._default_params)
 
-        _params = _params.merge_with(self._default_params)
         _, _specials = parse_specials(_params.copy())
         return _params, _specials
 

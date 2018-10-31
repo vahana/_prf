@@ -113,7 +113,7 @@ def mongodb_exc_tween(handler, registry):
             return handler(request)
 
         except mongo.NotUniqueError as e:
-            if 'E11000' in e.message:
+            if 'E11000' in str(e):
                 raise prf.exc.HTTPConflict(detail='Resource already exists.',
                             request=request, exception=e)
             else:
