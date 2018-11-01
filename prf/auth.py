@@ -63,7 +63,7 @@ class BaseACL(object):
 
         item.__acl__ = self._item_acl(item)
         item.__parent__ = self
-        item.__name__ = item.id_str
+        item.__name__ = str(item.id)
         return item
 
 

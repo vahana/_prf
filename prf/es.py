@@ -77,7 +77,7 @@ def prep_sort(specials, nested=None):
     return new_sort
 
 
-class ESDoc(object):
+class ESDoc:
     def __init__(self, data, index, doc_types):
         self._data = slovar(data)
         self._index = index
@@ -91,7 +91,7 @@ class ESDoc(object):
         if key in self._data:
             return self._data[key]
 
-        return super().__getattr__(key)
+        raise AttributeError(key)
 
     def __setattr__(self, key, val):
         if key in ['_data', '_index', '_doc_types']:
