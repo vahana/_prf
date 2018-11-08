@@ -412,6 +412,8 @@ class ES(object):
         specials.aslist('_nested', default=[])
 
         q_params = {'default_operator': 'and'}
+        q_params['lowercase_expanded_terms'] = 'false'
+
         q_fields = specials.aslist('_q_fields', default=[], pop=True)
         if q_fields:
             q_params['fields'] = q_fields
