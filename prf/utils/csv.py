@@ -17,7 +17,7 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
     if processor:
         processor = maybe_dotted(processor, throw=True)
 
-    def _pop(each, key):
+    def render(each, key):
         val = each.pop(key, '')
         if isinstance(val, (datetime, date)):
             return val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
@@ -42,7 +42,7 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
             each = processor(each)
 
             for col in headers:
-                row.append(_pop(each, col))
+                row.append(render(each, col))
 
             tabdata.append(row)
 
