@@ -588,12 +588,12 @@ class ES(object):
         except IndexError:
             raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.index, params))
 
-    def get(self, **params):
+    def get(self, _default=None, **params):
         results = self.get_collection(_limit=1, **params)
         if results:
             return results[0]
         else:
-            return None
+            return _default
 
     def get_total(self, **params):
         params.setdefault('_limit', 1)

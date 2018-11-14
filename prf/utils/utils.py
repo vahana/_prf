@@ -88,6 +88,7 @@ def parse_specials(orig_params):
         _start=None,
         _limit=None,
         _page=None,
+        _end=None,
         _frequencies=None,
         _group=None,
         _distinct=None,
@@ -425,3 +426,32 @@ def raise_or_log(_raise=False):
     else:
         import traceback
         traceback.print_exc()
+
+
+def join(cls1, cls2, join_on, require_match=False, join_as=None, **params):
+    '''
+        require_match = False is equivalent to SQL left join
+        require_match = True is equivalent to SQL left inner join
+    '''
+
+    for each in cls1.get_collection(**params):
+        _d1 = each.to_dict()
+
+        params2 = _d1.extract(join_on).flat()
+        if not params2 and require_match:
+            log.warning('empty query for cls2')
+            continue
+
+        params2.setdefault('_limit', 1)
+        matched = cls2.get_collection(**params2)
+
+        if not matched and not require_match and join_as:
+            matched = [slovar()] #attach empty slovar to results as join_as
+
+        for it in matched:
+            _d2 = it.to_dict()
+
+            if join_as:
+                _d2 = slovar({join_as:_d2})
+
+            yield _d1.update_with(_d2)
