@@ -87,6 +87,9 @@ class ESDoc:
         parts = ['_index: %s' % self._index, '_id: %s' % self._data.get('_id', 'NA')]
         return '<%s>' % ', '.join(parts)
 
+    def get(self, key):
+        return self._data.get(key)
+
     def __getattr__(self, key):
         if key in self._data:
             return self._data[key]
