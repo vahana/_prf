@@ -34,7 +34,8 @@ setup(
             'main = prf:main',
         ],
         'console_scripts':[
-            'prf.mongo_index = prf.scripts.mongo_index:run'
+            'prf.mongo_index = prf.scripts.mongo_index:run',
+            'prf.es = prf.scripts.es:run'
         ]
 
     },
