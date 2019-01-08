@@ -231,7 +231,10 @@ class BaseView(object):
                 _d = _d.pop_by_values([[], {}, ''])
 
             if self._specials._flat:
-                _d = _d.flat(keep_lists= not self._specials._flat=='all')
+                if '*' in self._specials._flat:
+                    _d = _d.flat()
+                else:
+                    _d = _d.flat(self._specials._flat)
 
             return _d.extract(self._specials._fields)
 

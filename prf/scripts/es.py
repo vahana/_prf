@@ -4,6 +4,7 @@ import logging
 from pprint import pprint as pp
 
 from prf.request import Request
+from prf.utils.utils import TODAY
 
 from argparse import ArgumentParser
 
@@ -19,6 +20,7 @@ class Script(object):
         parser.add_argument('--port', default=9200)
         parser.add_argument('-r', '--repo', default='es2.s3')
         parser.add_argument('-s', '--snapname')
+        parser.add_argument('--date-pref', action='store_true')
         parser.add_argument('-i', '--indices')
         parser.add_argument('--rename_to')
         parser.add_argument('-a', '--action', required=True, choices=ACTIONS)
@@ -48,8 +50,12 @@ class Script(object):
             self.js(getattr(self.api, method)(**kw))
 
     def snapshot(self):
+        snapname = self.args.snapname
+        if self.args.date_pref:
+            snapname = '%s_%s' % (TODAY(), self.args.snapname)
+
         params = dict(
-            path = '_snapshot/%s/%s' % (self.args.repo, self.args.snapname),
+            path = '_snapshot/%s/%s' % (self.args.repo, snapname),
             data = dict(
                 indices=self.args.indices
             )

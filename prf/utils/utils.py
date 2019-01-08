@@ -114,7 +114,7 @@ def parse_specials(orig_params):
 
     specials._sort = params.aslist(short('_sort'), default=[], pop=True)
     specials._fields = params.aslist(short('_fields'), default=[], pop=True)
-    specials._flat = '_flat' in params; params.pop('_flat', False)
+    specials._flat = params.aslist(short('_flat'), default=[], pop=True)
     specials._group = params.aslist(short('_group'), default=[], pop=True)
 
     specials._count = short('_count') in params; params.pop(short('_count'), False)
