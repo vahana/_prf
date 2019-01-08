@@ -52,7 +52,7 @@ class Script(object):
     def snapshot(self):
         snapname = self.args.snapname
         if self.args.date_pref:
-            snapname = '%s_%s' % (TODAY(), self.args.snapname)
+            snapname = '%s%s' % (TODAY(), self.args.snapname)
 
         params = dict(
             path = '_snapshot/%s/%s' % (self.args.repo, snapname),
