@@ -14,7 +14,7 @@ import prf.exc
 from prf.utils import json_dumps, urlencode
 from prf.serializer import DynamicSchema
 from prf import resource
-from prf.utils import process_fields, typecast, Params, parse_specials
+from prf.utils import typecast, Params, parse_specials
 
 log = logging.getLogger(__name__)
 
@@ -230,13 +230,14 @@ class BaseView(object):
             if self._specials._pop_empty:
                 _d = _d.pop_by_values([[], {}, ''])
 
+            _d = _d.extract(self._specials._fields)
             if self._specials._flat:
                 if '*' in self._specials._flat:
                     _d = _d.flat()
                 else:
                     _d = _d.flat(self._specials._flat)
 
-            return _d.extract(self._specials._fields)
+            return _d
 
         _total = getattr(obj, 'total', None)
         _meta = getattr(obj, '_meta', None)

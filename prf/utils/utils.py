@@ -19,6 +19,9 @@ from prf.utils.errors import DValueError, DKeyError
 
 log = logging.getLogger(__name__)
 
+OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in', 'all',
+             'startswith', 'exists', 'range', 'geobb', 'size']
+
 
 class Params(slovar):
     'Subclass of slovar that will raise D* exceptions'
@@ -78,6 +81,14 @@ def snake2camel(text):
 def camel2snake(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
+
+
+def process_key(key, suffix=''):
+    _key, div, op = key.rpartition('__')
+    if div and op in OPERATORS:
+        key = _key
+    key = key.replace('__', '.')
+    return ('%s.%s' % (key, suffix) if suffix else key), (op if op in OPERATORS else '')
 
 
 def parse_specials(orig_params):
@@ -150,6 +161,12 @@ def parse_specials(orig_params):
     if specials._type:
         field,_type = specials._type.split(':')
         params['__raw__'] = {field:{'$type':_type}}
+
+    if 'AUTO' in specials._fields:
+        for kk in params:
+            fld, _ = process_key(kk)
+            specials._fields.append(fld)
+
     return params, specials
 
 
@@ -413,10 +430,10 @@ def qs2dict(qs):
 
 
 def TODAY():
-    return datetime.now().strftime('%Y_%m_%d')
+    return datetime.utcnow().strftime('%Y_%m_%d')
 
 def NOW():
-    return datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+    return datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
 
 def raise_or_log(_raise=False):
     if _raise:

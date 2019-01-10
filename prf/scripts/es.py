@@ -2,6 +2,7 @@ import os
 import sys
 import logging
 from pprint import pprint as pp
+from datetime import datetime
 
 from prf.request import Request
 from prf.utils.utils import TODAY
@@ -20,7 +21,6 @@ class Script(object):
         parser.add_argument('--port', default=9200)
         parser.add_argument('-r', '--repo', default='es2.s3')
         parser.add_argument('-s', '--snapname')
-        parser.add_argument('--date-pref', action='store_true')
         parser.add_argument('-i', '--indices')
         parser.add_argument('--rename_to')
         parser.add_argument('-a', '--action', required=True, choices=ACTIONS)
@@ -49,10 +49,14 @@ class Script(object):
         else:
             self.js(getattr(self.api, method)(**kw))
 
+    def get_snapname(self, name):
+        now = datetime.utcnow()
+        seconds_since_midnight = int((now - now.replace(hour=0, minute=0, second=0, microsecond=0))\
+                                     .total_seconds())
+        return '%s_%s_%s' % (TODAY(), name, seconds_since_midnight)
+
     def snapshot(self):
-        snapname = self.args.snapname
-        if self.args.date_pref:
-            snapname = '%s%s' % (TODAY(), self.args.snapname)
+        snapname = self.args.snapname or self.get_snapname(self.args.indices)
 
         params = dict(
             path = '_snapshot/%s/%s' % (self.args.repo, snapname),
@@ -74,9 +78,9 @@ class Script(object):
         )
         self.request('post', **params)
 
-    def ls(self):
+    def ls(self, index='_all'):
         params = dict(
-            path = '_cat/snapshots/%s' % self.args.repo
+            path = '_snapshot/%s/%s' % (self.args.repo, index)
         )
         self.request('get', **params)
 

@@ -12,14 +12,12 @@ from elasticsearch_dsl import aggs as AGGS
 
 from slovar import slovar
 import prf
-from prf.utils import parse_specials, process_fields, split_strip, pager, chunks, Params
+from prf.utils import (parse_specials, process_fields, split_strip,
+                        pager, chunks, Params, process_key)
 from prf.utils.errors import DValueError, DKeyError
 
 
 log = logging.getLogger(__name__)
-
-OPERATORS = ['ne', 'lt', 'lte', 'gt', 'gte', 'in', 'all',
-             'startswith', 'exists', 'range', 'geobb', 'size']
 
 PRECISION_THRESHOLD = 40000
 DEFAULT_AGGS_LIMIT = 20
@@ -220,7 +218,7 @@ class Aggregator(object):
             'size': self.get_size(),
         }
 
-        field, _ = ES.process_key(self.specials._distinct)
+        field, _ = process_key(self.specials._distinct)
 
         if self.specials._sort and self.specials._sort[0].startswith('-'):
             order = { "_term" : "desc" }
@@ -269,7 +267,7 @@ class Aggregator(object):
 
         _field.params['size'] = self.get_size()
         _field.bucket_name = field
-        _field.field, _ = ES.process_key(field)
+        _field.field, _ = process_key(field)
         _field.op_type = 'terms'
 
         if '__as__' in field:
@@ -307,14 +305,6 @@ class Aggregator(object):
 class ES(object):
     def __call__(self):
         return self
-
-    @classmethod
-    def process_key(cls, key, suffix=''):
-        _key, div, op = key.rpartition('__')
-        if div and op in OPERATORS:
-            key = _key
-        key = key.replace('__', '.')
-        return ('%s.%s' % (key, suffix) if suffix else key), (op if op in OPERATORS else '')
 
     @classmethod
     def process_hits(cls, hits):
@@ -434,7 +424,7 @@ class ES(object):
             if isinstance(val, str) and ',' in val:
                 val = _params.aslist(key)
 
-            key, op = self.process_key(key)
+            key, op = process_key(key)
             root_key = key.split('.')[0]
 
             _filter = None
