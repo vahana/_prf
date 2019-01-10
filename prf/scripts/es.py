@@ -5,12 +5,12 @@ from pprint import pprint as pp
 from datetime import datetime
 
 from prf.request import Request
-from prf.utils.utils import TODAY
+from prf.utils.utils import TODAY, split_strip
 
 from argparse import ArgumentParser
 
 log = logging
-log.basicConfig(level=logging.DEBUG)
+# log.basicConfig(level=logging.DEBUG)
 
 ACTIONS = ['ls', 'snapshot', 'restore', 'current', ]
 
@@ -34,20 +34,21 @@ class Script(object):
 
         self.silent = self.args.silent or self.args.action in ['ls', 'current']
 
-    def js(self, resp):
-        pp(resp.json())
-
     def request(self, method, **kw):
         print('URL:', self.api.base_url)
         pp(kw)
 
+        resp = getattr(self.api, method)(**kw)
+
         if not self.silent:
             if input('Hit ENTER to run  ').upper() == '':
-                self.js(getattr(self.api, method)(**kw))
+                pp(resp.json())
             else:
                 print('Canceled')
         else:
-            self.js(getattr(self.api, method)(**kw))
+            pp(resp.json())
+
+        return resp
 
     def get_snapname(self, name):
         now = datetime.utcnow()
@@ -55,8 +56,23 @@ class Script(object):
                                      .total_seconds())
         return '%s_%s_%s' % (TODAY(), name, seconds_since_midnight)
 
+    def index_exists(self, index):
+        return self.api.head(index).ok
+
     def snapshot(self):
-        snapname = self.args.snapname or self.get_snapname(self.args.indices)
+        snapname = self.args.snapname
+        indices = split_strip(self.args.indices)
+
+        for each in indices:
+            if not self.index_exists(each):
+                log.warning('index `%s` does not exist', each)
+
+        if snapname and '*' in snapname:
+            snapname = self.get_snapname(snapname.replace('*', ''))
+        elif not snapname:
+            if len(indices)>1:
+                log.warning('more than 1 index specified. forgot -s arg ?')
+            snapname = self.get_snapname(indices[0])
 
         params = dict(
             path = '_snapshot/%s/%s' % (self.args.repo, snapname),
