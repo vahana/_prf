@@ -28,13 +28,11 @@ class Script(object):
         parser.add_argument('--restore', action='store_true')
         parser.add_argument('--current', action='store_true')
 
+        self.parser = parser
         self.args = parser.parse_args()
         self.api = Request('http://%s:%s' % (self.args.host, self.args.port))
 
-        if (self.args.action in ['snapshot', 'restore']) and not (self.args.snapname or self.args.indices):
-            parser.error('snapname and/or indices missing')
-
-        self.silent = self.args.silent or self.args.action in ['ls', 'current']
+        self.silent = self.args.silent or (self.args.ls or self.args.current)
 
     def request(self, method, **kw):
         print('URL:', self.api.base_url)
@@ -47,8 +45,6 @@ class Script(object):
                 print('Canceled')
         else:
             pp(getattr(self.api, method)(**kw).json())
-
-        return resp
 
     def get_snapname(self, name):
         now = datetime.utcnow()
@@ -116,7 +112,7 @@ class Script(object):
         elif self.args.restore:
             self.restore()
         else:
-            self.error('Nothing to do')
+            self.parser.error('Nothing to do')
 
 def run():
     Script(sys.argv).run()
