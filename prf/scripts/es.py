@@ -12,8 +12,6 @@ from argparse import ArgumentParser
 log = logging
 # log.basicConfig(level=logging.DEBUG)
 
-ACTIONS = ['ls', 'snapshot', 'restore', 'current', ]
-
 class Script(object):
     def __init__(self, argv):
         parser = ArgumentParser(description=__doc__)
@@ -23,8 +21,12 @@ class Script(object):
         parser.add_argument('-s', '--snapname')
         parser.add_argument('-i', '--indices')
         parser.add_argument('--rename_to')
-        parser.add_argument('-a', '--action', required=True, choices=ACTIONS)
+
         parser.add_argument('--silent', action='store_true')
+        parser.add_argument('--ls', action='store_true')
+        parser.add_argument('--snapshot', action='store_true')
+        parser.add_argument('--restore', action='store_true')
+        parser.add_argument('--current', action='store_true')
 
         self.args = parser.parse_args()
         self.api = Request('http://%s:%s' % (self.args.host, self.args.port))
@@ -38,15 +40,13 @@ class Script(object):
         print('URL:', self.api.base_url)
         pp(kw)
 
-        resp = getattr(self.api, method)(**kw)
-
         if not self.silent:
-            if input('Hit ENTER to run  ').upper() == '':
-                pp(resp.json())
+            if input('Hit ENTER to run  ') == '':
+                pp(getattr(self.api, method)(**kw).json())
             else:
                 print('Canceled')
         else:
-            pp(resp.json())
+            pp(getattr(self.api, method)(**kw).json())
 
         return resp
 
@@ -107,7 +107,16 @@ class Script(object):
         self.request('get', **params)
 
     def run(self):
-        getattr(self, self.args.action)()
+        if self.args.ls:
+            self.ls()
+        elif self.args.current:
+            self.current()
+        elif self.args.snapshot:
+            self.snapshot()
+        elif self.args.restore:
+            self.restore()
+        else:
+            self.error('Nothing to do')
 
 def run():
     Script(sys.argv).run()
