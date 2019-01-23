@@ -106,6 +106,9 @@ class ESDoc:
 
 class Results(list):
     def __init__(self, index, specials, data, total, took):
+        if not index:
+            raise ValueError('index cant be None or empty')
+
         doc_types = ES.get_doc_types(index)
         list.__init__(self, [ESDoc(each, index=index, doc_types=doc_types) for each in data])
         self.total = total
@@ -114,7 +117,7 @@ class Results(list):
             total = total,
             took = took,
             doc_types = doc_types,
-            index = index
+            alias = ES.api.indices.get_alias(index)
         )
 
 
@@ -405,7 +408,7 @@ class ES(object):
         specials.aslist('_nested', default=[])
 
         q_params = {'default_operator': 'and'}
-        q_params['lowercase_expanded_terms'] = 'false'
+        # q_params['lowercase_expanded_terms'] = 'false'
 
         q_fields = specials.aslist('_q_fields', default=[], pop=True)
         if q_fields:

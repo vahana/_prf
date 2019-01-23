@@ -8,9 +8,6 @@ from prf.utils import maybe_dotted
 
 log = logging.getLogger(__name__)
 
-def default_processor(item):
-    return slovar(item).flat(keep_lists=0)
-
 def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=None):
     import tablib
 
@@ -28,8 +25,6 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
     fields = fields or []
     data = data or []
 
-    processor = processor or default_processor
-
     for each in split_strip(fields):
         aa, _, bb = each.partition('__as__')
         name = (bb or aa).split(':')[0]
@@ -38,8 +33,10 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
     tabdata = tablib.Dataset(headers = None if skip_headers else headers)
     try:
         for each in data:
+            each = each.flat(keep_lists=0)
             row = []
-            each = processor(each)
+            if processor:
+                each = processor(each)
 
             for col in headers:
                 row.append(render(each, col))
