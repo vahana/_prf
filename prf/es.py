@@ -408,7 +408,7 @@ class ES(object):
         specials.aslist('_nested', default=[])
 
         q_params = {'default_operator': 'and'}
-        # q_params['lowercase_expanded_terms'] = 'false'
+        q_params['lowercase_expanded_terms'] = 'false'
 
         q_fields = specials.aslist('_q_fields', default=[], pop=True)
         if q_fields:
@@ -578,21 +578,23 @@ class ES(object):
             yield self.get_collection(**_params)
 
     def get_resource(self, **params):
-        results = self.get_collection(_limit=1, **params)
+        params['_limit'] = 1
+        results = self.get_collection(**params)
         try:
             return results[0]
         except IndexError:
             raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.index, params))
 
     def get(self, _default=None, **params):
-        results = self.get_collection(_limit=1, **params)
+        params['_limit'] = 1
+        results = self.get_collection(**params)
         if results:
             return results[0]
         else:
             return _default
 
     def get_total(self, **params):
-        params.setdefault('_limit', 1)
+        params['_limit'] = 1
         return self.get_collection(_count=1, **params)
 
     def save(self, obj, data):

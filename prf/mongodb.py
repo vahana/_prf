@@ -630,11 +630,12 @@ class BaseMixin(object):
 
     @classmethod
     def get_resource(cls, **params):
-        return cls.get_collection(_limit=1, **params).first()
+        params['_limit']=1
+        return cls.get_collection(**params).first()
 
     @classmethod
     def get(cls, **params):
-        return cls.get_collection(_limit=1, **params).first()
+        return get_resource(**params)
 
     @classmethod
     def search_text(cls, text, **params):
