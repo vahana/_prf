@@ -860,7 +860,7 @@ class BaseMixin(object):
         for kk in keys:
             parts = kk.split('__')
             if parts[-1] in ['exists', 'in', 'ne', 'size',
-                             'asbool', 'asint', 'aslist', 'asdt', 'gt', 'ln']:
+                             'asbool', 'asint', 'aslist', 'asdt', 'gt', 'lt', 'gte', 'lte']:
                 parts.pop(-1)
 
             new_keys.append('.'.join(parts))

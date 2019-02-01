@@ -579,23 +579,16 @@ class ES(object):
 
     def get_resource(self, **params):
         params['_limit'] = 1
-        results = self.get_collection(**params)
         try:
-            return results[0]
+            return self.get_collection(**params)[0].to_dict()
         except IndexError:
             raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.index, params))
 
-    def get(self, _default=None, **params):
-        params['_limit'] = 1
-        results = self.get_collection(**params)
-        if results:
-            return results[0]
-        else:
-            return _default
+    def get(self, **params):
+        return self.get_resource(**params)
 
     def get_total(self, **params):
-        params['_limit'] = 1
-        return self.get_collection(_count=1, **params)
+        return self.get_resource(_count=1, **params)
 
     def save(self, obj, data):
         data = slovar(data).unflat()

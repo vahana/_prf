@@ -219,6 +219,9 @@ class BaseView(object):
 
         raise AttributeError(attr)
 
+    def extract_item_fields(self, item):
+        return item.extract(self._specials._fields)
+
     def serialize(self, obj, many):
         def get_meta(meta, total):
             if meta:
@@ -230,7 +233,8 @@ class BaseView(object):
             if self._specials._pop_empty:
                 _d = _d.pop_by_values([[], {}, ''])
 
-            _d = _d.extract(self._specials._fields)
+            _d = self.extract_item_fields(_d)
+
             if self._specials._flat:
                 if '*' in self._specials._flat:
                     _d = _d.flat()
