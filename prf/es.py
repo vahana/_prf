@@ -485,7 +485,15 @@ class ES(object):
                     _filter = ~_filter
 
             elif isinstance(val, list):
+                has_null = False
+                if 'null' in val:
+                    val.remove('null')
+                    has_null = True
+
                 _filter = Q('bool', should=prefixedQ(key, val))
+
+                if has_null:
+                    _filter = _filter | ~Q('exists', field=key)
 
                 if op == 'ne':
                     _filter = ~_filter
