@@ -54,7 +54,7 @@ def prep_sort(specials, nested=None):
             missing = specials.get('_sort_missing', '_last')
         else:
             order = 'asc'
-            missing = specials.get('_sort_missing', '_first')
+            missing = specials.get('_sort_missing', '_last')
 
         srt = {
                 'order': order,
@@ -432,6 +432,7 @@ class ES(object):
             if isinstance(val, str) and ',' in val:
                 val = _params.aslist(key)
 
+            if isinstance(val, list):
                 list_has_null = False
                 if 'null' in val:
                     val.remove('null')
