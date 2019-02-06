@@ -51,10 +51,10 @@ def prep_sort(specials, nested=None):
         if each.startswith('-'):
             order = 'desc'
             each = each[1:]
-            missing = '_last'
+            missing = specials.get('_sort_missing', '_last')
         else:
             order = 'asc'
-            missing = '_last'
+            missing = specials.get('_sort_missing', '_first')
 
         srt = {
                 'order': order,
