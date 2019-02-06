@@ -399,6 +399,12 @@ class ES(object):
             if specials._start > pagination_limit:
                 raise prf.exc.HTTPBadRequest('Reached max pagination limit of `%s`' % pagination_limit)
 
+        def list_has_null(val):
+            if 'null' in val:
+                val.remove('null')
+                return True
+            return False
+
         s_ = Search(index=self.index)
 
         _ranges = []
@@ -472,10 +478,9 @@ class ES(object):
                         }
                     })
 
-            elif op == 'in':
-                _filter = Q('bool', should=prefixedQ(key, val))
-
-                if op == 'ne':
+            elif val is None:
+                _filter = Q('exists', field=key)
+                if op != 'ne':
                     _filter = ~_filter
 
             elif op == 'all':
@@ -484,10 +489,13 @@ class ES(object):
                 if op == 'ne':
                     _filter = ~_filter
 
-            elif isinstance(val, list):
+            elif isinstance(val, list) or op == 'in':
+
                 has_null = False
                 if 'null' in val:
                     val.remove('null')
+                    has_null = True
+                elif val==[]:
                     has_null = True
 
                 _filter = Q('bool', should=prefixedQ(key, val))
@@ -496,11 +504,6 @@ class ES(object):
                     _filter = _filter | ~Q('exists', field=key)
 
                 if op == 'ne':
-                    _filter = ~_filter
-
-            elif val is None:
-                _filter = Q('exists', field=key)
-                if op != 'ne':
                     _filter = ~_filter
 
             else:
