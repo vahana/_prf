@@ -399,11 +399,8 @@ class ES(object):
             if specials._start > pagination_limit:
                 raise prf.exc.HTTPBadRequest('Reached max pagination limit of `%s`' % pagination_limit)
 
-        def list_has_null(val):
-            if 'null' in val:
-                val.remove('null')
-                return True
-            return False
+        def get_exists(key):
+            return Q('exists', field=key)
 
         s_ = Search(index=self.index)
 
@@ -430,8 +427,17 @@ class ES(object):
 
 
         for key, val in list(_params.items()):
+            list_has_null = False
+
             if isinstance(val, str) and ',' in val:
                 val = _params.aslist(key)
+
+                list_has_null = False
+                if 'null' in val:
+                    val.remove('null')
+                    list_has_null=True
+                elif val==[]:
+                    list_has_null=True
 
             key, op = process_key(key)
             root_key = key.split('.')[0]
@@ -450,19 +456,22 @@ class ES(object):
                     _filter = Q('prefix', **{key:val})
 
             elif op == 'exists':
-                _filter = Q('exists', field=key)
+                _filter = get_exists(key)
                 if val == 0:
                     _filter = ~_filter
 
             elif op == 'range':
                 _range = []
-                for _it in chunks(split_strip(val), 2):
+                for _it in chunks(val, 2):
                     rangeQ = Q('range', **{key: {'gte': _it[0]}})
 
                     if len(_it) == 2:
                         rangeQ = rangeQ & Q('range', **{key: {'lte': _it[1]}})
 
                     _range.append(rangeQ)
+
+                if list_has_null:
+                    _range.append(~get_exists(key))
 
                 _ranges.append(Q('bool', should=_range))
 
@@ -479,7 +488,7 @@ class ES(object):
                     })
 
             elif val is None:
-                _filter = Q('exists', field=key)
+                _filter = get_exists(key)
                 if op != 'ne':
                     _filter = ~_filter
 
@@ -490,18 +499,10 @@ class ES(object):
                     _filter = ~_filter
 
             elif isinstance(val, list) or op == 'in':
-
-                has_null = False
-                if 'null' in val:
-                    val.remove('null')
-                    has_null = True
-                elif val==[]:
-                    has_null = True
-
                 _filter = Q('bool', should=prefixedQ(key, val))
 
-                if has_null:
-                    _filter = _filter | ~Q('exists', field=key)
+                if list_has_null:
+                    _filter |= ~get_exists(key)
 
                 if op == 'ne':
                     _filter = ~_filter
@@ -517,6 +518,7 @@ class ES(object):
 
             if root_key in specials._nested:
                 _nested[root_key] = _nested[root_key] & _filter if root_key in _nested else _filter
+
             elif _filter:
                 _filters = _filters & _filter if _filters else _filter
 
