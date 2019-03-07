@@ -635,7 +635,10 @@ class BaseMixin(object):
 
     @classmethod
     def get(cls, **params):
-        return cls.get_resource(**params)
+        try:
+            return cls.get_resource(**params)
+        except:
+            pass
 
     @classmethod
     def search_text(cls, text, **params):

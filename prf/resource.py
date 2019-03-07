@@ -21,6 +21,35 @@ class Actions(object):
     def all(cls):
         return list(cls.__dict__.keys())
 
+
+def process_acl_rules(acl):
+    import pyramid.security as pysec
+    all_perms = []
+
+    def get_action(action):
+        if action == 'allow':
+            return pysec.Allow
+        elif action == 'deny':
+            return pysec.Deny
+        else:
+            raise ValueError('bad action for acl: %s' % action)
+
+    def get_role(role):
+        if role == 'authenticated':
+            return pysec.Authenticated
+        else:
+            return role
+
+    for role, rules in acl.items():
+        for act, perms in rules.items():
+            if perms == '*':
+                perms = pysec.ALL_PERMISSIONS
+
+            all_perms += [(get_action(act), get_role(role), perms)]
+
+    return all_perms
+
+
 def get_view_class(view, resource):
     '''Returns the dotted path to the default view class.'''
 
@@ -77,7 +106,18 @@ def add_action_routes(config, view, member_name, collection_name, **kwargs):
     path_prefix = kwargs.pop('path_prefix', '')
     name_prefix = kwargs.pop('name_prefix', '')
 
-    view._acl = kwargs.pop('acl', view._acl)
+    acl = kwargs.pop('acl', None)
+
+    if acl:
+        if isinstance(acl, dict):
+            if not view._acl and config.registry['prf.default_acl']:
+                view._acl = config.registry['prf.default_acl']
+                view._acl._acl = lambda x:process_acl_rules(acl)
+            else:
+                raise ValueError("either view's _acl is missing or default acl is not set")
+        else:
+            view._acl = maybe_dotted(acl)
+
 
     id_name = kwargs.pop('id_name')
     id_slug = ('/{%s}' % id_name if collection_name else '')

@@ -80,7 +80,7 @@ def add_api_view(config):
 def set_default_acl(config, acl_model):
     acl_model = maybe_dotted(acl_model)
     config.set_root_factory(acl_model)
-
+    config.registry['prf.default_acl'] = acl_model
 
 def process_tweens(config):
     import pyramid
@@ -131,6 +131,7 @@ def includeme(config):
     config.registry['prf.resources_map'] = {}
     config.registry['prf.auth'] = settings.asbool('auth.enabled', default=False)
     config.registry['prf.xhr'] = settings.asbool('xhr.enabled', default=False)
+    config.registry['prf.default_acl'] = ''
 
     config.add_request_method(get_resource_map, 'resource_map', reify=True)
 

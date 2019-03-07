@@ -158,7 +158,49 @@ class Aggregator(object):
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
 
+    def execute(self):
+        try:
+            resp = self.search_obj.execute()
+            aggs = slovar(resp.aggregations._d_)
+            hits = ES.process_hits(resp.hits.hits)
+
+            data = slovar(
+                    aggs = slovar(resp.aggregations._d_),
+                    hits = hits
+                )
+
+            return data
+
+        except Exception as e:
+            raise prf.exc.HTTPBadRequest(e)
+
+        finally:
+            log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(self.search_obj.to_dict()))
+
+    def do_group_range(self):
+        val = [it.split(':') for it in split_strip(self.specials.get('_group_range'))]
+        if not val:
+            raise prf.exc.HTTPBadRequest('_group_range can not be empty')
+
+        field = self.specials._group[0]
+        ranges = []
+
+        for it in val:
+            item = {}
+            if it[0]: item['from'] = it[0]
+            if len(it) > 1 and it[1]: item['to'] = it[1]
+            ranges.append(item)
+
+        self.search_obj.aggs.bucket('%s_range' % field, 'range', field=field, ranges=ranges)\
+                            .bucket('stats', 'stats')
+
+        return self.execute()
+
     def do_group(self):
+
+        if self.specials.get('_group_range'):
+            return self.do_group_range()
+
         if '_show_hits' not in self.specials:
             self.search_obj = self.search_obj[0:0]
 
@@ -188,32 +230,17 @@ class Aggregator(object):
                       field = field.field,
                       **field.params))
 
+
         for (op, val) in self.metrics:
-            bname = '%s_%s' % (self.undot(val), op)
-            aggs.metric(bname, op, field=val)
+            aggs.metric('%s_%s' % (self.undot(val), op), op, field=val)
 
         self.search_obj.aggs.bucket(top_field.bucket_name, top_terms)
 
         if self.specials._count:
             return self.do_count(self.search_obj)
 
-        try:
-            resp = self.search_obj.execute()
-            aggs = slovar(resp.aggregations._d_)
-            hits = ES.process_hits(resp.hits.hits)
+        return self.execute()
 
-            data = slovar(
-                    aggs = slovar(resp.aggregations._d_),
-                    hits = hits
-                )
-
-            return data
-
-        except Exception as e:
-            raise prf.exc.HTTPBadRequest(e)
-
-        finally:
-            log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(self.search_obj.to_dict()))
 
     def do_distinct(self):
 
@@ -410,8 +437,9 @@ class ES(object):
         _nested = {}
         specials.aslist('_nested', default=[])
 
-        q_params = {'default_operator': 'and'}
-        q_params['lowercase_expanded_terms'] = 'false'
+        q_params = self.settings.get('search', {})
+        q_params.setdefault('default_operator', 'and')
+        q_params.setdefault('lowercase_expanded_terms', 'false')
 
         q_fields = specials.aslist('_q_fields', default=[], pop=True)
         if q_fields:
@@ -599,10 +627,14 @@ class ES(object):
             raise prf.exc.HTTPNotFound("(ES) '%s(%s)' resource not found" % (self.index, params))
 
     def get(self, **params):
-        return self.get_resource(**params)
+        params['_limit'] = 1
+        try:
+            return self.get_collection(**params)[0].to_dict()
+        except IndexError:
+            pass
 
     def get_total(self, **params):
-        return self.get_resource(_count=1, **params)
+        return self.get_collection(_count=1, **params)
 
     def save(self, obj, data):
         data = slovar(data).unflat()
