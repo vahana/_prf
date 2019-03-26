@@ -653,3 +653,4 @@ class ES(object):
             doc_type = obj._meta._type,
             id = obj._meta._id,
         )
+

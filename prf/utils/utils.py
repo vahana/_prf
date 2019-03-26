@@ -150,7 +150,7 @@ def parse_specials(orig_params):
         if each.startswith('_'):
             specials[each] = params.pop(each)
 
-        if '.' in each:
+        if '.' in each and each in params:
             params[each.replace('.', '__')] = params.pop(each)
 
     params = typecast(params)
@@ -445,22 +445,24 @@ def raise_or_log(_raise=False):
         traceback.print_exc()
 
 
-def join(cls1, cls2, join_on, require_match=False, join_as=None, **params):
+def join(objects, cls2, join_on, require_match=False, join_as=None, join_params=None):
     '''
         require_match = False is equivalent to SQL left join
         require_match = True is equivalent to SQL left inner join
     '''
 
-    for each in cls1.get_collection(**params):
+    join_params = slovar(join_params or {}).flat()
+
+    for each in objects:
         _d1 = each.to_dict()
 
-        params2 = _d1.extract(join_on).flat()
-        if not params2 and require_match:
+        join_params.update(_d1.extract(join_on).flat())
+        if not join_params and require_match:
             log.warning('empty query for cls2')
             continue
 
-        params2.setdefault('_limit', 1)
-        matched = cls2.get_collection(**params2)
+        join_params.setdefault('_limit', 1)
+        matched = cls2.get_collection(**join_params)
 
         if not matched and not require_match and join_as:
             matched = [slovar()] #attach empty slovar to results as join_as
