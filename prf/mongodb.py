@@ -154,9 +154,6 @@ class Aggregator(object):
         if specials.get('_group'):
             self.setup_group()
 
-        elif specials.get('_join'):
-            self.setup_join()
-
         elif specials.get('_unwind'):
             self.setup_unwind()
 
@@ -181,23 +178,6 @@ class Aggregator(object):
                         self.accumulators.append([op, _v])
                 else:
                     self.accumulators.append([op, val])
-
-    def setup_join(self):
-        _join,_,_join_on = self.specials._join.partition('.')
-        _join_as = self.specials.asstr('_join_as', default=_join)
-        self.specials.aslist('_join_fields', default=[])
-
-        self.after_match = slovar()
-        for key,val in list(self.match_query.items()):
-            if key == _join_as or key.startswith('%s.' % _join_as):
-                self.after_match[key]=val
-                self.match_query.pop(key)
-
-        self._join_cond = typecast(slovar([e.split(':') for e in
-            self.specials.aslist('_join_cond', default=[])]))
-
-        self.specials._join = _join
-        self.specials.aslist('_join_on', default=[_join_on, _join_on])
 
     def setup_unwind(self):
         self.post_match = slovar()
@@ -265,64 +245,6 @@ class Aggregator(object):
         self.add_limit()
         return self.aggregate(collection)
 
-    def join(self, collection):
-        if self.match_query:
-            self._agg.append({'$match':self.match_query})
-
-        self.add_lookup()
-
-        _join_as = self.specials._join_as
-        _join_on = self.specials._join_on
-
-        if self._join_cond:
-            self._agg.append({'$unwind': '$%s'%_join_as})
-
-            true_case = []
-            for field, value in list(self._join_cond.items()):
-                if not field.startswith(_join_as):
-                    field = '.'.join([_join_as, field])
-                true_case.append({'$eq': ['$%s'%field, value]})
-
-            _project = {_join_as:
-                            {'$cond': {
-                                'if': {'$and': true_case},
-                                'then': '$%s'%(_join_as),
-                                'else': None }},
-                        '_id': 0,
-                        _join_on[0]: 1
-                        }
-
-            self._agg.append({'$project': _project})
-
-            self._agg.append(
-                { '$group' : {
-                    '_id' : "$%s"%_join_on[0],
-                    _join_as: {'$push': '$%s.%s' % (_join_as, _join_on[1])},
-                    }
-                }
-            )
-
-            _project = {
-                    _join_on[0]: '$_id',
-                    _join_as: '$%s'% (_join_as),
-                    '_id': 0,
-                }
-            self._agg.append(
-                {'$project': _project}
-            )
-
-
-        if self.after_match:
-            self._agg.append({'$match': self.after_match})
-
-        if self.specials.asbool('_count', False):
-            return self.aggregate_count(collection)
-
-        self.add_sort()
-        self.add_skip()
-        self.add_limit()
-
-        return self.aggregate(collection)
 
     def add_group(self):
         group_dict = {}
@@ -361,29 +283,6 @@ class Aggregator(object):
                 _d[sfx] = {op:_dd}
 
             self._agg.append({'$group':_d})
-
-        return self
-
-    def add_lookup(self):
-        join_on = self.specials._join_on
-
-        if len(join_on) == 1:
-            left = right = join_on[0]
-        elif len(join_on) == 2:
-            left,right = join_on
-        else:
-            raise prf.exc.HTTPBadRequest(
-                'Use `_join_on` or dotted `_join` to pass the field to join on')
-
-        self._agg.append(
-            {'$lookup': {
-                    'from': self.specials._join,
-                    'localField': left,
-                    'foreignField': right,
-                    'as': self.specials._join_as
-                }
-            }
-        )
 
         return self
 
@@ -539,10 +438,6 @@ class BaseMixin(object):
         return Aggregator(queryset._query, specials).group(cls._get_collection())
 
     @classmethod
-    def get_join(cls, queryset, specials):
-        return Aggregator(queryset._query, specials).join(cls._get_collection())
-
-    @classmethod
     def get_unwind(cls, queryset, specials):
         return Aggregator(queryset._query, specials).unwind(cls._get_collection())
 
@@ -580,9 +475,6 @@ class BaseMixin(object):
 
             elif specials._group:
                 return cls.get_group(query_set, specials)
-
-            elif specials._join:
-                return cls.get_join(query_set, specials)
 
             elif specials._distinct:
                 return cls.get_distinct(query_set, specials)

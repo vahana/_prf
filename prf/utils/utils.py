@@ -445,7 +445,8 @@ def raise_or_log(_raise=False):
         traceback.print_exc()
 
 
-def join(objects, cls2, join_on, require_match=False, join_as=None, join_params=None):
+def join(objects, joinee_itor, join_on, require_match=True, join_ns=None,
+                                            join_unwind=True, join_params=None):
     '''
         require_match = False is equivalent to SQL left join
         require_match = True is equivalent to SQL left inner join
@@ -457,20 +458,37 @@ def join(objects, cls2, join_on, require_match=False, join_as=None, join_params=
         _d1 = each.to_dict()
 
         join_params.update(_d1.extract(join_on).flat())
-        if not join_params and require_match:
-            log.warning('empty query for cls2')
-            continue
+
+        if not join_params:
+            if require_match:
+                log.warning('empty query for cls2')
+                continue
+            else:
+                yield _d1
+                continue
 
         join_params.setdefault('_limit', 1)
-        matched = cls2.get_collection(**join_params)
+        matched = joinee_itor(**join_params)
 
-        if not matched and not require_match and join_as:
-            matched = [slovar()] #attach empty slovar to results as join_as
+        if not matched:
+            if require_match:
+                continue
+            elif not join_ns:
+                yield _d1
+                continue
+            else:
+                matched = [slovar()] #attach empty slovar to results as join_ns
 
-        for it in matched:
-            _d2 = it.to_dict()
+        if not join_unwind:
+            joinee_list = [it.to_dict(join_params.get('_fields', [])) for it in matched]
+            _d1[join_ns or 'joinee'] = joinee_list
+            yield _d1
 
-            if join_as:
-                _d2 = slovar({join_as:_d2})
+        else:
+            for it in matched:
+                _d2 = it.to_dict(join_params.get('_fields', []))
 
-            yield _d1.update_with(_d2)
+                if join_ns:
+                    _d2 = slovar({join_ns:_d2})
+
+                yield _d1.update_with(_d2)

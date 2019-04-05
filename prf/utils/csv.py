@@ -46,7 +46,7 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
         return getattr(tabdata, format_)
 
     except:
-        log.ERROR('Headers:%s, Fields:%s, Format:%s\nData:%s', headers, fields, format_, each)
+        log.error('Headers:%s, Fields:%s, Format:%s\nData:%s', headers, fields, format_, each)
         raise HTTPBadRequest('dict2tab error: %r'%sys.exc_info()[1])
 
 
