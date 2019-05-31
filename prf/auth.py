@@ -1,6 +1,7 @@
 import os
 import logging
 import copy
+
 import pyramid.security as pysec
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
@@ -36,6 +37,7 @@ class BaseACL(object):
     def init(self):
         pass
 
+
     def _acl(self):
         return [(pysec.Allow, self._admin_group_name, pysec.ALL_PERMISSIONS)] +\
                 self.acl()
@@ -66,12 +68,17 @@ class BaseACL(object):
         item.__name__ = str(item.id)
         return item
 
+    @classmethod
+    def role_fields(cls):
+        return {}
+
 
 def includeme(config):
     settings = slovar(config.get_settings())
     auth_params = settings.extract(['auth.hashlag',
                                    'auth.http_only:bool',
                                    'auth.callback',
+                                   'auth.policy_class',
                                    'auth.secret',
                                    'auth.timeout:int',
                                    'auth.reissue_time:int',
@@ -86,9 +93,10 @@ def includeme(config):
     if not auth_params.secret:
         raise DValueError('Missing auth.secret')
 
+
+    auth_policy_class = maybe_dotted(auth_params.pop('policy_class', AuthTktAuthenticationPolicy))
     auth_params.callback = maybe_dotted(auth_params.callback)
-    authn_policy = AuthTktAuthenticationPolicy(**auth_params)
+    authn_policy = auth_policy_class(**auth_params)
 
     config.set_authentication_policy(authn_policy)
     config.set_authorization_policy(ACLAuthorizationPolicy())
-

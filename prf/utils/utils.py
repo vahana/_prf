@@ -300,7 +300,7 @@ def sanitize_url(url, to_remove=None):
         query=urlencode(qs_dict, True)).geturl()
 
 def to_dunders(d, only=None):
-    new_d = dict()
+    new_d = slovar()
 
     for key in d:
         if only and key not in only:
