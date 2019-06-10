@@ -575,7 +575,7 @@ class BaseMixin(object):
         return str(self.id)
 
     def update_with(self, _dict, **kw):
-        self_dict = self.to_dict().update_with(_dict, **kw)
+        self_dict = slovar.to(self.to_dict()).update_with(_dict, **kw)
 
         for key, val in list(self_dict.unflat().items()):
             setattr(self, key, val)
@@ -583,7 +583,7 @@ class BaseMixin(object):
         return self
 
     def to_dict(self, fields=None):
-        _d = slovar(self.to_mongo().to_dict())
+        _d = self.to_mongo().to_dict()
 
         if '_id' in _d:
             _d['id']=_d.pop('_id')
@@ -660,33 +660,13 @@ class BaseMixin(object):
         params = slovar(params or {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
-        pager_field= params.pop('_pager_field', None)
+        pager_field= params.pop('_pagination', None)
 
         if _limit == -1:
             _limit = cls.get_collection(_limit=_limit, _count=1, **params)
 
         log.debug('page_size=%s, _start=%s, _limit=%s',
                                             page_size, _start, _limit)
-
-        def get_start_id(limit):
-            _prm = params.copy()
-            _prm['_fields'] = pager_field
-            _prm['_sort'] = pager_field
-            last_id = None
-
-            pgr = pager(0, 1000, limit)
-            for start, count in pgr():
-                _prm['_limit'] = count
-
-                if last_id:
-                    _prm['%s__gt' % pager_field] = last_id
-                else:
-                    _prm['_start'] = 0
-
-                results = cls.get_collection(**_prm)
-                last_id = results[len(results)-1][pager_field]
-
-            return last_id
 
         def process_pagination(start, count, collection):
             if params.get('_sort') or not pager_field:
@@ -703,11 +683,11 @@ class BaseMixin(object):
                     })
 
         pgr = pager(_start, page_size, _limit)
-        collection = []
+        results = []
         for start, count in pgr():
-            _params = process_pagination(start, count, collection)
-            collection = cls.get_collection(**_params)
-            yield collection
+            _params = process_pagination(start, count, results)
+            results = cls.get_collection(**_params)
+            yield results
 
     @classmethod
     def unregister(cls):

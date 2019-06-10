@@ -76,8 +76,9 @@ def prep_sort(specials, nested=None):
 
 
 class ESDoc:
+
     def __init__(self, data, index, doc_types):
-        self._data = slovar(data)
+        self._data = data
         self._index = index
         self._doc_types = doc_types
 
@@ -101,8 +102,9 @@ class ESDoc:
             self._data[key] = val
 
     def to_dict(self, fields=None):
-        return self._data.extract(fields)
-
+        if fields:
+            return slovar(self._data).extract(fields)
+        return self._data
 
 class Results(list):
     def __init__(self, index, specials, data, total, took):
@@ -241,7 +243,6 @@ class Aggregator(object):
 
         return self.execute()
 
-
     def do_distinct(self):
 
         term_params = {
@@ -333,6 +334,8 @@ class Aggregator(object):
 
 
 class ES(object):
+    _version = slovar(major=0, minor=0, patch=0)
+
     def __call__(self):
         return self
 
@@ -340,7 +343,7 @@ class ES(object):
     def process_hits(cls, hits):
         data = []
         for each in hits:
-            _d = slovar(each['_source'])
+            _d = slovar(each['_source'].to_dict())
             _d = _d.update({
                 '_score':each['_score'],
                 '_type':each['_type'],
@@ -372,6 +375,9 @@ class ES(object):
                                         timeout=cls.settings.asint('timeout', 30),
                                         serializer=Serializer(),
                                         **params)
+
+            cls.version = cls._version()
+
             log.info('Including ElasticSearch. %s' % cls.settings)
 
         except KeyError as e:
@@ -390,8 +396,28 @@ class ES(object):
                 return list(vv.get('mappings', {}).keys())
 
     @classmethod
-    def get_meta(cls, index, doc_type=None):
-        return ES.api.indices.get_mapping(index, doc_type, ignore_unavailable=True)
+    def get_meta(cls, index, doc_type=None, command='get_mapping'):
+        method = getattr(ES.api.indices, command)
+        if cls.version.major >= 7:
+            return method(index,
+                ignore_unavailable=True)
+        else:
+            return method(index,
+                doc_type,
+                ignore_unavailable=True)
+
+    @classmethod
+    def put_mapping(cls, **kw):
+        if cls.version.major >= 7:
+            kw.pop('doc_type', None)
+
+        return ES.api.indices.put_mapping(**kw)
+
+
+    @classmethod
+    def _version(cls):
+        vers = ES.api.info()['version']['number'].split('.')
+        return slovar(major=int(vers[0]), minor=int(vers[1]), patch=int(vers[2]))
 
     def drop_collection(self):
         ES.api.indices.delete(self.index, ignore=[400, 404])
@@ -399,11 +425,7 @@ class ES(object):
     def unregister(self):
         pass
 
-    def get_collection(self, **params):
-        params = Params(params)
-        log.debug('(ES) IN: %s, params: %s', self.index, pformat(params))
-
-        _params, specials = parse_specials(params)
+    def build_search_object(self, params, specials, **extra):
 
         def prefixedQ(key, val):
             if not isinstance(val, list):
@@ -421,15 +443,10 @@ class ES(object):
 
             return items
 
-        def check_pagination_limit():
-            pagination_limit = self.settings.asint('max_result_window', default=MAX_RESULT_WINDOW)
-            if specials._start > pagination_limit:
-                raise prf.exc.HTTPBadRequest('Reached max pagination limit of `%s`' % pagination_limit)
-
         def get_exists(key):
             return Q('exists', field=key)
 
-        s_ = Search(index=self.index)
+        _s = Search(index=self.index)
 
         _ranges = []
         _filters = None
@@ -447,18 +464,18 @@ class ES(object):
 
         if '_q' in specials:
             q_params['query'] = specials._q
-            s_ = s_.query('simple_query_string', **q_params)
+            _s = _s.query('simple_query_string', **q_params)
 
         elif '_search' in specials:
             q_params['query'] = specials._search
-            s_ = s_.query('query_string', **q_params)
+            _s = _s.query('query_string', **q_params)
 
 
-        for key, val in list(_params.items()):
+        for key, val in list(params.items()):
             list_has_null = False
 
             if isinstance(val, str) and ',' in val:
-                val = _params.aslist(key)
+                val = params.aslist(key)
 
             if isinstance(val, list):
                 list_has_null = False
@@ -560,64 +577,102 @@ class ES(object):
             _filters = _filters & Q('bool', must=_ranges) if _filters else Q('bool', must=_ranges)
 
         if _filters:
-            s_ = s_.filter(_filters)
-
-        if specials._count:
-            return s_.count()
+            _s = _s.filter(_filters)
 
         if specials._sort:
-            s_ = s_.sort(*prep_sort(specials, _nested))
+            _s = _s.sort(*prep_sort(specials, _nested))
+
+        if ES.version.major > 2 and specials.get('_search_after'):
+            _s = _s.extra(search_after=specials.aslist('_search_after'))
 
         if specials._end is not None:
-            s_ = s_[specials._start:specials._end]
+            _s = _s[specials._start:specials._end]
         else:
-            s_ = s_[specials._start:]
+            _s = _s[specials._start:]
 
         _fields = specials._fields
+
         if _fields:
             only, exclude = process_fields(_fields).mget(['only', 'exclude'])
-            s_ = s_.source(include=['%s'%e for e in only],
+            _s = _s.source(include=['%s'%e for e in only],
                            exclude = ['%s'%e for e in exclude])
+
+        _s = _s.params(**extra)
+        return _s
+
+    def get_collection(self, **params):
+        params = Params(params)
+        log.debug('(ES) IN: %s, params: %s', self.index, pformat(params))
+
+        _params, specials = parse_specials(params)
+
+        def check_pagination_limit():
+            pagination_limit = self.settings.asint('max_result_window', default=MAX_RESULT_WINDOW)
+            if specials._start > pagination_limit:
+                raise prf.exc.HTTPBadRequest('Reached max pagination limit of `%s`' % pagination_limit)
+
+        _s = self.build_search_object(_params, specials)
+
+        if specials._count:
+            return _s.count()
 
         try:
             if specials._group:
-                return Aggregator(specials, s_, self.index).do_group()
+                return Aggregator(specials, _s, self.index).do_group()
 
             if specials._distinct:
-                return Aggregator(specials, s_, self.index).do_distinct()
-
-            if '_scan' in specials or specials._limit == -1:
-                data = []
-                for hit in s_.scan():
-                    data.append(hit._d_)
-                    if len(data) == specials._limit:
-                        break
-
-                return Results(self.index, specials, data, s_.count(), 0)
+                return Aggregator(specials, _s, self.index).do_distinct()
 
             check_pagination_limit()
 
-            resp = s_.execute()
+            resp = _s.execute()
             data = self.process_hits(resp.hits.hits)
-            return Results(self.index, specials, data, resp.hits.total, resp.took)
+            return Results(self.index, specials, data, self.get_total(**params), resp.took)
 
         finally:
-            log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(s_.to_dict()))
+            log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(_s.to_dict()))
+
+    def paginate(self, page_size, limit, params):
+        _params, specials = parse_specials(params)
+
+        _s = self.build_search_object(_params, specials, size=page_size, sort=['_doc'])
+        log.debug('(ES) SCAN: %s, QUERY:\n%s', self.index, pformat(_s.to_dict()))
+
+        data = []
+        total = 0
+
+        for hit in _s.scan():
+            if total >= limit:
+                break
+
+            total += 1
+            data.append(hit.to_dict())
+
+            if len(data) >= page_size:
+                yield Results(self.index, {}, data, 0, 0)
+                data = []
 
     def get_collection_paged(self, page_size, **params):
-        params = slovar(params or {})
+        params = Params(params or {})
         _start = int(params.pop('_start', 0))
         _limit = int(params.pop('_limit', -1))
 
         if _limit == -1:
-            _limit = self.get_collection(_limit=_limit, _count=1, **params)
+            _limit = self.get_total(**params)
+
+        if params.asbool('_pagination', default=False, pop=True):
+            for results in self.paginate(page_size, _limit, params):
+                yield results
+            return
 
         log.debug('page_size=%s, _limit=%s', page_size, _limit)
-
         pgr = pager(_start, page_size, _limit)
+        results = []
+
         for start, count in pgr():
-            _params = params.copy().update({'_start':start, '_limit': count})
-            yield self.get_collection(**_params)
+            params.update({'_start':start, '_limit': count})
+            results = self.get_collection(**params)
+            yield results
 
     def get_resource(self, **params):
         params['_limit'] = 1
@@ -637,20 +692,36 @@ class ES(object):
         return self.get_collection(_count=1, **params)
 
     def save(self, obj, data):
-        data = slovar(data).unflat()
-        return ES.api.update(
-            index = obj._meta._index,
-            doc_type = obj._meta._type,
-            id = obj._meta._id,
-            refresh=True,
-            detect_noop=True,
-            body = {'doc': data}
-        )
+        data = slovar.to(data).unflat()
+
+        if self.version.major >= 7:
+            return ES.api.update(
+                index = obj._meta._index,
+                id = obj._meta._id,
+                refresh=True,
+                detect_noop=True,
+                body = {'doc': data}
+            )
+        else:
+            return ES.api.update(
+                index = obj._meta._index,
+                doc_type = obj._meta._type,
+                id = obj._meta._id,
+                refresh=True,
+                detect_noop=True,
+                body = {'doc': data}
+            )
 
     def delete(self, obj):
-        return ES.api.delete(
-            index = obj._meta._index,
-            doc_type = obj._meta._type,
-            id = obj._meta._id,
-        )
+        if self.version.major >= 7:
+            return ES.api.delete(
+                index = obj._meta._index,
+                id = obj._meta._id,
+            )
+        else:
+            return ES.api.delete(
+                index = obj._meta._index,
+                doc_type = obj._meta._type,
+                id = obj._meta._id,
+            )
 

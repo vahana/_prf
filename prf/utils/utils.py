@@ -432,8 +432,11 @@ def qs2dict(qs):
 def TODAY():
     return datetime.utcnow().strftime('%Y_%m_%d')
 
-def NOW():
-    return datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S')
+def NOW(sep=None):
+    dnow = datetime.utcnow()
+    if sep:
+        return dnow.strftime(sep.join(['%Y', '%m', '%dT%H', '%M', '%S']))
+    return dnow.strftime('%Y-%m-%dT%H:%M:%S')
 
 def raise_or_log(_raise=False):
     if _raise:
