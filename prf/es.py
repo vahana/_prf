@@ -334,7 +334,7 @@ class Aggregator(object):
 
 
 class ES(object):
-    _version = slovar(major=0, minor=0, patch=0)
+    version = slovar(major=2, minor=4, patch=0)
 
     def __call__(self):
         return self
@@ -343,7 +343,7 @@ class ES(object):
     def process_hits(cls, hits):
         data = []
         for each in hits:
-            _d = slovar(each['_source'].to_dict())
+            _d = slovar.to(each['_source'])
             _d = _d.update({
                 '_score':each['_score'],
                 '_type':each['_type'],
@@ -416,7 +416,11 @@ class ES(object):
 
     @classmethod
     def _version(cls):
-        vers = ES.api.info()['version']['number'].split('.')
+        try:
+            vers = ES.api.info()['version']['number'].split('.')
+        except Exception as e:
+            return cls.version
+
         return slovar(major=int(vers[0]), minor=int(vers[1]), patch=int(vers[2]))
 
     def drop_collection(self):

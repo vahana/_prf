@@ -3,7 +3,7 @@ from pprint import pformat
 from datetime import datetime
 
 import pymongo
-from pymongo.errors import PyMongoError
+from pymongo.errors import PyMongoError, BulkWriteError
 from bson import ObjectId, DBRef
 import mongoengine as mongo
 from mongoengine.base import TopLevelDocumentMetaclass as TLDMetaclass
@@ -104,6 +104,8 @@ def mongo_connect(settings):
 def mongo_disconnect(alias):
     mongo.connection.disconnect(alias)
 
+def is_exists_error(e):
+    return 'E11000' in str(e)
 
 def mongodb_exc_tween(handler, registry):
     log.info('mongodb_exc_tween enabled')
@@ -113,7 +115,7 @@ def mongodb_exc_tween(handler, registry):
             return handler(request)
 
         except mongo.NotUniqueError as e:
-            if 'E11000' in str(e):
+            if is_exists_error(e):
                 raise prf.exc.HTTPConflict(detail='Resource already exists.',
                             request=request, exception=e)
             else:
@@ -377,6 +379,18 @@ class BaseMixin(object):
             return {name: _default}
 
     @classmethod
+    def insert_many(cls, objs, fail_on_error=True):
+        try:
+            result = cls._get_collection().insert_many([it.to_mongo() for it in objs], ordered=False)
+            return len(result.inserted_ids), []
+
+        except BulkWriteError as e:
+            if fail_on_error:
+                raise
+
+            return e.details['nInserted'], e.details['writeErrors']
+
+    @classmethod
     def insert_into(cls, name, docs=None, query=None):
         if query:
             docs = [d.to_dict(query.get('_fields')) for
@@ -583,13 +597,13 @@ class BaseMixin(object):
         return self
 
     def to_dict(self, fields=None):
-        _d = self.to_mongo().to_dict()
+        _d = slovar.to(self.to_mongo().to_dict())
 
         if '_id' in _d:
             _d['id']=_d.pop('_id')
 
         if fields:
-            _d = slovar(_d).extract(fields)
+            _d = _d.extract(fields)
 
         return _d
 
@@ -645,6 +659,16 @@ class BaseMixin(object):
         if not isinstance(other, dict):
             other = other.to_dict(exclude)
         return not other or self.to_dict(list(other.keys())) == other
+
+    def save(self, _dont_fail_on_duplicate=False):
+        try:
+            return super().save()
+        except mongo.NotUniqueError as e:
+            if _dont_fail_on_duplicate and is_exists_error(e):
+                pass
+                # log.debug('Found duplicate. Insert mode, skipping: %s', e)
+            else:
+                raise
 
     def save_safe(self):
         try:
