@@ -477,9 +477,10 @@ class BaseMixin(object):
         else: # needs better way to check if its a proper query object
             query_set = cls.objects(_q)
 
-        #TODO: move it out of here. put it in get_collection_paged?
-        cls.check_indexes_exist(list(params.keys())+
-                [e[1:] if e.startswith('-') else e for e in specials._sort])
+        if log.getEffectiveLevel() == logging.DEBUG:
+            #TODO: move it out of here. put it in get_collection_paged?
+            cls.check_indexes_exist(list(params.keys())+
+                    [e[1:] if e.startswith('-') else e for e in specials._sort])
 
         query_set = query_set(**params)
 

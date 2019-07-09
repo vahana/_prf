@@ -46,9 +46,13 @@ def add_error_view(config, exc, http_exc=None, error='', error_attr='message'):
     config.add_view(view, context=exc)
 
 
-def add_account_views(config, user_model, route_prefix=''):
+def add_account_views(config, user_model, account_view=None, route_prefix=''):
     from pyramid.security import  NO_PERMISSION_REQUIRED
-    from prf.utility_views import AccountView
+
+    if account_view:
+        AccountView = config.maybe_dotted(account_view)
+    else:
+        from prf.utility_views import AccountView
 
     user_model = config.maybe_dotted(user_model)
     AccountView.set_user_model(user_model)

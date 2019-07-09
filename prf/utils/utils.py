@@ -427,6 +427,17 @@ def ld2dd(ld, key):
     'list of dicts to dict of dicts'
     return {each[key]:each for each in ld}
 
+def d2inv(d, value_as_list=True):
+    inv_dict = {}
+
+    for kk,vv in d.items():
+        if value_as_list:
+            inv_dict[vv] = inv_dict.get(vv, [])
+            inv_dict[vv].append(kk)
+        elif vv not in inv_dict:
+            inv_dict[vv] = kk
+
+    return inv_dict
 
 def qs2dict(qs):
     from urllib.parse import parse_qsl
