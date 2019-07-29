@@ -98,7 +98,7 @@ def mongo_connect(settings):
     alias = settings.get('mongodb.alias', 'default')
 
     mongo.connect(db=db, host=host, port=port, alias=alias, connect=False)
-    log.info('MongoDB enabled with db:%s, host:%s, port:%s, alias:%s', db, host, port, alias)
+    log.debug('MongoDB enabled with db:%s, host:%s, port:%s, alias:%s', db, host, port, alias)
 
 
 def mongo_disconnect(alias):
@@ -771,31 +771,16 @@ class BaseMixin(object):
                         cls.__name__, list(missing))
 
     @classmethod
-    def mark_dups(cls, keys, page_size=100, **query):
-        total_marked = 0
+    def get_db(cls):
+        return mongo.connection.get_db()
 
-        for batch in cls.get_collection_paged(
-                        page_size,
-                        dups_by__exists=0,
-                        count__gt=1,
-                        _group=keys,
-                        _group_list='_id',
-                        **query):
-
-            dup_ids = []
-
-            for each in batch:
-                ids = [e['_id'] for e in each['list']]
-                dup_ids.extend(sorted(ids, reverse=True)[1:])
-
-            total_marked += cls.objects(id__in=dup_ids)\
-                               .update(set__dups_by=keys,
-                                       write_concern={"w": 1})
-
-            log.debug('%s marked as dups by %s', total_marked, keys)
+    @classmethod
+    def get_last_status(cls):
+        return cls.get_db().last_status()
 
     def get_density(self, fields=[]):
         return len(self.to_dict(fields).flat(keep_lists=1))
+
 
 
 class Base(BaseMixin, mongo.Document, metaclass=TopLevelDocumentMetaclass):

@@ -232,7 +232,6 @@ class Aggregator(object):
                       field = field.field,
                       **field.params))
 
-
         for (op, val) in self.metrics:
             aggs.metric('%s_%s' % (self.undot(val), op), op, field=val)
 
@@ -385,6 +384,7 @@ class ES(object):
 
     def __init__(self, name):
         self.index = name
+        self.name = name
 
     @classmethod
     def get_doc_types(cls, index):
