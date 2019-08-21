@@ -107,11 +107,7 @@ class ESDoc:
         return self._data
 
 class Results(list):
-    def __init__(self, index, specials, data, total, took):
-        if not index:
-            raise ValueError('index cant be None or empty')
-
-        doc_types = ES.get_doc_types(index)
+    def __init__(self, index, specials, data, total, took, doc_types):
         list.__init__(self, [ESDoc(each, index=index, doc_types=doc_types) for each in data])
         self.total = total
         self.specials = specials
@@ -140,6 +136,8 @@ class Aggregator(object):
 
         self.search_obj = search_obj
         self.index=index
+        self.doc_types = ES.get_doc_types(index)
+
 
     @staticmethod
     def undot(name):
@@ -385,6 +383,7 @@ class ES(object):
     def __init__(self, name):
         self.index = name
         self.name = name
+        self.doc_types = ES.get_doc_types(name)
 
     @classmethod
     def get_doc_types(cls, index):
@@ -473,7 +472,6 @@ class ES(object):
         elif '_search' in specials:
             q_params['query'] = specials._search
             _s = _s.query('query_string', **q_params)
-
 
         for key, val in list(params.items()):
             list_has_null = False
@@ -631,7 +629,8 @@ class ES(object):
 
             resp = _s.execute()
             data = self.process_hits(resp.hits.hits)
-            return Results(self.index, specials, data, self.get_total(**params), resp.took)
+            return Results(self.index, specials, data, self.get_total(**params), resp.took,
+                            doc_types=self.doc_types)
 
         finally:
             log.debug('(ES) OUT: %s, QUERY:\n%s', self.index, pformat(_s.to_dict()))
@@ -653,7 +652,7 @@ class ES(object):
             data.append(hit.to_dict())
 
             if len(data) >= page_size:
-                yield Results(self.index, {}, data, 0, 0)
+                yield Results(self.index, {}, data, 0, 0, self.doc_types)
                 data = []
 
     def get_collection_paged(self, page_size, **params):
