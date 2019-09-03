@@ -237,9 +237,13 @@ class BaseView(object):
 
             if self._specials._flat:
                 if '*' in self._specials._flat:
-                    _d = _d.flat()
+                    fl_keys = ''
                 else:
-                    _d = _d.flat(self._specials._flat)
+                    fl_keys = self._specials._flat
+
+                _d = _d.flat(fl_keys,
+                        keep_lists=self._specials._flat_keep_lists,
+                        sep=self._specials._flat_sep)
 
             return _d
 

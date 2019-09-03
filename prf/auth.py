@@ -86,7 +86,7 @@ def includeme(config):
                                     defaults={'auth.hashalg':'sha512',
                                               'auth.http_only':True,
                                               'auth.callback':None,
-                                              'auth.secret':None}).auth
+                                              'auth.secret':None}).unflat().auth
 
     if not auth_params.callback:
         raise DValueError('Missing auth.callback')

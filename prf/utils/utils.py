@@ -107,6 +107,8 @@ def parse_specials(orig_params):
         _ix=None,
         _explain=None,
         _flat=None,
+        _flat_sep=None,
+        _flat_keep_lists=None,
         _join=None,
         _unwind=None,
         _where=None,
@@ -146,6 +148,8 @@ def parse_specials(orig_params):
                          if specials._limit > -1 else None
 
     specials._ix = params.asint('_ix', pop=True, allow_missing=True, _raise=False)
+    specials._flat_keep_lists = params.asbool('_flat_keep_lists', default=False)
+    specials._flat_sep = params.asstr('_flat_sep', default='.')
 
     specials._asdict = params.pop('_asdict', False)
     specials._pop_empty = params.pop('_pop_empty', False)
