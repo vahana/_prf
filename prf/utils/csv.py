@@ -8,29 +8,32 @@ from prf.utils import maybe_dotted
 
 log = logging.getLogger(__name__)
 
-def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=None):
+def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=None, auto_headers=False):
     import tablib
 
     if processor:
         processor = maybe_dotted(processor, throw=True)
 
     def render(each, key):
-        val = each.pop(key, '')
+        val = each.get(key)
         if isinstance(val, (datetime, date)):
-            return val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
-        else:
-            return str(val)
+            val = val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
 
-    headers = []
-    fields = fields or []
+        return val
+
     data = data or []
+    headers = []
 
-    for each in split_strip(fields):
-        aa, _, bb = each.partition('__as__')
-        name = (bb or aa).split(':')[0]
-        headers.append(name)
+    if auto_headers and data:
+        headers = list(data[0].flat(keep_lists=0).keys())
+    elif fields:
+        for each in split_strip(fields):
+            aa, _, bb = each.partition('__as__')
+            name = (bb or aa).split(':')[0]
+            headers.append(name)
 
-    tabdata = tablib.Dataset(headers = None if skip_headers else headers)
+    tabdata = tablib.Dataset(headers=None if skip_headers else headers)
+
     try:
         for each in data:
             each = each.flat(keep_lists=0)
@@ -38,16 +41,21 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
             if processor:
                 each = processor(each)
 
-            for col in headers:
+            if auto_headers:
+                new_cols = list(set(each.keys()) - set(tabdata.headers))
+                for new_col in new_cols:
+                    tabdata.append_col([None]*len(tabdata), header=new_col)
+
+            for col in tabdata.headers:
                 row.append(render(each, col))
 
             tabdata.append(row)
 
         return getattr(tabdata, format_)
 
-    except:
-        log.error('Headers:%s, Fields:%s, Format:%s\nData:%s', headers, fields, format_, each)
-        raise HTTPBadRequest('dict2tab error: %r'%sys.exc_info()[1])
+    except Exception as e:
+        log.error('Headers:%s, auto_headers:%s, Format:%s\nData:%s', tabdata.headers, auto_headers, format_, each)
+        raise HTTPBadRequest('dict2tab error: %r' % e)
 
 
 class TabRenderer(object):
@@ -68,5 +76,6 @@ class TabRenderer(object):
             raise HTTPBadRequest('Unsupported Accept Header `%s`' % request.accept)
 
         return dict2tab(value.get('data', []),
-                        fields=specials.get('_fields'),
-                        format_=_format)
+                        fields=specials.aslist('_fields', default=[]),
+                        format_=_format,
+                        auto_headers= '_auto_headers' in specials)
