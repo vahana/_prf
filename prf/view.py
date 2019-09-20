@@ -223,10 +223,6 @@ class BaseView(object):
         return item.extract(self._specials._fields)
 
     def serialize(self, obj, many):
-        def get_meta(meta, total):
-            if meta:
-                return meta
-            return slovar(total = total)
 
         def process_dict(_d):
             _d = slovar(_d)
@@ -289,10 +285,13 @@ class BaseView(object):
                 'total': total,
                 'count': len(data),
                 'query': self._params,
+                '_meta': slovar(),
             }
 
             if meta:
-                wrapper['_meta'] = meta
+                wrapper['_meta'].update(meta)
+            if self._specials._meta:
+                wrapper['_meta'].update(self._specials._meta)
 
             wrapper['data'] = data
             return wrapper

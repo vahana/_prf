@@ -71,7 +71,7 @@ def drop_collections(name_prefix):
             db.drop_collection(name)
 
 def drop_db(name):
-    return mongo.connect().drop_database(name)
+    return mongo.get_connection().drop_database(name)
 
 def includeme(config):
     mongo_connect(config.prf_settings())

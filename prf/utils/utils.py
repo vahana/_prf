@@ -114,6 +114,7 @@ def parse_specials(orig_params):
         _where=None,
         _or=None,
         _type=None,
+        _meta=None
     )
 
     def short(name):
@@ -174,6 +175,8 @@ def parse_specials(orig_params):
         for kk in params:
             fld, _ = process_key(kk)
             specials._fields.append(fld)
+
+    specials._meta = params.get('_meta', slovar())
 
     return params, specials
 
@@ -447,9 +450,8 @@ def qs2dict(qs):
     from urllib.parse import parse_qsl
     return slovar(parse_qsl(qs,keep_blank_values=True))
 
-
-def TODAY():
-    return datetime.utcnow().strftime('%Y_%m_%d')
+def TODAY(sep='_'):
+    return datetime.utcnow().strftime(sep.join(['%Y', '%m', '%d']))
 
 def NOW(sep=None):
     dnow = datetime.utcnow()
