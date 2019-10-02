@@ -4,7 +4,7 @@ from pprint import pformat
 
 from bson import ObjectId, DBRef
 
-from elasticsearch.exceptions import ElasticsearchException
+from elasticsearch.exceptions import ElasticsearchException, NotFoundError
 from elasticsearch.serializer import JSONSerializer
 from elasticsearch_dsl import Search, Q, A, DocType
 from elasticsearch_dsl.connections import connections
@@ -29,7 +29,23 @@ MAX_RESULT_WINDOW = 10000
 def includeme(config):
     Settings = slovar(config.registry.settings)
     ES.setup(Settings)
-    config.add_error_view(ElasticsearchException, error='%128s', error_attr='args')
+    config.add_tween('prf.es.es_exc_tween',
+                      under='pyramid.tweens.excview_tween_factory')
+
+
+def es_exc_tween(handler, registry):
+    log.info('mongodb_exc_tween enabled')
+
+    def tween(request):
+        try:
+            return handler(request)
+
+        except NotFoundError as e:
+            raise prf.exc.HTTPNotFound(request=request, exception=e)
+        except ElasticsearchException as e:
+            raise prf.exc.HTTPBadRequest(request=request, exception=e)
+
+    return tween
 
 
 class Base(DocType):
