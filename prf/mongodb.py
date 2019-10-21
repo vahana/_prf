@@ -71,7 +71,7 @@ def drop_collections(name_prefix):
             db.drop_collection(name)
 
 def drop_db(name):
-    return mongo.get_connection().drop_database(name)
+    return mongo.connection.get_connection().drop_database(name)
 
 def includeme(config):
     mongo_connect(config.prf_settings())
@@ -519,11 +519,13 @@ class BaseMixin(object):
                 return query_set.scalar(*specials.aslist('_scalar'))
 
             if specials._fields:
-                only, exclude = process_fields(specials._fields).mget(['only', 'exclude'])
-                if only:
-                    query_set = query_set.only(*only)
+                op = process_fields(specials._fields)
+                if op.star:
+                    pass
+                elif op.only:
+                    query_set = query_set.only(*op.only)
                 elif exclude:
-                    query_set = query_set.exclude(*exclude)
+                    query_set = query_set.exclude(*op.exclude)
 
             query_set._total = _total
             if specials._explain and isinstance(query_set, mongo.QuerySet):

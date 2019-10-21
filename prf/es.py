@@ -9,6 +9,7 @@ from elasticsearch.serializer import JSONSerializer
 from elasticsearch_dsl import Search, Q, A, DocType
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import aggs as AGGS
+from elasticsearch import helpers
 
 from slovar import slovar
 import prf
@@ -438,6 +439,32 @@ class ES(object):
 
         return slovar(major=int(vers[0]), minor=int(vers[1]), patch=int(vers[2]))
 
+    @classmethod
+    def flush(cls, data):
+        success, all_errors = helpers.bulk(cls.api, data, raise_on_error=False,
+                                                raise_on_exception=False, refresh=True)
+        errors = []
+        retries = []
+        retry_data = []
+
+        if all_errors:
+            #separate retriable errors
+            for err in all_errors:
+                err = slovar(err)
+                if err.fget('index.status') == 429: #too many requests
+                    retries.append(err['index']['_id'])
+                else:
+                    errors.append(err)
+
+                if retries:
+                    for each in data:
+                        if each['_id'] in retries:
+                            retry_data.append(each)
+
+        log.debug('BULK FLUSH: total=%s, success=%s, errors=%s, retries=%s',
+                                len(data), success, len(errors), len(retry_data))
+        return success, errors, retry_data
+
     def drop_collection(self):
         ES.api.indices.delete(self.index, ignore=[400, 404])
 
@@ -608,12 +635,11 @@ class ES(object):
         else:
             _s = _s[specials._start:]
 
-        _fields = specials._fields
-
-        if _fields:
-            only, exclude = process_fields(_fields).mget(['only', 'exclude'])
-            _s = _s.source(include=['%s'%e for e in only],
-                           exclude = ['%s'%e for e in exclude])
+        if specials._fields:
+            op = process_fields(specials._fields)
+            if not op.star:
+                _s = _s.source(include=['%s'%e for e in op.only],
+                               exclude = ['%s'%e for e in op.exclude])
 
         _s = _s.params(**extra)
         return _s
@@ -743,4 +769,5 @@ class ES(object):
                 doc_type = obj._meta._type,
                 id = obj._meta._id,
             )
+
 

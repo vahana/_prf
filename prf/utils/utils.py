@@ -516,3 +516,20 @@ def join(objects, joinee_itor, join_on, require_match=True, join_ns=None,
                     _d2 = slovar({join_ns:_d2})
 
                 yield _d1.update_with(_d2)
+
+
+def rextract(expr, data, delim, _raise=True):
+    result = re.search('%s(.*)%s' % (delim, delim), expr)
+    if result:
+        fld = result.group(1)
+        val = data.extract(fld)
+
+        if val:
+            return expr.replace(result.group(0), typecast(val.flat())[fld])
+
+        else:
+            msg = 'missing fields in data.\nfields: %s\ndata keys: %s' % (fld, data.keys())
+            if _raise:
+                raise ValueError(msg)
+            else:
+                log.error(msg)
