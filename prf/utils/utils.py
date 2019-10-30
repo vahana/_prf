@@ -10,6 +10,7 @@ from urllib.parse import urlparse, parse_qs, parse_qsl
 from datetime import date, datetime
 import requests
 from functools import partial
+from time import time, sleep
 
 from slovar.strings import split_strip, str2dt, str2rdt
 from slovar.utils import maybe_dotted
@@ -533,3 +534,26 @@ def rextract(expr, data, delim, _raise=True):
                 raise ValueError(msg)
             else:
                 log.error(msg)
+
+
+class Throttler:
+    def __init__(self, max_counter, period):
+        self.max_counter = max_counter
+        self.period = period
+        self.reset()
+
+    def reset(self):
+        self.stime = time()
+        self.counter = 0
+
+    def pause(self):
+        time_past = time() - self.stime
+        sleep_for = self.period-time_past
+        log.debug('THROTTLE: sleep for %s, with %s' % (sleep_for, self.__dict__))
+        sleep(sleep_for)
+        self.reset()
+
+    def __call__(self):
+        self.counter += 1
+        if time() - self.stime <= self.period and self.counter >= self.max_counter:
+            self.pause()

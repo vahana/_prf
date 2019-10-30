@@ -141,6 +141,8 @@ class Aggregator(object):
     def __init__(self, specials, search_obj, index):
         self.specials = specials
         self.specials.aslist('_group', default=[])
+        self.specials.aslist('_buckets', default=[])
+
         self.metrics = []
 
         if self.specials._start or self.specials._page:
@@ -175,18 +177,36 @@ class Aggregator(object):
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
 
+    def transform(self, aggs):
+
+        def _rec_trans(_aggs, bucket_name, agg_names):
+            buckets = []
+
+            for bucket in _aggs[bucket_name]['buckets']:
+                _d = slovar({bucket_name: bucket['key'], 'count': bucket['doc_count']})
+
+                for fld in self.specials._buckets:
+                    parts = fld.split('..')
+                    if len(parts) == self.specials._group.index(bucket_name)+1:
+                        _d = _d.extract('*,%s' % parts[-1])
+
+                if not self.specials._flat:
+                    _d = _d.unflat()
+
+                if agg_names:
+                    _d['buckets'] = _rec_trans(bucket, agg_names[0], agg_names[1:])
+                buckets.append(_d)
+
+            return buckets
+
+        return slovar(
+            total = aggs['total']['value'],
+            data = _rec_trans(aggs, self.specials._group[0], self.specials._group[1:]))
+
     def execute(self):
         try:
             resp = self.search_obj.execute()
-            aggs = slovar(resp.aggregations._d_)
-            hits = ES.process_hits(resp.hits.hits)
-
-            data = slovar(
-                    aggs = slovar(resp.aggregations._d_),
-                    hits = hits
-                )
-
-            return data
+            return self.transform(resp.aggregations._d_)
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
@@ -397,11 +417,6 @@ class ES(object):
         except KeyError as e:
             raise Exception('Bad or missing settings for elasticsearch. %s' % e)
 
-    def __init__(self, name):
-        self.index = name
-        self.name = name
-        self.doc_types = ES.get_doc_types(name)
-
     @classmethod
     def get_doc_types(cls, index):
         meta = cls.get_meta(index)
@@ -421,6 +436,20 @@ class ES(object):
             return method(index,
                 doc_type,
                 ignore_unavailable=True)
+
+    @classmethod
+    def get_alias_index_maps(cls, name):
+        #name can be either alias or index
+        aliases = slovar()
+        indices = slovar()
+
+        for index, alias in cls.get_meta(name, command='get_alias').items():
+            allist = list(alias['aliases'].keys())
+            indices.add_to_list(index, allist)
+            for al in allist:
+                aliases.add_to_list(al, index)
+
+        return aliases, indices
 
     @classmethod
     def put_mapping(cls, **kw):
@@ -464,6 +493,13 @@ class ES(object):
         log.debug('BULK FLUSH: total=%s, success=%s, errors=%s, retries=%s',
                                 len(data), success, len(errors), len(retry_data))
         return success, errors, retry_data
+
+
+    def __init__(self, name):
+        self.index = name
+        self.name = name
+        self.doc_types = ES.get_doc_types(name)
+        self.alias_map, self.index_map = ES.get_alias_index_maps(name)
 
     def drop_collection(self):
         ES.api.indices.delete(self.index, ignore=[400, 404])
