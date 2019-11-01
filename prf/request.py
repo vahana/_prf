@@ -111,13 +111,15 @@ class Request(object):
         return isinstance(data, (tuple, list, dict)) \
             and self.session.headers['content-type'] == 'application/json'
 
-    def raise_or_log(self, resp):
-        if self._raise:
-            params = self.json(resp) or {'detail':resp.text}
+    def raise_or_log(self, resp, _raise=False):
+        params = self.json(resp) or {'detail':resp.text}
+        params['extra'] = {'url':resp.url}
+        log.error(str(params))
+
+        if _raise or self._raise:
             raise exc_kls.exception_response(status_code=resp.status_code,
                                              **params)
 
-        log.error(str(self.json(resp)))
         return resp
 
     def from_cache(self, resp):

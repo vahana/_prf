@@ -199,9 +199,14 @@ class Aggregator(object):
 
             return buckets
 
-        return slovar(
-            total = aggs['total']['value'],
-            data = _rec_trans(aggs, self.specials._group[0], self.specials._group[1:]))
+        total = aggs['total']['value']
+        data = _rec_trans(aggs, self.specials._group[0], self.specials._group[1:])
+
+        return Results(self.index, self.specials, data, total, 0, doc_types=self.doc_types)
+
+        # return slovar(
+        #     total = aggs['total']['value'],
+        #     data = _rec_trans(aggs, self.specials._group[0], self.specials._group[1:]))
 
     def execute(self):
         try:
