@@ -177,41 +177,13 @@ class Aggregator(object):
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
 
-    def transform(self, aggs):
-
-        def _rec_trans(_aggs, bucket_name, agg_names):
-            buckets = []
-
-            for bucket in _aggs[bucket_name]['buckets']:
-                _d = slovar({bucket_name: bucket['key'], 'count': bucket['doc_count']})
-
-                for fld in self.specials._buckets:
-                    parts = fld.split('..')
-                    if len(parts) == self.specials._group.index(bucket_name)+1:
-                        _d = _d.extract('*,%s' % parts[-1])
-
-                if not self.specials._flat:
-                    _d = _d.unflat()
-
-                if agg_names:
-                    _d['buckets'] = _rec_trans(bucket, agg_names[0], agg_names[1:])
-                buckets.append(_d)
-
-            return buckets
-
-        total = aggs['total']['value']
-        data = _rec_trans(aggs, self.specials._group[0], self.specials._group[1:])
-
-        return Results(self.index, self.specials, data, total, 0, doc_types=self.doc_types)
-
-        # return slovar(
-        #     total = aggs['total']['value'],
-        #     data = _rec_trans(aggs, self.specials._group[0], self.specials._group[1:]))
-
     def execute(self):
         try:
             resp = self.search_obj.execute()
-            return self.transform(resp.aggregations._d_)
+            return slovar(
+                    aggs = slovar(resp.aggregations._d_),
+                    hits = {}
+                )
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
