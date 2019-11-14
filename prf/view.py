@@ -9,6 +9,7 @@ from pyramid.request import Request
 from pyramid.response import Response
 
 from slovar import slovar
+from slovar.utils import maybe_dotted
 
 import prf.exc
 from prf.utils import json_dumps, urlencode
@@ -222,10 +223,26 @@ class BaseView(object):
     def extract_item_fields(self, item):
         return item.extract(self._specials._fields)
 
+    def transform_item(self, item, _raise=True):
+        for tr in self._specials._tr:
+            try:
+                tr_obj = maybe_dotted(tr)()
+                item = tr_obj(item)
+
+            except (TypeError, ImportError) as e:
+                msg = '`%s` transformer error: %s' % (tr, e)
+                if _raise:
+                    raise prf.exc.HTTPBadRequest(msg)
+                else:
+                    log.error(msg)
+        return item
+
     def serialize(self, obj, many):
 
         def process_dict(_d):
             _d = slovar(_d)
+            _d = self.transform_item(_d)
+
             if self._specials._pop_empty:
                 _d = _d.pop_by_values([[], {}, ''])
 
