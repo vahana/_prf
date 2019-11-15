@@ -456,17 +456,6 @@ class BaseMixin(object):
         return Aggregator(queryset._query, specials).unwind(cls._get_collection())
 
     @classmethod
-    def _ix(cls, specials, total):
-        if specials._ix < 0:
-            _ix = max(total + specials._ix, 0)
-        else:
-            _ix = min(specials._ix, total-1)
-
-        specials._start = _ix
-        specials._end = _ix + 1
-        specials._limit = 1
-
-    @classmethod
     def get_collection(cls, _q=None, **params):
         params = Params(params)
         log.debug('IN: cls: %s, params: %.512s', cls.__name__, params)
@@ -505,9 +494,6 @@ class BaseMixin(object):
             if specials._sort:
                 query_set = query_set.order_by(*specials._sort)
 
-            if specials._ix is not None:
-                cls._ix(specials, _total)
-
             if specials._end is None:
                 if specials._start == 0:
                     return query_set
@@ -524,13 +510,10 @@ class BaseMixin(object):
                     pass
                 elif op.only:
                     query_set = query_set.only(*op.only)
-                elif exclude:
+                elif op.exclude:
                     query_set = query_set.exclude(*op.exclude)
 
             query_set._total = _total
-            if specials._explain and isinstance(query_set, mongo.QuerySet):
-                return query_set.explain()
-
             return query_set
 
         finally:
@@ -592,7 +575,7 @@ class BaseMixin(object):
         return str(self.id)
 
     def update_with(self, _dict, **kw):
-        self_dict = slovar.to(self.to_dict()).update_with(_dict, **kw)
+        self_dict = self.to_dict().update_with(_dict, **kw)
 
         for key, val in list(self_dict.unflat().items()):
             setattr(self, key, val)
@@ -600,7 +583,7 @@ class BaseMixin(object):
         return self
 
     def to_dict(self, fields=None):
-        _d = slovar.to(self.to_mongo().to_dict())
+        _d = slovar(self.to_mongo().to_dict())
 
         if '_id' in _d:
             _d['id']=_d.pop('_id')

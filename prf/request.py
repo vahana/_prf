@@ -341,6 +341,6 @@ class PRFRequest(Request):
             return data
         else:
             if isinstance(data['data'], list):
-                return data
+                return slovar(data)
             else:
                 return slovar(data['data'])

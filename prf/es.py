@@ -9,6 +9,8 @@ from elasticsearch.serializer import JSONSerializer
 from elasticsearch_dsl import Search, Q, A, DocType
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import aggs as AGGS
+from elasticsearch_dsl.exceptions import UnknownDslObject
+
 from elasticsearch import helpers
 
 from slovar import slovar
@@ -45,6 +47,9 @@ def es_exc_tween(handler, registry):
             raise prf.exc.HTTPNotFound(request=request, exception=e)
         except ElasticsearchException as e:
             raise prf.exc.HTTPBadRequest(request=request, exception=e)
+        except UnknownDslObject as e:
+            raise prf.exc.HTTPBadRequest(request=request, exception=e)
+
 
     return tween
 
@@ -141,7 +146,8 @@ class Aggregator(object):
     def __init__(self, specials, search_obj, index):
         self.specials = specials
         self.specials.aslist('_group', default=[])
-        self.specials.aslist('_buckets', default=[])
+        self.specials.aslist('_bucket_items', default=[])
+        self.specials.asbool('_raw_', default=False)
 
         self.metrics = []
 
@@ -177,13 +183,45 @@ class Aggregator(object):
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
 
+    def transform(self, aggs):
+        if self.specials._raw_:
+            return aggs
+
+        def _trans(_aggs, bucket_name, agg_names):
+            '''recursive transformation
+            Use _bucket_items to modify an item in the bucket.
+            e.g. _group=address.country.name,address.admin1.name&_bucket_items=buckets.address.admin1.name__as__state
+            '''
+
+            buckets = []
+
+            for bucket in _aggs[bucket_name]['buckets']:
+                _d = slovar({bucket_name: bucket['key'], 'count': bucket['doc_count']})
+                for fld in self.specials._bucket_items:
+                    parts = fld.split('buckets.')
+                    if len(parts) == self.specials._group.index(bucket_name)+1:
+                        _d = _d.extract('*,%s' % parts[-1])
+
+                if not self.specials._flat:
+                    _d = _d.unflat()
+
+                if agg_names:
+                    _d['buckets'] = _trans(bucket, agg_names[0], agg_names[1:])
+                buckets.append(_d)
+
+            return buckets
+
+        total = aggs['total']['value']
+
+        bucket_name = self.specials._group[0]
+        data = _trans(aggs, bucket_name, self.specials._group[1:])
+
+        return Results(self.index, self.specials, data, total, 0, doc_types=self.doc_types)
+
     def execute(self):
         try:
             resp = self.search_obj.execute()
-            return slovar(
-                    aggs = slovar(resp.aggregations._d_),
-                    hits = {}
-                )
+            return self.transform(resp.aggregations._d_)
 
         except Exception as e:
             raise prf.exc.HTTPBadRequest(e)
@@ -211,7 +249,6 @@ class Aggregator(object):
         return self.execute()
 
     def do_group(self):
-
         if self.specials.get('_group_range'):
             return self.do_group_range()
 
@@ -308,40 +345,50 @@ class Aggregator(object):
         _field.params = slovar()
 
         _field.params['size'] = self.get_size()
-        _field.bucket_name = field
         _field.field, _ = process_key(field)
+        _field.bucket_name = field
         _field.op_type = 'terms'
 
         if '__as__' in field:
+            # switch to raw results from ES directly so self.transform skips processing it
+            self.specials._raw_ = True
+
             field, _, _op = field.partition('__as__')
+            _field.bucket_name =  '%s__%s' % (field, _op)
+
             if _op == 'geo':
                 _field.op_type = 'geohash_grid'
                 _field.params.precision = self.specials.asint('_geo_precision', default=5)
-                _field.bucket_name = _field.field = field.replace(',', '_')
 
             elif _op == 'date_range':
-                _field.bucket_name = field
-                _field.op_type = 'date_range'
+                _field.op_type = _op
                 _field.field = field
-                _field.params.format = "MM-YY"
+                _field.params.format = self.specials.asstr('_format', default='yyyy-MM-dd')
+
                 _from, _to = self.specials.aslist('_ranges')
                 _field.params.ranges = [{'from':_from}, {'to':_to}]
                 _field.params.pop('size', None)
+
+            elif _op == 'date_histogram':
+                _field.op_type = _op
+                _field.field = field
+                _field.params.interval = self.specials._interval
+                _field.params.pop('size', None)
+                _field.params.format = self.specials.asstr('_format', default='yyyy-MM-dd')
+
+            else:
+                _field.op_type = _op
+                _field.field = field
+                _field.params.pop('size')
 
         return _field
 
     def build_agg_item(self, field_name, **params):
         field = self.process_field(field_name)
         field.params.update(params)
-
-        if field.op_type in ['terms', 'geohash_grid']:
-            return A(field.op_type,
-                     field = field.field,
-                     **field.params)
-        elif field.op_type == 'date_range':
-            return A('date_range',
-                     field = field.field,
-                     **field.params)
+        return A(field.op_type,
+                 field = field.field,
+                 **field.params)
 
 
 class ES(object):
@@ -354,7 +401,7 @@ class ES(object):
     def process_hits(cls, hits):
         data = []
         for each in hits:
-            _d = slovar.to(each['_source'])
+            _d = slovar(each['_source'])
             _d = _d.update({
                 '_score':each['_score'],
                 '_type':each['_type'],
@@ -670,15 +717,15 @@ class ES(object):
 
         _s = self.build_search_object(_params, specials)
 
-        if specials._count:
-            return _s.count()
-
         try:
             if specials._group:
                 return Aggregator(specials, _s, self.index).do_group()
 
             if specials._distinct:
                 return Aggregator(specials, _s, self.index).do_distinct()
+
+            if specials._count:
+                return _s.count()
 
             check_pagination_limit()
 
@@ -750,7 +797,7 @@ class ES(object):
         return self.get_collection(_count=1, **params)
 
     def save(self, obj, data):
-        data = slovar.to(data).unflat()
+        data = slovar(data).unflat()
 
         if self.version.major >= 7:
             return ES.api.update(

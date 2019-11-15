@@ -105,17 +105,13 @@ def parse_specials(orig_params):
         _group=None,
         _distinct=None,
         _scalar=None,
-        _ix=None,
-        _explain=None,
         _flat=None,
         _flat_sep=None,
         _flat_keep_lists=None,
         _join=None,
         _unwind=None,
-        _where=None,
-        _or=None,
-        _type=None,
-        _meta=None
+        _meta=None,
+        _tr=None
     )
 
     def short(name):
@@ -134,8 +130,6 @@ def parse_specials(orig_params):
 
     specials._count = short('_count') in params; params.pop(short('_count'), False)
 
-    specials._explain = '_explain' in params; params.pop('_explain', False)
-
     params.asint('_start', allow_missing=True)
     params.asint('_page', allow_missing=True)
     params.asint('_limit', allow_missing=True)
@@ -149,7 +143,6 @@ def parse_specials(orig_params):
         specials._end = specials._start+specials._limit\
                          if specials._limit > -1 else None
 
-    specials._ix = params.asint('_ix', pop=True, allow_missing=True, _raise=False)
     specials._flat_keep_lists = params.asbool('_flat_keep_lists', default=False)
     specials._flat_sep = params.asstr('_flat_sep', default='.')
 
@@ -165,19 +158,14 @@ def parse_specials(orig_params):
 
     params = typecast(params)
 
-    if specials._where:
-        params['__raw__'] = {'$where': specials._where}
-
-    if specials._type:
-        field,_type = specials._type.split(':')
-        params['__raw__'] = {field:{'$type':_type}}
-
+    #deduce fields from the query
     if 'AUTO' in specials._fields:
         for kk in params:
             fld, _ = process_key(kk)
             specials._fields.append(fld)
 
-    specials._meta = params.get('_meta', slovar())
+    specials._meta = specials.get('_meta', slovar())
+    specials._tr = specials.aslist('_tr', default=[])
 
     return params, specials
 
@@ -416,8 +404,8 @@ def cleanup_url(url, _raise=True):
 
 def ld2dl(ld):
     dl = {}
-    for each in ld:
-        for kk,vv in each:
+    for _d in ld:
+        for kk,vv in _d.items():
             if kk in dl:
                 dl[kk].append(vv)
             else:
@@ -468,7 +456,6 @@ def raise_or_log(_raise=False):
     else:
         import traceback
         traceback.print_exc()
-
 
 def join(objects, joinee_itor, join_on, require_match=True, join_ns=None,
                                             join_unwind=True, join_params=None):
@@ -523,17 +510,18 @@ def rextract(expr, data, delim, _raise=True):
     result = re.search('%s(.*)%s' % (delim, delim), expr)
     if result:
         fld = result.group(1)
-        val = data.extract(fld)
+        _d = data.extract(fld)
 
-        if val:
-            return expr.replace(result.group(0), typecast(val.flat())[fld])
+        if _d:
+            val = typecast(_d.flat())[fld]
+            if val:
+                return expr.replace(result.group(0), val)
 
+        msg = 'missing fields or value None in data.\nfields: %s\ndata keys: %s' % (fld, data.keys())
+        if _raise:
+            raise ValueError(msg)
         else:
-            msg = 'missing fields in data.\nfields: %s\ndata keys: %s' % (fld, data.keys())
-            if _raise:
-                raise ValueError(msg)
-            else:
-                log.error(msg)
+            log.warning(msg)
 
 
 class Throttler:
