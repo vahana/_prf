@@ -255,7 +255,7 @@ class Aggregator(object):
         if '_show_hits' not in self.specials:
             self.search_obj = self.search_obj[0:0]
 
-        top_field = self.process_field(self.specials._group[0])
+        top_terms, top_field = self.build_agg_item(self.specials._group[0])
 
         cardinality = A('cardinality',
                          field = top_field.field,
@@ -267,7 +267,6 @@ class Aggregator(object):
             resp = self.search_obj.execute()
             return resp.aggregations.total.value
 
-        top_terms = self.build_agg_item(self.specials._group[0])
         if top_field.op_type == 'terms':
             top_terms._params['collect_mode']\
                  = self.specials.asstr('_collect_mode', default="breadth_first")
@@ -341,20 +340,20 @@ class Aggregator(object):
             raise prf.exc.HTTPBadRequest('`%s` results: %s' % (total, msg))
 
     def process_field(self, field):
+        field, _, _op = field.partition('__as__')
+
         _field = slovar()
         _field.params = slovar()
 
         _field.params['size'] = self.get_size()
-        _field.field, _ = process_key(field)
-        _field.bucket_name = field
+        _field.field = field
+        _field.bucket_name = '%s__%s' % (field, _op) if _op else field
+
         _field.op_type = 'terms'
 
-        if '__as__' in field:
-            # switch to raw results from ES directly so self.transform skips processing it
+        if _op:
+            # make sure self.transform skips processing this
             self.specials._raw_ = True
-
-            field, _, _op = field.partition('__as__')
-            _field.bucket_name =  '%s__%s' % (field, _op)
 
             if _op == 'geo':
                 _field.op_type = 'geohash_grid'
@@ -362,7 +361,6 @@ class Aggregator(object):
 
             elif _op == 'date_range':
                 _field.op_type = _op
-                _field.field = field
                 _field.params.format = self.specials.asstr('_format', default='yyyy-MM-dd')
 
                 _from, _to = self.specials.aslist('_ranges')
@@ -371,14 +369,12 @@ class Aggregator(object):
 
             elif _op == 'date_histogram':
                 _field.op_type = _op
-                _field.field = field
                 _field.params.interval = self.specials._interval
                 _field.params.pop('size', None)
                 _field.params.format = self.specials.asstr('_format', default='yyyy-MM-dd')
 
             else:
                 _field.op_type = _op
-                _field.field = field
                 _field.params.pop('size')
 
         return _field
@@ -388,7 +384,7 @@ class Aggregator(object):
         field.params.update(params)
         return A(field.op_type,
                  field = field.field,
-                 **field.params)
+                 **field.params), field
 
 
 class ES(object):
