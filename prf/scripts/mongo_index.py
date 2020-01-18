@@ -3,8 +3,10 @@ import sys
 import logging
 
 from argparse import ArgumentParser
-from pymongo import MongoClient
-from pymongo import IndexModel
+import pymongo
+
+from urllib.parse import urlparse
+from prf.utils import qs2dict
 
 log = logging
 # log.basicConfig(level=logging.DEBUG)
@@ -28,37 +30,37 @@ class Script(object):
         if '/' not in self.args.uri:
             self.parser.error('provide input as `db/collection/indexes, where indexes are comma separated <name>:sparse:background`')
 
-        parts = self.args.uri.split('/')
-        if len(parts) != 3:
-            self.parser.error('uri must have 3 parts `db/collection/index`')
-        self.db, self.collection, self.index = parts
-        self.index = self.index.split(',')
+        parts = urlparse(self.args.uri)
+        path_parts = parts.path.split('/')
+        path_index = None
+
+        if len(path_parts) == 2:
+            self.db, self.collection = path_parts
+        elif len(path_parts) == 3:
+            self.db, self.collection,path_index = path_parts
+        else:
+            return self.parser.error('Bad path, must be either 2 or 3 parts')
+
+        self.index = qs2dict(parts.query)
+        if path_index:
+            self.index['index'] = path_index
 
     def run(self):
-        con = MongoClient(host=self.args.host, port=self.args.port)
+        con = pymongo.MongoClient(host=self.args.host, port=self.args.port)
         db = con.get_database(self.db)
         col = db.get_collection(self.collection)
 
         indexes = []
-        for each in self.index:
-            parts = each.split(':')
-            key = parts[0]
-
-            if not key:
-                return self.parser.error('missing index name')
+        for op in self.index:
+            _inds = self.index.aslist(op)
 
             params = {}
-
-            if 'sparse' in parts:
-                params['sparse'] = True
-            if 'no_background' in parts:
-                params['background'] = False
-            if 'unique' in parts:
-                params['unique'] = True
+            if op != 'index':
+                params[op] = True
+                indexes.append(pymongo.IndexModel([(it, pymongo.DESCENDING) for it in _inds], **params))
             else:
-                params['background'] = True
-
-            indexes.append(IndexModel(key, **params))
+                for ind in _inds:
+                    indexes.append(pymongo.IndexModel(ind, **params))
 
         if self.args.dry:
             print('>>> DRY RUN <<<')

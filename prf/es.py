@@ -32,8 +32,7 @@ MAX_RESULT_WINDOW = 10000
 def includeme(config):
     Settings = slovar(config.registry.settings)
     ES.setup(Settings)
-    config.add_tween('prf.es.es_exc_tween',
-                      under='pyramid.tweens.excview_tween_factory')
+    config.add_tween('prf.es.es_exc_tween')
 
 
 def es_exc_tween(handler, registry):
@@ -143,6 +142,10 @@ class Results(list):
 
 class Aggregator(object):
 
+    METRICS_AGGS = [
+        '_agg_avg', '_agg_sum', '_agg_max', '_agg_min',
+        '_agg_stats', '_agg_percentiles', '_agg_cardinality' ]
+
     def __init__(self, specials, search_obj, index):
         self.specials = specials
         self.specials.aslist('_group', default=[])
@@ -155,14 +158,26 @@ class Aggregator(object):
             raise prf.exc.HTTPBadRequest('_start/_page not supported in _group')
 
         for name,val in list(self.specials.items()):
-            if name.startswith('_group_'):
-                op = name[7:]
-                self.metrics.append([op, val])
+            if name in self.METRICS_AGGS:
+                op = name[5:]
+                self.metrics.append([op, split_strip(val)])
 
         self.search_obj = search_obj
         self.index=index
         self.doc_types = ES.get_doc_types(index)
 
+        if self.specials._group or self.metrics:
+            cardinality = A('cardinality',
+                             field = 'total',
+                             precision_threshold=PRECISION_THRESHOLD)
+
+            self.search_obj.aggs.bucket('total', cardinality)
+
+    @classmethod
+    def is_metrics(cls, specials):
+        for name in specials:
+            if name in cls.METRICS_AGGS:
+                return True
 
     @staticmethod
     def undot(name):
@@ -187,6 +202,25 @@ class Aggregator(object):
         if self.specials._raw_:
             return aggs
 
+        def _trans_metr(data):
+            _d = slovar()
+
+            def _clean(val):
+                if 'value' in val:
+                    return val['value']
+                elif 'values' in val:
+                    return val['values']
+                else:
+                    return val
+
+            for kk, vals in self.metrics:
+                for vv in vals:
+                    metr_key = '%s_%s'%(vv, kk)
+                    if metr_key in data:
+                        _d[metr_key] = _clean(data[metr_key])
+
+            return _d
+
         def _trans(_aggs, bucket_name, agg_names):
             '''recursive transformation
             Use _bucket_items to modify an item in the bucket.
@@ -197,6 +231,8 @@ class Aggregator(object):
 
             for bucket in _aggs[bucket_name]['buckets']:
                 _d = slovar({bucket_name: bucket['key'], 'count': bucket['doc_count']})
+                _d.update(_trans_metr(slovar(bucket)))
+
                 for fld in self.specials._bucket_items:
                     parts = fld.split('buckets.')
                     if len(parts) == self.specials._group.index(bucket_name)+1:
@@ -211,10 +247,21 @@ class Aggregator(object):
 
             return buckets
 
-        total = aggs['total']['value']
+        total = 0
 
-        bucket_name = self.specials._group[0]
-        data = _trans(aggs, bucket_name, self.specials._group[1:])
+        if self.specials._group:
+            bucket_name = self.specials._group[0]
+            total = aggs[bucket_name]['sum_other_doc_count']
+            data = _trans(aggs, bucket_name, self.specials._group[1:])
+        elif self.metrics:
+            data = [_trans_metr(aggs)]
+        else:
+            data = [aggs]
+
+        total = total or len(data)
+
+        if self.specials._count:
+            return total
 
         return Results(self.index, self.specials, data, total, 0, doc_types=self.doc_types)
 
@@ -248,24 +295,18 @@ class Aggregator(object):
 
         return self.execute()
 
-    def do_group(self):
-        if self.specials.get('_group_range'):
-            return self.do_group_range()
+    def do_metrics(self):
+        for (op, val) in self.metrics:
+            for each_val in val:
+                self.search_obj.aggs.metric('%s_%s' % (self.undot(each_val), op), op, field=each_val)
 
+        return self.execute()
+
+    def do_group(self):
         if '_show_hits' not in self.specials:
             self.search_obj = self.search_obj[0:0]
 
         top_terms, top_field = self.build_agg_item(self.specials._group[0])
-
-        cardinality = A('cardinality',
-                         field = top_field.field,
-                         precision_threshold=PRECISION_THRESHOLD)
-
-        self.search_obj.aggs.bucket('total', cardinality)
-
-        if self.specials._count:
-            resp = self.search_obj.execute()
-            return resp.aggregations.total.value
 
         if top_field.op_type == 'terms':
             top_terms._params['collect_mode']\
@@ -285,9 +326,6 @@ class Aggregator(object):
 
         self.search_obj.aggs.bucket(top_field.bucket_name, top_terms)
 
-        if self.specials._count:
-            return self.do_count(self.search_obj)
-
         return self.execute()
 
     def do_distinct(self):
@@ -306,16 +344,8 @@ class Aggregator(object):
         term_params['order'] = order
         term_params['field'] = field
 
-        cardinality = A('cardinality',
-                         field = field,
-                         precision_threshold=PRECISION_THRESHOLD)
-
-        self.search_obj.aggs.bucket('total', cardinality)
         terms = A('terms', **term_params)
         self.search_obj.aggs.bucket('grouped', terms)
-
-        if self.specials._count:
-            return self.do_count(self.search_obj)
 
         try:
             resp = self.search_obj.execute()
@@ -717,8 +747,14 @@ class ES(object):
             if specials._group:
                 return Aggregator(specials, _s, self.index).do_group()
 
+            if specials.get('_group_range'):
+                return Aggregator(specials, _s, self.index).do_group_range()
+
             if specials._distinct:
                 return Aggregator(specials, _s, self.index).do_distinct()
+
+            if Aggregator.is_metrics(specials):
+                return Aggregator(specials, _s, self.index).do_metrics()
 
             if specials._count:
                 return _s.count()
