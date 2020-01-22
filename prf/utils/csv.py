@@ -30,6 +30,7 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
         for each in split_strip(fields):
             aa, _, bb = each.partition('__as__')
             name = (bb or aa).split(':')[0]
+
             headers.append(name)
 
     tabdata = tablib.Dataset(headers=None if skip_headers else headers)
@@ -42,11 +43,11 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
                 each = processor(each)
 
             if auto_headers:
-                new_cols = list(set(each.keys()) - set(tabdata.headers))
+                new_cols = list(set(each.keys()) - set(headers))
                 for new_col in new_cols:
                     tabdata.append_col([None]*len(tabdata), header=new_col)
 
-            for col in tabdata.headers:
+            for col in headers:
                 row.append(render(each, col))
 
             tabdata.append(row)
