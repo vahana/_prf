@@ -3,10 +3,11 @@ import logging
 from datetime import datetime, date
 from slovar import slovar
 from slovar.strings import split_strip
-from prf.exc import HTTPBadRequest
+import prf.exc as prf_exc
 from prf.utils import maybe_dotted
 
 log = logging.getLogger(__name__)
+
 
 def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=None, auto_headers=False):
     import tablib
@@ -22,30 +23,36 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
         return val
 
     data = data or []
+
+    if not data:
+        return None
+
     headers = []
 
-    if auto_headers and data:
-        headers = list(data[0].flat(keep_lists=0).keys())
-    elif fields:
+    if fields:
         for each in split_strip(fields):
             aa, _, bb = each.partition('__as__')
             name = (bb or aa).split(':')[0]
-
             headers.append(name)
+    else:
+        #get the headers from the first item in the data.
+        #Note, data IS schemaless, so other items could have different fields.
+        headers = sorted(list(data[0].flat(keep_lists=0).keys()))
+        log.warn('Default headers take from the first item: %s', headers)
 
     tabdata = tablib.Dataset(headers=None if skip_headers else headers)
 
     try:
         for each in data:
-            each = each.flat(keep_lists=0)
+            each = each.extract(headers).flat(keep_lists=0)
             row = []
             if processor:
                 each = processor(each)
 
-            if auto_headers:
-                new_cols = list(set(each.keys()) - set(headers))
-                for new_col in new_cols:
-                    tabdata.append_col([None]*len(tabdata), header=new_col)
+            # if auto_headers:
+            #     new_cols = list(set(each.keys()) - set(headers))
+            #     for new_col in new_cols:
+            #         tabdata.append_col([None]*len(tabdata), header=new_col)
 
             for col in headers:
                 row.append(render(each, col))
@@ -56,7 +63,7 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
 
     except Exception as e:
         log.error('Headers:%s, auto_headers:%s, Format:%s\nData:%s', tabdata.headers, auto_headers, format_, each)
-        raise HTTPBadRequest('dict2tab error: %r' % e)
+        raise prf_exc.HTTPBadRequest('dict2tab error: %r' % e)
 
 
 class TabRenderer(object):
@@ -64,6 +71,7 @@ class TabRenderer(object):
         pass
 
     def __call__(self, value, system):
+
         request = system.get('request')
         response = request.response
         _, specials = system['view'](None, request).process_params(request)
@@ -74,9 +82,8 @@ class TabRenderer(object):
         elif 'text/xls' in request.accept:
             _format = 'xls'
         else:
-            raise HTTPBadRequest('Unsupported Accept Header `%s`' % request.accept)
+            raise prf_exc.HTTPBadRequest('Unsupported Accept Header `%s`' % request.accept)
 
         return dict2tab(value.get('data', []),
-                        fields=specials.aslist('_fields', default=[]),
-                        format_=_format,
-                        auto_headers= '_auto_headers' in specials)
+                        fields=specials.aslist('_csv_fields', default=[]),
+                        format_=_format)

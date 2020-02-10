@@ -135,6 +135,10 @@ class BaseView(object):
         self.__params = Params(val)
 
     def set_renderer(self):
+        if self._params.get('_renderer') in ['csv', 'tab'] and self.request.method == 'GET':
+            self.request.override_renderer = 'tab'
+            return
+
         # no accept headers, use default
         if '' in self.request.accept:
             self.request.override_renderer = self._default_renderer
@@ -146,7 +150,7 @@ class BaseView(object):
             self.request.override_renderer = 'string'
 
         elif ('text/csv' in self.request.accept or
-             'text/xls' in self.request.accept):
+                                         'text/xls' in self.request.accept):
             self.request.override_renderer = 'tab'
 
     def process_params(self, request):

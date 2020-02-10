@@ -524,6 +524,25 @@ def rextract(expr, data, delim, _raise=True):
             log.warning(msg)
 
 
+def get_dt_unique_name(name='', add_seconds=True, only_seconds=False):
+    now = datetime.utcnow()
+    seconds_since_midnight = int((now - now.replace(hour=0, minute=0, second=0, microsecond=0))\
+                                 .total_seconds())
+
+    if only_seconds:
+        return '%s_%s' % (name, seconds_since_midnight)
+
+    if name:
+        uname = '%s_%s' % (TODAY(), name)
+    else:
+        uname = TODAY()
+
+    if add_seconds:
+        uname += '_%s' % seconds_since_midnight
+
+    return uname
+
+
 class Throttler:
     def __init__(self, max_counter, period):
         self.max_counter = max_counter
