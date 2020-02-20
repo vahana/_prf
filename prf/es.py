@@ -155,7 +155,9 @@ class Aggregator(object):
         self.metrics = []
 
         if self.specials._start or self.specials._page:
-            raise prf.exc.HTTPBadRequest('_start/_page not supported in _group')
+            log.warning('_start/_page not supported in _group. Ignored.')
+            self.specials.pop('_start', None)
+            self.specials.pop('_page', None)
 
         for name,val in list(self.specials.items()):
             if name in self.METRICS_AGGS:
@@ -322,7 +324,8 @@ class Aggregator(object):
                       **field.params))
 
         for (op, val) in self.metrics:
-            aggs.metric('%s_%s' % (self.undot(val), op), op, field=val)
+            for each in val:
+                aggs.metric('%s_%s' % (self.undot(each), op), op, field=each)
 
         self.search_obj.aggs.bucket(top_field.bucket_name, top_terms)
 
@@ -519,9 +522,12 @@ class ES(object):
         return slovar(major=int(vers[0]), minor=int(vers[1]), patch=int(vers[2]))
 
     @classmethod
-    def flush(cls, data):
-        success, all_errors = helpers.bulk(cls.api, data, raise_on_error=False,
-                                                raise_on_exception=False, refresh=True)
+    def flush(cls, data, args={}):
+        args.setdefault('raise_on_error', False)
+        args.setdefault('raise_on_exception', False)
+        args.setdefault('refresh', True)
+
+        success, all_errors = helpers.bulk(cls.api, data, **args)
         errors = []
         retries = []
         retry_data = []

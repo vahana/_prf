@@ -84,6 +84,11 @@ def camel2snake(name):
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
 
 
+def urlify(s):
+    s = re.sub(r"[^\w\s]", '', s)
+    s = re.sub(r"\s+", '_', s)
+    return s
+
 def process_key(key, suffix=''):
     _key, div, op = key.rpartition('__')
     if div and op in OPERATORS:
