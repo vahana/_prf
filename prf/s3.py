@@ -2,9 +2,14 @@ import logging
 import boto3
 import io
 
+from slovar import slovar
 from prf.csv import CSV
 
 log = logging.getLogger(__name__)
+
+def includeme(config):
+    Settings = slovar(config.registry.settings)
+    S3.setup(Settings)
 
 
 class S3(CSV):

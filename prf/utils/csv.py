@@ -1,23 +1,27 @@
 import sys
 import io
 import logging
+import json
+
 from datetime import datetime, date
 from slovar import slovar
 from slovar.strings import split_strip
 import prf.exc as prf_exc
 from prf.utils import maybe_dotted
 
-
 log = logging.getLogger(__name__)
+
 
 def get_csv_header(file_or_buff):
     import pandas as pd
     return pd.read_csv(file_or_buff, nrows=0, engine = 'c').columns.to_list()
 
+
 def get_csv_total(file_or_buff):
     import pandas as pd
     df = pd.read_csv(file_or_buff, header=[0], engine = 'c')
-    return df.shape[0] - 1
+    return df.shape[0]
+
 
 def pd_read_csv(file_or_buff, **params):
     import pandas as pd
@@ -50,33 +54,40 @@ def pd_read_csv(file_or_buff, **params):
 
     return df
 
+
 def csv2dict(file_or_buff, processor=None, fillna=None, **params):
     df = pd_read_csv(file_or_buff, **params)
 
-    def clean(row):
-        return slovar(row.to_dict()).pop_by_values([fillna]).unflat()
+    def pop_na(row):
+        _d = slovar(row.to_dict())
+        if fillna is None:
+            return _d.pop_by_values([''])
+        else:
+            return _d
 
     processor = processor or (lambda x:x)
     results = []
 
     for chunk in df:
-        if fillna:
-            chunk = chunk.fillna(fillna)
-        for each in chunk.iterrows():
-            results.append(processor(clean(each[1])))
+        for each in chunk.fillna(fillna or '').iterrows():
+            results.append(processor(pop_na(each[1])))
 
     return results
 
-def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=None, auto_headers=False):
-    import tablib
 
-    if processor:
-        processor = maybe_dotted(processor, throw=True)
+def dict2tab(data, fields=None, format_='csv', skip_headers=False):
+    import tablib
 
     def render(each, key):
         val = each.get(key)
         if isinstance(val, (datetime, date)):
             val = val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
+
+        elif isinstance(val, (list, tuple)):
+            val = json.dumps(val)
+
+        if val is None:
+            val = ''
 
         return val
 
@@ -95,22 +106,15 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
     else:
         #get the headers from the first item in the data.
         #Note, data IS schemaless, so other items could have different fields.
-        headers = sorted(list(data[0].flat(keep_lists=0).keys()))
+        headers = sorted(list(data[0].flat(keep_lists=1).keys()))
         log.warn('Default headers take from the first item: %s', headers)
 
     tabdata = tablib.Dataset(headers=None if skip_headers else headers)
 
     try:
         for each in data:
-            each = each.extract(headers).flat(keep_lists=0)
+            each = each.extract(headers).flat(keep_lists=1)
             row = []
-            if processor:
-                each = processor(each)
-
-            # if auto_headers:
-            #     new_cols = list(set(each.keys()) - set(headers))
-            #     for new_col in new_cols:
-            #         tabdata.append_col([None]*len(tabdata), header=new_col)
 
             for col in headers:
                 row.append(render(each, col))
@@ -120,7 +124,7 @@ def dict2tab(data, fields=None, format_='csv', skip_headers=False, processor=Non
         return getattr(tabdata, format_)
 
     except Exception as e:
-        log.error('Headers:%s, auto_headers:%s, Format:%s\nData:%s', tabdata.headers, auto_headers, format_, each)
+        log.error('Headers:%s, Format:%s\nData:%s', tabdata.headers, format_, each)
         raise prf_exc.HTTPBadRequest('dict2tab error: %r' % e)
 
 

@@ -512,21 +512,23 @@ def join(objects, joinee_itor, join_on, require_match=True, join_ns=None,
 
 
 def rextract(expr, data, delim, _raise=True):
-    result = re.search('%s(.*)%s' % (delim, delim), expr)
-    if result:
-        fld = result.group(1)
+
+     for fld in expr.split(delim)[1::2]:
         _d = data.extract(fld)
 
         if _d:
             val = typecast(_d.flat())[fld]
             if val:
-                return expr.replace(result.group(0), val)
+                expr = expr.replace('#%s#'%fld, val)
 
-        msg = 'missing fields or value None in data.\nfields: %s\ndata keys: %s' % (fld, data.keys())
-        if _raise:
-            raise ValueError(msg)
         else:
-            log.warning(msg)
+            msg = 'missing fields or value None in data.\nfields: %s\ndata keys: %s' % (fld, data.keys())
+            if _raise:
+                raise ValueError(msg)
+            else:
+                log.warning(msg)
+
+        return expr
 
 
 def get_dt_unique_name(name='', add_seconds=True, only_seconds=False):

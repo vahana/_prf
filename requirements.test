@@ -1,4 +1,4 @@
--e git+git@github.com:vahana/slovar.git#egg=slovar
+-e git+git@github.com:gazelle-ai/slovar.git#egg=slovar
 
 pyramid
 requests

@@ -1,5 +1,6 @@
 import logging
 import os
+import json
 
 from slovar import slovar
 
@@ -11,6 +12,11 @@ from prf.utils.csv import (dict2tab, csv2dict, pd_read_csv,
 log = logging.getLogger(__name__)
 
 
+def includeme(config):
+    Settings = slovar(config.registry.settings)
+    CSV.setup(Settings)
+
+
 class Results(list):
     def __init__(self, specials, data, total):
         list.__init__(self, [slovar(each) for each in data])
@@ -19,6 +25,10 @@ class Results(list):
 
 
 class CSV(object):
+
+    @classmethod
+    def setup(cls, settings):
+        cls.settings = settings.copy()
 
     def create_if(self, path):
         if os.path.isdir(path):
@@ -35,7 +45,7 @@ class CSV(object):
         if ds.name.startswith('/'):
             file_name = ds.name
         else:
-            root_path = prf.Settings.get('prf.csv.root', root_path)
+            root_path = self.settings.get('prf.csv.root', root_path)
             if not root_path:
                 raise KeyError('Missing CSV backend `root_path` or `prf.csv.root` setting in config')
 
@@ -82,8 +92,10 @@ class CSV(object):
 
         if '_clean' in specials:
             processor = self.clean_row
+
         elif '_processor' in specials:
             processor = specials._processor
+
         else:
             processor = lambda x: x.unflat()
 
@@ -91,8 +103,7 @@ class CSV(object):
             return self.get_total(**specials)
 
         items = csv2dict(self.get_file_or_buff(), processor=processor,
-                         fillna=specials.get('_fillna'),
-                         **specials)
+                            fillna=specials.get('_fillna'), **specials)
 
         return Results(specials, items, self.get_total(**specials))
 
