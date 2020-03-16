@@ -6,7 +6,7 @@ from slovar import slovar
 
 import prf
 from prf.utils.utils import maybe_dotted, parse_specials, pager
-from prf.utils.csv import (dict2tab, csv2dict, pd_read_csv,
+from prf.utils.csv import (csv2dict, pd_read_csv,
                             get_csv_header, get_csv_total)
 
 log = logging.getLogger(__name__)
