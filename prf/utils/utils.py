@@ -169,7 +169,7 @@ def parse_specials(orig_params):
             fld, _ = process_key(kk)
             specials._fields.append(fld)
 
-    specials._meta = specials.get('_meta', slovar())
+    specials._meta = specials.get('_meta') or slovar()
     specials._tr = specials.aslist('_tr', default=[])
 
     return params, specials
