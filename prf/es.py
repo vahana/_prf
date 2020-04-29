@@ -744,7 +744,7 @@ class ES(object):
 
         def check_pagination_limit():
             pagination_limit = self.settings.asint('max_result_window', default=MAX_RESULT_WINDOW)
-            if specials._start > pagination_limit:
+            if (specials._start or 0) > pagination_limit:
                 raise prf.exc.HTTPBadRequest('Reached max pagination limit of `%s`' % pagination_limit)
 
         _s = self.build_search_object(_params, specials)
