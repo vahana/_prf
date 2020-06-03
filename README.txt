@@ -2,21 +2,20 @@ Pyramid RESTful Framework is designed to help coding REST CRUD endpoints with co
 
 Setup.
 
+First, lets install pyramid and create an app.
+
 1. virtualenv myapp
 2. pip install pyramid
-3. pip install git+https://github.com/vahana/prf
-4. pcreate -s starter myapp
-5. cd myapp
-6. pip install -e .
+3. pcreate -s starter myapp
+4. pip install -e .
 
-Run.
+Now if we run pserve development.ini and navigate to http://localhost:6543 we will see the standard pyramid app. Boring.
 
-pserve development.ini
+Lets add prf to the mix!
 
-This will run a server and you can navigate your browser to http://0.0.0.0:6543
+pip install git+https://github.com/vahana/prf
 
-
-Adding prf resources.
+And add resources.
 
 In the __init__.main function of your pyramid app declare your resources:
 
