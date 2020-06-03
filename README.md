@@ -117,7 +117,10 @@ http 0.0.0.0:6543/users
 
 Above, we declared `index`, `show`, `create` and `delete` actions which correspond to: GET collection, GET resource, POST resource and DELETE resource respectively. You could also declare `update`, which would correspond to the PUT method. You dont need to declare all of them, only those you need. The missing ones will automatically return 405 Method Not Allowed error.
 
-Comment out the `index` action and try.
+Comment out the `index` action and try:
+```
+http 0.0.0.0:6543/users
+```
 
 Happy RESTing !
 
