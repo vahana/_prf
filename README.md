@@ -80,16 +80,17 @@ Users = [
 class UsersView(BaseView):
 
   def index(self):
-     return Users
+    return Users
 
   def show(self, id):
-     return Users[int(id)]
+    return Users[int(id)]
 
   def create(self):
-     Users.update(**self._params)
+    Users.update(**self._params)
 
   def delete(self, id):
-     del Users[id]
+    Users.pop(int(id))
+
 ```
 
 We need to change the view argument for the `users` resource to point to our new class in the `main`:
