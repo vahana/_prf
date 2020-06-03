@@ -32,17 +32,15 @@ Modify `__init__.main` function of myapp to look like:
 def main(global_config, **settings):
     config = Configurator(settings=settings)
 
-    config.include('prf')
-    root = config.get_root_resource()
-    user = root.add('user', view='prf.view.NoOp')
-    user_story = user.add('story', 'stories', view='prf.view.NoOp')
+    config.include('prf') #pyramid way of adding external packages.
+    root = config.get_root_resource() #acquire root resource.
+    user = root.add('user', 'users', view='prf.view.NoOp') # declare `users` root resource
+    user_story = user.add('story', 'stories', view='prf.view.NoOp') # declare `nested resource `users/stories`
 
-    config.scan()
+    #per pyramid, must return wsgi app
     return config.make_wsgi_app()
  ```
  
-We removed the generated code, acquired a root resource using `config.get_root_resource` object and added 2 resources `users` and nested one: `users/{id}/stories.
-
 The following endpoints are declared with the code above:
 
 ```
