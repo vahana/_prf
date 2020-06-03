@@ -18,7 +18,9 @@ pserve development.ini
 
 and navigate to http://localhost:6543 we will see the standard pyramid app. Boring.
 
-Lets add prf to the mix!
+Lets install `httpie` to use it for doing requests to our endpoints. Feel free to use curl or any other http client as long as it supports CRUDs.
+
+And lets add prf to the mix!
 
 ```
 pip install git+https://github.com/vahana/prf
@@ -48,9 +50,16 @@ users/{id}
 users/{user_id}/stories/{id}
 ```
 
-To see all available resources, navigate to `http://0.0.0.0:6543/_`.
+Try these:
 
-Try to navigate to http://0.0.0.0:6543/users or http://0.0.0.0:6543/users/1/stories to see the declared the resources in action.
+```
+# will get all declared resources
+http 0.0.0.0:6543/_
+# will get users
+http 0.0.0.0:6543/users
+will get stories for a user with id 1
+http 0.0.0.0:6543/users/1/stories
+```
 
 'NoOp' view, as name suggests, does not do much. We will need to create our own views for each resource.
 In our case UsersView and UserStoriesView.
@@ -96,7 +105,15 @@ We need to change the view argument for the `users` resource to point to our new
 user = root.add('user', view='myapp.views.UsersView')
 ```
 
-Restart the server and navigate to http://0.0.0.0:6543/users
+Restart the server and try:
+```
+# list users
+http 0.0.0.0:6543/users
+# delete a user with id 1
+http DELETE 0.0.0.0:6543/users/1
+# user 1 is gone
+http 0.0.0.0:6543/users
+```
 
 Above, we declared `index`, `show`, `create` and `delete` actions which correspond to: GET collection, GET resource, POST resource and DELETE resource respectively. You could also declare `update`, which would correspond to the PUT method. You dont need to declare all of them, only those you need. The missing ones will automatically return 405 Method Not Allowed error.
 
