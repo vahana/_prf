@@ -3,10 +3,11 @@ Pyramid RESTful Framework is designed to help coding REST CRUD endpoints with co
 Setup.
 
 1. virtualenv myapp
-2. pip install git+https://github.com/vahana/prf
-3. pcreate -s starter myapp
-4. cd myapp
-5. pip install -e .
+2. pip install pyramid
+3. pip install git+https://github.com/vahana/prf
+4. pcreate -s starter myapp
+5. cd myapp
+6. pip install -e .
 
 Run.
 
