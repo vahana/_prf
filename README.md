@@ -92,9 +92,9 @@ class UsersView(BaseView):
      del Users[id]
 ```
 
-We need to change the view for the `users` resource to point to our new class in the `main`:
+We need to change the view argument for the `users` resource to point to our new class in the `main`:
 ```
-user = root.add('user', view=UsersView)
+user = root.add('user', view='myapp.views.UsersView')
 ```
 
 Restart the server and navigate to http://0.0.0.0:6543/users
