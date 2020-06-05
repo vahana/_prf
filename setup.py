@@ -3,10 +3,7 @@ import os
 from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
-README = open(os.path.join(here, 'README.txt')).read()
-CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 VERSION = open(os.path.join(here, 'VERSION.txt')).read()
-
 
 dependency_links = [
     'http://github.com/vahana/slovar#egg=slovar'
@@ -25,7 +22,7 @@ setup(
     name='prf',
     version=VERSION,
     description='Pyramid RESTful Framework is designed to help coding REST CRUD endpoints with couple of lines of code.',
-    long_description=README + '\n\n' +  CHANGES,
+    long_description='',
     classifiers=[
         "Programming Language :: Python",
         "Framework :: Pyramid",
