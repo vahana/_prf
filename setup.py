@@ -7,7 +7,18 @@ README = open(os.path.join(here, 'README.txt')).read()
 CHANGES = open(os.path.join(here, 'CHANGES.txt')).read()
 VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 
+
+dependency_links = [
+    'http://github.com/vahana/slovar#egg=slovar'
+]
+
 install_requires = [
+    'pyramid',
+    'urllib3',
+    'slovar',
+    'mongoengine',
+    'requests',
+    'marshmallow'
 ]
 
 setup(
