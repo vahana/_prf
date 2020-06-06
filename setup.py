@@ -5,15 +5,6 @@ from setuptools import setup, find_packages
 here = os.path.abspath(os.path.dirname(__file__))
 VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 
-dependency_links = [
-    'http://github.com/vahana/slovar#egg=slovar'
-]
-
-install_requires = [
-    'pyramid',
-    'slovar',
-    'requests',
-]
 
 setup(
     name='prf',
@@ -33,7 +24,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-    install_requires=install_requires,
     entry_points={
         'paste.app_factory': [
             'main = prf:main',
