@@ -11,11 +11,8 @@ dependency_links = [
 
 install_requires = [
     'pyramid',
-    'urllib3',
     'slovar',
-    'mongoengine',
     'requests',
-    'marshmallow'
 ]
 
 setup(
