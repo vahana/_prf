@@ -1,4 +1,4 @@
-Pyramid RESTful Framework is designed to help coding RESTful endpoints with minimal code. It takes care of lots of reasonable defaults and boilerplate code.
+Pyramid RESTful Framework (PRF) is designed to help coding RESTful endpoints with minimal code. It takes care of lots of reasonable defaults and boilerplate code.
 
 Setup.
 
