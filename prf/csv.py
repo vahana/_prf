@@ -1,6 +1,7 @@
 import logging
 import os
 import json
+import pandas as pd
 
 from slovar import slovar
 
@@ -103,7 +104,7 @@ class CSV(object):
             return self.get_total(**specials)
 
         items = csv2dict(self.get_file_or_buff(), processor=processor,
-                            fillna=specials.get('_fillna'), **specials)
+                                    fillna=specials.get('_fillna'), **specials)
 
         return Results(specials, items, self.get_total(**specials))
 
