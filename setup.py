@@ -4,13 +4,14 @@ from setuptools import setup, find_packages
 
 here = os.path.abspath(os.path.dirname(__file__))
 VERSION = open(os.path.join(here, 'VERSION.txt')).read()
-
+README = open(os.path.join(here, 'README.md')).read()
 
 setup(
     name='prf',
     version=VERSION,
-    description='Pyramid RESTful Framework is designed to help coding REST CRUD endpoints with couple of lines of code.',
-    long_description='',
+    description='PRF is designed to help coding RESTful endpoints with minimal code',
+    long_description=README,
+    long_description_content_type='text/markdown',
     classifiers=[
         "Programming Language :: Python",
         "Framework :: Pyramid",
