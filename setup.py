@@ -6,6 +6,14 @@ here = os.path.abspath(os.path.dirname(__file__))
 VERSION = open(os.path.join(here, 'VERSION.txt')).read()
 README = open(os.path.join(here, 'README.md')).read()
 
+
+install_requires = [
+    'pyramid',
+    'slovar',
+    'requests',
+    'mongoengine'
+]
+
 setup(
     name='prf',
     version=VERSION,
@@ -23,6 +31,7 @@ setup(
     url='',
     keywords='web wsgi bfg pylons pyramid rest',
     packages=find_packages(),
+    install_requires = install_requires,
     include_package_data=True,
     zip_safe=False,
     entry_points={
