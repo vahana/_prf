@@ -14,22 +14,24 @@ def includeme(config):
     Settings = slovar(config.registry.settings)
     FS.setup(Settings)
 
-def get_format_from_file(file_or_buff):
-    format = ''
-
-    if isinstance(file_or_buff, str):
-        _, format = os.path.splitext(file_or_buff)
-    else:
-        raise Error('Failed to get format from file')
-
-    if format.startswith('.'):
-        format = format[1:]
-
-    return format.lower()
 
 class FileReader:
+    @staticmethod
+    def get_format_from_file(file_or_buff):
+        format = ''
+
+        if isinstance(file_or_buff, str):
+            _, format = os.path.splitext(file_or_buff)
+        else:
+            raise ValueError('Failed to get format from file')
+
+        if format.startswith('.'):
+            format = format[1:]
+
+        return format.lower()
+
     def __init__(self, file_or_buff, format=None):
-        self.format = format or get_format_from_file(file_or_buff)
+        self.format = format or FileReader.get_format_from_file(file_or_buff)
         self.file_or_buff = file_or_buff
         self.total = None
 
