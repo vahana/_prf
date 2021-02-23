@@ -3,7 +3,7 @@ import boto3
 import io
 
 from slovar import slovar
-from prf.csv import CSV
+from prf import fs
 
 log = logging.getLogger(__name__)
 
@@ -12,7 +12,7 @@ def includeme(config):
     S3.setup(Settings)
 
 
-class S3(CSV):
+class S3(fs.FS):
 
     def __init__(self, ds, create=False):
         path = ds.ns.split('/')

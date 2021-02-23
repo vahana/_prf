@@ -92,13 +92,14 @@ Field2Default = {
 
 def mongo_connect(settings):
     settings = slovar(settings)
-    db = settings['mongodb.db']
-    host = settings.get('mongodb.host', 'localhost')
-    port = settings.asint('mongodb.port', default=27017)
-    alias = settings.get('mongodb.alias', 'default')
+    settings.get('mongodb.host', 'localhost')
+    settings.asint('mongodb.port', default=27017)
+    settings.asstr('mongodb.alias', default='default')
+    db_settings = settings.unflat().mongodb
 
-    mongo.connect(db=db, host=host, port=port, alias=alias, connect=False)
-    log.debug('MongoDB enabled with db:%s, host:%s, port:%s, alias:%s', db, host, port, alias)
+    mongo.connect(connect=False, **db_settings)
+    log.debug('MongoDB enabled with db:%s, host:%s, port:%s, alias:%s',
+              db_settings.db, db_settings.host, db_settings.port, db_settings.alias)
 
 
 def mongo_disconnect(alias):

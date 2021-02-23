@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from prf.utils.csv import dict2tab
+from prf.utils import dict2tab
 from slovar import slovar
 
 

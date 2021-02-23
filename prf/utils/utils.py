@@ -571,3 +571,81 @@ class Throttler:
         self.counter += 1
         if time() - self.stime <= self.period and self.counter >= self.max_counter:
             self.pause()
+
+
+def dict2tab(data, fields=None, format_='csv', skip_headers=False):
+    import tablib
+
+    def render(each, key):
+        val = each.get(key)
+        if isinstance(val, (datetime, date)):
+            val = val.strftime('%Y-%m-%dT%H:%M:%SZ')  # iso
+
+        elif isinstance(val, (list, tuple)):
+            val = json.dumps(val)
+
+        if val is None:
+            val = ''
+
+        return val
+
+    data = data or []
+
+    if not data:
+        return None
+
+    headers = []
+
+    if fields:
+        for each in split_strip(fields):
+            aa, _, bb = each.partition('__as__')
+            name = (bb or aa).split(':')[0]
+            headers.append(name)
+    else:
+        #get the headers from the first item in the data.
+        #Note, data IS schemaless, so other items could have different fields.
+        headers = sorted(list(data[0].flat(keep_lists=1).keys()))
+        log.warn('Default headers take from the first item: %s', headers)
+
+    tabdata = tablib.Dataset(headers=None if skip_headers else headers)
+
+    try:
+        for each in data:
+            each = each.extract(headers).flat(keep_lists=1)
+            row = []
+
+            for col in headers:
+                row.append(render(each, col))
+
+            tabdata.append(row)
+
+        return getattr(tabdata, format_)
+
+    except Exception as e:
+        log.error('Headers:%s, Format:%s\nData:%s',
+                  tabdata.headers, format_, each)
+        raise prf_exc.HTTPBadRequest('dict2tab error: %r' % e)
+
+
+class TabRenderer(object):
+    def __init__(self, info):
+        pass
+
+    def __call__(self, value, system):
+
+        request = system.get('request')
+        response = request.response
+        _, specials = system['view'](None, request).process_params(request)
+
+        if 'text/csv' in request.accept:
+            response.content_type = 'text/csv'
+            _format = 'csv'
+        elif 'text/xls' in request.accept:
+            _format = 'xls'
+        else:
+            raise prf_exc.HTTPBadRequest(
+                'Unsupported Accept Header `%s`' % request.accept)
+
+        return dict2tab(value.get('data', []),
+                        fields=specials.aslist('_csv_fields', default=[]),
+                        format_=_format)
