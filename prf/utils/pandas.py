@@ -9,10 +9,17 @@ import pandas as pd
 log = logging.getLogger(__name__)
 
 def get_csv_header(file_or_buff):
+    #make sure if its a file object, its reset to 0
+    if hasattr(file_or_buff, 'seekable'):
+        file_or_buff.seek(0)
+
     return pd.read_csv(file_or_buff, nrows=0, engine = 'c').columns.to_list()
 
 
 def get_csv_total(file_or_buff):
+    #make sure if its a file object, its reset to 0
+    if hasattr(file_or_buff, 'seekable'):
+        file_or_buff.seek(0)
     df = pd.read_csv(file_or_buff, header=[0], engine = 'c')
     return df.shape[0]
 
