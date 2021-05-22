@@ -1,4 +1,5 @@
 import logging
+import json
 
 from pandas.io import json
 from slovar import slovar
@@ -7,6 +8,10 @@ from prf.utils import parse_specials
 import pandas as pd
 
 log = logging.getLogger(__name__)
+
+NA_LIST = ['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan',
+                '1.#IND', '1.#QNAN', 'N/A',
+                'NULL', 'NaN', 'n/a', 'nan', 'null']
 
 def get_csv_header(file_or_buff):
     #make sure if its a file object, its reset to 0
@@ -29,9 +34,6 @@ def get_json_total(file_or_buff):
 
 
 def pd_read_csv(file_or_buff, **params):
-    NA_LIST = ['', '#N/A', '#N/A N/A', '#NA', '-1.#IND', '-1.#QNAN', '-NaN', '-nan',
-                '1.#IND', '1.#QNAN', 'N/A',
-                'NULL', 'NaN', 'n/a', 'nan', 'null']
 
     if not params.get('_header'):
         params['_header'] = get_csv_header(file_or_buff)
@@ -86,7 +88,6 @@ def csv2dict(file_or_buff, **kw):
 
     return results
 
-import json
 def json2dict(file_or_buff, **kw):
     specials = slovar(kw)
     results = []
@@ -100,3 +101,40 @@ def json2dict(file_or_buff, **kw):
         return results[specials._start:specials._limit]
 
     return results
+
+
+def get_excel_total(file_or_buff):
+    df = pd.read_excel(file_or_buff, header=[0])
+    return df.shape[0]
+
+
+def get_excel_header(file_or_buff):
+    #make sure if its a file object, its reset to 0
+    if hasattr(file_or_buff, 'seekable'):
+        file_or_buff.seek(0)
+
+    return pd.read_excel(file_or_buff, nrows=0).columns.to_list()
+
+
+def excel2dict(file_or_buff, **params):
+    results = []
+
+    if not params.get('_header'):
+        params['_header'] = get_excel_header(file_or_buff)
+
+    params['_start'] = params.setdefault('_start', 0)
+
+    #make sure if its a file object, its reset to 0
+    if hasattr(file_or_buff, 'seekable'):
+        file_or_buff.seek(0)
+
+    df = pd.read_excel(
+        file_or_buff,
+        dtype=object,
+        keep_default_na = False,
+        skiprows = params.get('_start') or 0,
+        nrows = params.get('_limit'),
+        names=params['_header']
+    )
+
+    return df.to_dict('records')

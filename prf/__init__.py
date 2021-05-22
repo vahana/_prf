@@ -104,20 +104,7 @@ def disable_exc_tweens(config, names=None):
 
 
 def prf_settings(config):
-    import sys
-    from pyramid.scripts.common import parse_vars
-
-    # When running unit tests, sys.argv is pytest's options
-    # Added a `testing` setting to prevent trying to load the settings file
-    if not config.registry.settings.get('testing'):
-        try:
-            config_file = sys.argv[1]
-        except IndexError:
-            raise ValueError('No config file provided')
-
-        return slovar(config.registry.settings).update_with(parse_vars(sys.argv[2:]))
     return slovar(config.registry.settings)
-
 
 def includeme(config):
     log.info('%s %s' % (APP_NAME, __version__))

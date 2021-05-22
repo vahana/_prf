@@ -5,7 +5,8 @@ from slovar import slovar
 
 from prf.utils.utils import parse_specials, pager
 from prf.utils import (
-    csv2dict, get_csv_total, json2dict, get_json_total)
+    csv2dict, get_csv_total, json2dict, get_json_total,
+    get_excel_total, excel2dict)
 
 log = logging.getLogger(__name__)
 
@@ -44,7 +45,10 @@ class FileReader:
         if self.format == 'csv':
             return csv2dict(self.file_or_buff, **kw)
 
-        if self.format == 'json':
+        elif self.format in ['xls', 'xlsx']:
+            return excel2dict(self.file_or_buff, **kw)
+
+        elif self.format == 'json':
             return json2dict(self.file_or_buff, **kw)
 
     def get_total(self, **kw):
@@ -54,6 +58,9 @@ class FileReader:
 
         if self.format == 'csv':
             self.total = get_csv_total(self.file_or_buff)
+
+        elif self.format in ['xls', 'xlsx']:
+            self.total = get_excel_total(self.file_or_buff)
 
         elif self.format == 'json':
             self.total = get_json_total(self.file_or_buff)

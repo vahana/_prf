@@ -6,7 +6,7 @@ from bson import ObjectId, DBRef
 
 from elasticsearch.exceptions import ElasticsearchException, NotFoundError
 from elasticsearch.serializer import JSONSerializer
-from elasticsearch_dsl import Search, Q, A, DocType
+from elasticsearch_dsl import Search, Q, A
 from elasticsearch_dsl.connections import connections
 from elasticsearch_dsl import aggs as AGGS
 from elasticsearch_dsl.exceptions import UnknownDslObject
@@ -53,7 +53,7 @@ def es_exc_tween(handler, registry):
     return tween
 
 
-class Base(DocType):
+class Base:
     pass
 
 class Serializer(JSONSerializer):

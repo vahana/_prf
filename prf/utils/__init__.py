@@ -10,5 +10,6 @@ from prf.utils.utils import (JSONEncoder, json_dumps,
                              dict2tab, TabRenderer
                             )
 from prf.utils.pandas import (
-    get_csv_header, get_csv_total, get_json_total, get_json_total, csv2dict, json2dict)
+    get_csv_header, get_csv_total, get_json_total, get_json_total, csv2dict, json2dict,
+    excel2dict, get_excel_total)
 from prf.utils.errors import DKeyError, DValueError
