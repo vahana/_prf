@@ -2,7 +2,8 @@ import logging
 from six.moves.urllib.parse import urlparse
 from pprint import pformat
 
-from bson import ObjectId, DBRef
+from bson import ObjectId
+from bson.dbref import DBRef
 
 from elasticsearch.exceptions import ElasticsearchException, NotFoundError
 from elasticsearch.serializer import JSONSerializer
